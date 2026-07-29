@@ -56,6 +56,10 @@
     font-size:14px;background:var(--panel);border:1px solid var(--panelborder);border-radius:10px;
     padding:6px 14px;opacity:0;transition:opacity .15s}
   .carry.show{opacity:1}
+  .staminaBar{height:8px;width:150px;margin:6px auto 0;border-radius:6px;background:rgba(255,255,255,.15);overflow:hidden}
+  .staminaBar>i{display:block;height:100%;background:linear-gradient(90deg,var(--good),#ffcf5c,var(--cry));
+    border-radius:6px;transition:width .12s linear}
+  .staminaBar.low>i{animation:flash .5s steps(2) infinite}
 
   .corner{position:absolute;bottom:16px;right:16px;display:flex;gap:8px;pointer-events:auto}
   .btn{pointer-events:auto;cursor:pointer;border:1px solid var(--panelborder);background:var(--panel);
@@ -166,8 +170,10 @@
     </div>
     <p style="font-size:13px;opacity:.8">The baby <b>crawls around</b> the house and plays with toys.
        Scoop it up with <kbd>Space</kbd> to carry it anywhere and calm it down, or drop whatever you're
-       holding with <kbd>Q</kbd>. Changing diapers collects 💩 <b>poo</b> — spend it at the 🛠️ workbench
-       to upgrade everything. Survive until Mom returns to win! (There's a 🚪 closet in the bedroom too —
+       holding with <kbd>Q</kbd> — but 💪 your arms tire out the longer you hold the baby, so you can't
+       just carry it forever (upgrade <b>Strong Arms</b> at the workbench to hold longer). Changing diapers
+       collects 💩 <b>poo</b> — spend it at the 🛠️ workbench to upgrade everything. Survive until Mom
+       returns to win! (There's a 🚪 closet in the bedroom too —
        but hiding in it ends the game. Don't be <i>that</i> dad.)</p>
     <div class="diffPicker" id="diffPicker">
       <div class="diffOpt" data-diff="first">
@@ -1046,21 +1052,27 @@ const UPGRADES = {
   diaper: {icon:'🧷', title:'Premium Diapers',desc:'Collects more 💩 per change',                base:6},
   cartoon:{icon:'📺', title:'Fun Cartoons',   desc:'Holds attention longer (slower drain)',      base:5},
   speed:  {icon:'👟', title:'Quick Steps',   desc:'Dad moves faster around the house',          base:6},
+  arms:   {icon:'💪', title:'Strong Arms',   desc:'Carry the baby longer before your arms give out', base:5},
 };
 const MOVE_SPEED = 7.2;
 const DIAPER_CHANGE_MAX = 40; // diaper need must have decayed to at most this % before a change is allowed
+const ARM_UPGRADE_SECONDS = 3;    // seconds of extra hold time per Strong Arms level
+const ARM_RECOVER_MIN_FRAC = 0.2; // can't pick the baby back up until arms recover to at least this fraction
 
 // ---- difficulty: picked on the intro screen, locked in for the run ----
 const DIFFICULTIES = {
   first:   {key:'first', label:'First Born', gameLen:150,
     decayMul:0.72, cryFillMul:0.65, cryDrainMul:1.3, vomitMin:34, vomitMax:60,
-    walkChance:0.2, fallMin:9, fallMax:18, needStart:{food:100,milk:100,diaper:100,cartoon:96}},
+    walkChance:0.2, fallMin:9, fallMax:18, needStart:{food:100,milk:100,diaper:100,cartoon:96},
+    holdBase:15, holdRecoverMul:1.4},
   veteran: {key:'veteran', label:"Been There, Done That", gameLen:180,
     decayMul:1, cryFillMul:1, cryDrainMul:1, vomitMin:28, vomitMax:52,
-    walkChance:0.32, fallMin:6, fallMax:13, needStart:{food:100,milk:95,diaper:100,cartoon:88}},
+    walkChance:0.32, fallMin:6, fallMax:13, needStart:{food:100,milk:95,diaper:100,cartoon:88},
+    holdBase:10, holdRecoverMul:1.3},
   king:    {key:'king', label:'King', gameLen:210,
     decayMul:1.4, cryFillMul:1.35, cryDrainMul:0.75, vomitMin:16, vomitMax:34,
-    walkChance:0.46, fallMin:4, fallMax:9, needStart:{food:85,milk:80,diaper:88,cartoon:70}},
+    walkChance:0.46, fallMin:4, fallMax:9, needStart:{food:85,milk:80,diaper:88,cartoon:70},
+    holdBase:6, holdRecoverMul:1.15},
 };
 let difficulty = 'veteran';
 function curDiff(){ return DIFFICULTIES[difficulty]; }
@@ -1078,7 +1090,7 @@ function resetState(){
     carrying:null,                     // 'food'|'milk'|'diaper'|'mop'|null
     holdingBaby:false,
     cartoonsOn:false, tvTimer:0,
-    lvl:{food:0,milk:0,diaper:0,cartoon:0,speed:0},
+    lvl:{food:0,milk:0,diaper:0,cartoon:0,speed:0,arms:0},
     gameLen: D.gameLen,
     timeLeft: D.gameLen,
     changes:0, cuddles:0,
@@ -1086,6 +1098,8 @@ function resetState(){
     vomitTimer: rand(D.vomitMin*0.5, D.vomitMax*0.5), // first throw-up comes sooner than the steady interval
     slowTimer:0,                       // >0 while Dad's slipping around after stepping in a mess
     babyFallen:false,                  // baby took a tumble while walking — crying until Dad picks it up
+    holdStamina: holdMaxFor(D, 0),     // arms give out after this many seconds of continuous carrying
+    armsTiredTimer:0,                  // >0 briefly after a forced put-down, for the HUD message
   };
 }
 resetState();
@@ -1095,6 +1109,8 @@ function decayRate(k){
   let r = BASE_DECAY[k] * curDiff().decayMul * Math.pow(0.8, S.lvl[k]);   // difficulty scales it, upgrades slow it back down
   return r;
 }
+function holdMaxFor(D, armsLvl){ return D.holdBase + armsLvl*ARM_UPGRADE_SECONDS; }
+function holdMax(){ return holdMaxFor(curDiff(), S.lvl.arms); }
 function upgradeCost(k){ return UPGRADES[k].base * (S.lvl[k]+1); }
 function moveSpeed(){
   let s = MOVE_SPEED * (1 + 0.15*S.lvl.speed);
@@ -1174,17 +1190,20 @@ function interact(){                                   // the E key
   if(k){ doStation(k); return; }
   Audio.error();
 }
+function putBabyDown(){                                 // shared by voluntary put-down and forced (arms-tired) drop
+  S.holdingBaby=false; baby.scale.set(1,1,1);
+  baby.position.set(dad.position.x - Math.sin(dad.rotation.y)*1.1, 0,
+                    dad.position.z - Math.cos(dad.rotation.y)*1.1);
+  baby.userData.mat.visible = true;
+  pickBabyTarget(); babyMode='crawl';                    // safe grace period right after being set back down
+}
 function toggleHoldBaby(){                              // the Space key
   if(S.mode!=='play') return;
-  if(S.holdingBaby){                                   // put down at dad's feet
-    S.holdingBaby=false; baby.scale.set(1,1,1);
-    baby.position.set(dad.position.x - Math.sin(dad.rotation.y)*1.1, 0,
-                      dad.position.z - Math.cos(dad.rotation.y)*1.1);
-    baby.userData.mat.visible = true;
-    pickBabyTarget(); babyMode='crawl';                 // safe grace period right after being set back down
-    Audio.buy();
+  if(S.holdingBaby){
+    putBabyDown(); Audio.buy();
   } else {
     if(S.carrying){ Audio.error(); return; }           // can't hold baby with hands full
+    if(S.holdStamina < holdMax()*ARM_RECOVER_MIN_FRAC){ Audio.error(); return; } // arms still too tired
     if(babyDist() < 2.9){ S.holdingBaby=true; S.cuddles++; S.babyFallen=false; baby.scale.set(0.9,0.9,0.9);
       baby.userData.mat.visible = false; Audio.chime(); }
     else Audio.error();
@@ -1453,6 +1472,15 @@ function tick(){
     toys.forEach(ty=>{ ty.mesh.position.y = ty.baseY + (playing && babyPlayingToy===ty ? Math.abs(Math.sin(t*10))*0.15 : 0); });
     S.joy = Math.max(0, S.joy - 0.06*dt);
 
+    // ---- arm stamina: drains while holding the baby, recovers while not, forces a put-down at empty ----
+    if(S.holdingBaby){
+      S.holdStamina = Math.max(0, S.holdStamina - dt);
+      if(S.holdStamina<=0){ putBabyDown(); S.armsTiredTimer=2.5; Audio.error(); }
+    } else {
+      S.holdStamina = Math.min(holdMax(), S.holdStamina + dt*curDiff().holdRecoverMul);
+    }
+    if(S.armsTiredTimer>0) S.armsTiredTimer = Math.max(0, S.armsTiredTimer-dt);
+
     // ---- occasional throw-up: leaves a mess only the mop can clean ----
     S.vomitTimer -= dt;
     if(S.vomitTimer <= 0){
@@ -1577,17 +1605,24 @@ function updateHUD(){
     }
     else msg = `Bring the ${CARRY_ICON[S.carrying]} to the baby — <kbd>Q</kbd> to drop it`;
   } else {
-    if(near) msg = 'Pick up the baby — <kbd>Space</kbd>';
+    const armsTired = S.holdStamina < holdMax()*ARM_RECOVER_MIN_FRAC;
+    if(near && armsTired) msg = '😩 Arms too tired to pick up the baby — give them a moment';
+    else if(near) msg = 'Pick up the baby — <kbd>Space</kbd>';
     else if(k==='shop') msg = 'Open the <kbd>U</kbd>pgrade workbench — <kbd>E</kbd>';
     else if(k==='cartoon') msg = (S.cartoonsOn?'Cartoons playing':'Turn on cartoons')+' — <kbd>E</kbd>';
     else if(k) msg = `Grab ${NEED_ICON[k]} ${NEED_LABEL[k]||k} — <kbd>E</kbd>`;
     else if(mess) msg = '🤢 Ew, a mess — go grab the 🧹 mop';
+    else if(S.armsTiredTimer>0) msg = '😩 Your arms gave out — the baby slipped down!';
   }
   el.prompt.innerHTML = msg;
   el.prompt.classList.toggle('show', !!msg);
 
   // carry / holding indicator
-  if(S.holdingBaby){ el.carry.innerHTML = 'Carrying: 👶 baby'; el.carry.classList.add('show'); }
+  if(S.holdingBaby){
+    const pct = Math.max(0, Math.min(100, S.holdStamina/holdMax()*100));
+    el.carry.innerHTML = `💪 Carrying: 👶 baby<div class="staminaBar${pct<25?' low':''}"><i style="width:${pct}%"></i></div>`;
+    el.carry.classList.add('show');
+  }
   else if(S.carrying){ el.carry.innerHTML = 'Carrying: '+CARRY_ICON[S.carrying]+' '+S.carrying; el.carry.classList.add('show'); }
   else if(S.slowTimer>0){ el.carry.innerHTML = '🐌 Slipped! Walking slower...'; el.carry.classList.add('show'); }
   else el.carry.classList.remove('show');
