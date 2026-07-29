@@ -87,6 +87,14 @@
   .tag{display:inline-block;background:rgba(255,255,255,.1);border-radius:20px;padding:4px 14px;
     font-size:13px;margin:4px 3px}
 
+  .diffPicker{display:flex;flex-direction:column;gap:8px;margin:18px 0;text-align:left}
+  .diffOpt{pointer-events:auto;cursor:pointer;background:rgba(255,255,255,.06);border:2px solid var(--panelborder);
+    border-radius:12px;padding:10px 14px;transition:border-color .15s,background .15s}
+  .diffOpt:hover{background:rgba(255,255,255,.1)}
+  .diffOpt.selected{border-color:var(--good);background:rgba(126,231,135,.12)}
+  .diffTitle{font-weight:bold;font-size:15px}
+  .diffSub{font-size:12px;opacity:.75;margin-top:2px}
+
   /* ---------- Upgrade panel ---------- */
   #shop.hidden{display:none}
   #shop{z-index:45}
@@ -159,8 +167,22 @@
     <p style="font-size:13px;opacity:.8">The baby <b>crawls around</b> the house and plays with toys.
        Scoop it up with <kbd>Space</kbd> to carry it anywhere and calm it down, or drop whatever you're
        holding with <kbd>Q</kbd>. Changing diapers collects 💩 <b>poo</b> — spend it at the 🛠️ workbench
-       to upgrade everything. Survive <b>3 minutes</b> until Mom returns to win! (There's a 🚪 closet in
-       the bedroom too — but hiding in it ends the game. Don't be <i>that</i> dad.)</p>
+       to upgrade everything. Survive until Mom returns to win! (There's a 🚪 closet in the bedroom too —
+       but hiding in it ends the game. Don't be <i>that</i> dad.)</p>
+    <div class="diffPicker" id="diffPicker">
+      <div class="diffOpt" data-diff="first">
+        <div class="diffTitle">🍼 First Born</div>
+        <div class="diffSub">Easiest — 2.5 min, needs drain slowly, fewer accidents</div>
+      </div>
+      <div class="diffOpt selected" data-diff="veteran">
+        <div class="diffTitle">😅 Been There, Done That</div>
+        <div class="diffSub">Medium — 3 min, the standard challenge</div>
+      </div>
+      <div class="diffOpt" data-diff="king">
+        <div class="diffTitle">👑 King</div>
+        <div class="diffSub">Hardest — 3.5 min, needs drain fast, expect chaos</div>
+      </div>
+    </div>
     <button class="btn cta" id="startBtn">Start Babysitting ▶</button>
   </div>
 </div>
@@ -1025,15 +1047,31 @@ const UPGRADES = {
   cartoon:{icon:'📺', title:'Fun Cartoons',   desc:'Holds attention longer (slower drain)',      base:5},
   speed:  {icon:'👟', title:'Quick Steps',   desc:'Dad moves faster around the house',          base:6},
 };
-const GAME_LEN = 180; // seconds until mom returns
 const MOVE_SPEED = 7.2;
 const DIAPER_CHANGE_MAX = 40; // diaper need must have decayed to at most this % before a change is allowed
 
+// ---- difficulty: picked on the intro screen, locked in for the run ----
+const DIFFICULTIES = {
+  first:   {key:'first', label:'First Born', gameLen:150,
+    decayMul:0.72, cryFillMul:0.65, cryDrainMul:1.3, vomitMin:34, vomitMax:60,
+    walkChance:0.2, fallMin:9, fallMax:18, needStart:{food:100,milk:100,diaper:100,cartoon:96}},
+  veteran: {key:'veteran', label:"Been There, Done That", gameLen:180,
+    decayMul:1, cryFillMul:1, cryDrainMul:1, vomitMin:28, vomitMax:52,
+    walkChance:0.32, fallMin:6, fallMax:13, needStart:{food:100,milk:95,diaper:100,cartoon:88}},
+  king:    {key:'king', label:'King', gameLen:210,
+    decayMul:1.4, cryFillMul:1.35, cryDrainMul:0.75, vomitMin:16, vomitMax:34,
+    walkChance:0.46, fallMin:4, fallMax:9, needStart:{food:85,milk:80,diaper:88,cartoon:70}},
+};
+let difficulty = 'veteran';
+function curDiff(){ return DIFFICULTIES[difficulty]; }
+
 let S;
 function resetState(){
+  const D = curDiff();
   S = {
     mode:'menu',                       // menu|play|over|win
-    need:{food:100,milk:95,diaper:100,cartoon:88},
+    diff: D.key,
+    need:{...D.needStart},
     cry:0,
     joy:0,                             // topped up by play/cuddles; eases crying
     poo:0,
@@ -1041,10 +1079,11 @@ function resetState(){
     holdingBaby:false,
     cartoonsOn:false, tvTimer:0,
     lvl:{food:0,milk:0,diaper:0,cartoon:0,speed:0},
-    timeLeft:GAME_LEN,
+    gameLen: D.gameLen,
+    timeLeft: D.gameLen,
     changes:0, cuddles:0,
     messes:[],                         // active vomit puddles {x,z,mesh,playerInside}
-    vomitTimer: rand(14,26),           // seconds until the baby might throw up
+    vomitTimer: rand(D.vomitMin*0.5, D.vomitMax*0.5), // first throw-up comes sooner than the steady interval
     slowTimer:0,                       // >0 while Dad's slipping around after stepping in a mess
     babyFallen:false,                  // baby took a tumble while walking — crying until Dad picks it up
   };
@@ -1053,7 +1092,7 @@ resetState();
 
 function happiness(){ let s=0; NEEDS.forEach(k=>s+=S.need[k]); return s/NEEDS.length; }
 function decayRate(k){
-  let r = BASE_DECAY[k] * Math.pow(0.8, S.lvl[k]);   // upgrades slow decay
+  let r = BASE_DECAY[k] * curDiff().decayMul * Math.pow(0.8, S.lvl[k]);   // difficulty scales it, upgrades slow it back down
   return r;
 }
 function upgradeCost(k){ return UPGRADES[k].base * (S.lvl[k]+1); }
@@ -1242,10 +1281,11 @@ const GAMEOVER_FLAVOR = {
 function endGame(reason){                              // 'win' | 'lose' | 'hide'
   S.mode = reason==='win' ? 'win' : 'over';
   closeShopFn();
-  const mins = Math.floor((GAME_LEN-S.timeLeft)/60), secs = Math.round((GAME_LEN-S.timeLeft)%60);
+  const mins = Math.floor((S.gameLen-S.timeLeft)/60), secs = Math.round((S.gameLen-S.timeLeft)%60);
+  const diffLabel = DIFFICULTIES[S.diff].label;
   if(reason==='win'){
     document.getElementById('winStats').textContent =
-      `Diapers changed: ${S.changes} · Poo banked: 💩${S.poo}`;
+      `${diffLabel} · Diapers changed: ${S.changes} · Poo banked: 💩${S.poo}`;
     document.getElementById('win').classList.remove('hidden');
   } else {
     const f = GAMEOVER_FLAVOR[reason];
@@ -1253,10 +1293,17 @@ function endGame(reason){                              // 'win' | 'lose' | 'hide
     document.getElementById('goTitle').textContent = f.title;
     document.getElementById('goBody').textContent = f.body;
     document.getElementById('goStats').textContent =
-      `You lasted ${mins}m ${secs}s · ${S.changes} diaper change${S.changes===1?'':'s'}.`;
+      `${diffLabel} · You lasted ${mins}m ${secs}s · ${S.changes} diaper change${S.changes===1?'':'s'}.`;
     document.getElementById('gameover').classList.remove('hidden');
   }
 }
+document.querySelectorAll('#diffPicker .diffOpt').forEach(opt=>{
+  opt.addEventListener('click', ()=>{
+    difficulty = opt.dataset.diff;
+    document.querySelectorAll('#diffPicker .diffOpt').forEach(o=>o.classList.toggle('selected', o===opt));
+    Audio.buy();
+  });
+});
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('retryBtn').addEventListener('click', startGame);
 document.getElementById('winBtn').addEventListener('click', startGame);
@@ -1295,8 +1342,9 @@ let babyMode = 'crawl', babyPoseT = 0, fallTimer = 0;       // 'crawl' (safe) or
 function pickBabyTarget(){
   babyRetime = 3 + Math.random()*3;
   babyPlay = 0; babyPlayingToy = null;
-  babyMode = Math.random() < 0.32 ? 'walk' : 'crawl';       // crawling is the safe default; walking is occasional and riskier
-  if(babyMode==='walk') fallTimer = rand(6,13);
+  const D = curDiff();
+  babyMode = Math.random() < D.walkChance ? 'walk' : 'crawl'; // crawling is the safe default; walking is occasional and riskier
+  if(babyMode==='walk') fallTimer = rand(D.fallMin, D.fallMax);
   if(toys.length && Math.random() < 0.55){                 // head to a toy and play
     const ty = toys[(Math.random()*toys.length)|0];
     babyTarget.set(ty.x + (Math.random()-0.5)*0.8, 0, ty.z + (Math.random()-0.5)*0.8);
@@ -1415,7 +1463,7 @@ function tick(){
         S.messes.push({x:mx, z:mz, mesh, playerInside:false});
         Audio.error();
       }
-      S.vomitTimer = rand(28,52);
+      S.vomitTimer = rand(curDiff().vomitMin, curDiff().vomitMax);
     }
     // stepping in a mess: drop whatever you're carrying and slip (walk slower for a few seconds)
     S.messes.forEach(m=>{
@@ -1441,15 +1489,16 @@ function tick(){
     });
     tvScreen.material.emissive.set(S.cartoonsOn ? '#7fd0ff' : '#101318');
 
-    // ---- crying / cry-o-meter (eased by play joy and by cuddling) ----
+    // ---- crying / cry-o-meter (eased by play joy and by cuddling; scaled by difficulty) ----
+    const diffCry = curDiff();
     let empties = 0; NEEDS.forEach(k=>{ if(S.need[k] <= 0.5) empties++; });
     const crying = empties>0 || S.babyFallen;
     if(crying){
-      let fill = (3.5 + empties*3) * (1 - 0.4*S.joy);
-      if(S.holdingBaby){ fill *= 0.5; S.cry = Math.max(0, S.cry - 3.5*dt); } // holding calms a fuss, but many unmet needs still creep up
+      let fill = (3.5 + empties*3) * (1 - 0.4*S.joy) * diffCry.cryFillMul;
+      if(S.holdingBaby){ fill *= 0.5; S.cry = Math.max(0, S.cry - 3.5*diffCry.cryDrainMul*dt); } // holding calms a fuss, but many unmet needs still creep up
       S.cry = Math.min(100, S.cry + fill*dt);
     } else {
-      S.cry = Math.max(0, S.cry - (13 + S.joy*8 + (S.holdingBaby?6:0))*dt);
+      S.cry = Math.max(0, S.cry - (13 + S.joy*8 + (S.holdingBaby?6:0))*diffCry.cryDrainMul*dt);
     }
 
     // baby cry sound + wobble (only when actually distressed, not while soothed)
