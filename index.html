@@ -1,0 +1,1493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Baby Care — Dad's on Duty</title>
+<style>
+  :root{
+    --bg1:#2b2140; --bg2:#4a3a6a;
+    --panel:rgba(24,18,38,.86); --panelborder:rgba(255,255,255,.14);
+    --food:#ffcf5c; --milk:#8fd3ff; --diaper:#a0e3a0; --cartoon:#e59bff;
+    --cry:#ff5c6b; --poo:#b07a4b; --good:#7ee787; --text:#f4eefc;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:linear-gradient(160deg,var(--bg1),var(--bg2));
+    font-family:'Trebuchet MS','Segoe UI',system-ui,sans-serif;color:var(--text);user-select:none;-webkit-user-select:none}
+  #app{position:fixed;inset:0}
+  canvas{display:block}
+
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:20}
+  .topbar{position:absolute;top:10px;left:50%;transform:translateX(-50%);
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;
+    background:var(--panel);border:1px solid var(--panelborder);border-radius:14px;padding:8px 12px;
+    box-shadow:0 8px 30px rgba(0,0,0,.35);max-width:96vw}
+  .need{display:flex;flex-direction:column;align-items:center;width:78px}
+  .need .lbl{font-size:12px;opacity:.85;margin-bottom:3px;white-space:nowrap}
+  .bar{width:74px;height:12px;border-radius:8px;background:rgba(255,255,255,.12);overflow:hidden;position:relative}
+  .bar > i{display:block;height:100%;width:100%;transition:width .12s linear;border-radius:8px}
+  .need[data-k=food] .bar>i{background:var(--food)}
+  .need[data-k=milk] .bar>i{background:var(--milk)}
+  .need[data-k=diaper] .bar>i{background:var(--diaper)}
+  .need[data-k=cartoon] .bar>i{background:var(--cartoon)}
+  .bar.low>i{animation:flash .5s steps(2) infinite}
+  @keyframes flash{50%{opacity:.35}}
+
+  .stat{display:flex;flex-direction:column;align-items:center;min-width:66px;padding:0 4px}
+  .stat b{font-size:18px;line-height:1}
+  .stat span{font-size:11px;opacity:.8}
+
+  .crywrap{position:absolute;top:96px;left:50%;transform:translateX(-50%);width:min(360px,80vw);
+    background:var(--panel);border:1px solid var(--panelborder);border-radius:12px;padding:7px 12px 9px;
+    box-shadow:0 6px 20px rgba(0,0,0,.3)}
+  .crywrap .lbl{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+  .crybar{height:16px;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden}
+  .crybar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ff8a5c,var(--cry));
+    transition:width .12s linear;border-radius:9px}
+
+  .prompt{position:absolute;bottom:74px;left:50%;transform:translateX(-50%);
+    background:rgba(0,0,0,.6);border:1px solid var(--panelborder);border-radius:10px;
+    padding:8px 16px;font-size:15px;opacity:0;transition:opacity .12s;white-space:nowrap}
+  .prompt.show{opacity:1}
+  .prompt kbd{background:#fff;color:#222;border-radius:6px;padding:1px 7px;font-weight:bold;font-family:inherit}
+
+  .carry{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
+    font-size:14px;background:var(--panel);border:1px solid var(--panelborder);border-radius:10px;
+    padding:6px 14px;opacity:0;transition:opacity .15s}
+  .carry.show{opacity:1}
+
+  .corner{position:absolute;bottom:16px;right:16px;display:flex;gap:8px;pointer-events:auto}
+  .btn{pointer-events:auto;cursor:pointer;border:1px solid var(--panelborder);background:var(--panel);
+    color:var(--text);border-radius:12px;padding:10px 16px;font-size:14px;font-family:inherit;font-weight:bold;
+    box-shadow:0 6px 18px rgba(0,0,0,.3);transition:transform .08s,background .15s}
+  .btn:hover{background:rgba(60,45,90,.95)}
+  .btn:active{transform:scale(.96)}
+  .btn.icon{padding:10px 12px;font-size:16px}
+
+  .hint{position:absolute;bottom:14px;left:12px;max-width:250px;font-size:12px;opacity:.75;line-height:1.7;
+    background:var(--panel);border:1px solid var(--panelborder);border-radius:10px;padding:8px 12px}
+  .hint kbd{background:#fff;color:#222;border-radius:4px;padding:0 5px;font-weight:bold}
+
+  /* ---------- Overlays ---------- */
+  .overlay{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-start;justify-content:center;
+    padding:20px;overflow-y:auto;background:radial-gradient(circle at 50% 30%,rgba(74,58,106,.6),rgba(20,14,32,.92));
+    backdrop-filter:blur(3px)}
+  .overlay.hidden{display:none}
+  .card{background:var(--panel);border:1px solid var(--panelborder);border-radius:22px;margin:auto;
+    padding:26px 32px;max-width:520px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .card h1{margin:.1em 0 .3em;font-size:30px}
+  .card h2{margin:.1em 0 .3em;font-size:26px}
+  .card p{font-size:15px;line-height:1.6;opacity:.92;margin:.5em 0}
+  .card .big{font-size:52px;margin:6px 0}
+  .card .cta{margin-top:18px;font-size:18px;padding:14px 30px}
+  .legend{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;text-align:left;margin:16px auto;
+    max-width:420px;font-size:14px}
+  .legend b{opacity:.95}
+  .tag{display:inline-block;background:rgba(255,255,255,.1);border-radius:20px;padding:4px 14px;
+    font-size:13px;margin:4px 3px}
+
+  /* ---------- Upgrade panel ---------- */
+  #shop.hidden{display:none}
+  #shop{z-index:45}
+  .shopcard{max-width:560px}
+  .ups{display:flex;flex-direction:column;gap:10px;margin:14px 0}
+  .up{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.06);
+    border:1px solid var(--panelborder);border-radius:14px;padding:10px 12px;text-align:left}
+  .up .ico{font-size:26px;width:34px;text-align:center}
+  .up .info{flex:1}
+  .up .info .t{font-weight:bold;font-size:15px}
+  .up .info .d{font-size:12px;opacity:.78}
+  .up .lv{font-size:12px;opacity:.85;margin-top:2px}
+  .up .buy{pointer-events:auto;cursor:pointer;border:none;border-radius:10px;padding:9px 14px;
+    font-weight:bold;font-family:inherit;font-size:14px;background:var(--good);color:#0d2a12;white-space:nowrap}
+  .up .buy:disabled{background:rgba(255,255,255,.14);color:rgba(255,255,255,.5);cursor:not-allowed}
+  .shopbal{font-size:16px;margin:2px 0 4px}
+  .flash{animation:pop .4s ease}
+  @keyframes pop{40%{transform:scale(1.06)}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="topbar" id="topbar">
+    <div class="need" data-k="food"><div class="lbl">🍎 Food</div><div class="bar"><i></i></div></div>
+    <div class="need" data-k="milk"><div class="lbl">🍼 Milk</div><div class="bar"><i></i></div></div>
+    <div class="need" data-k="diaper"><div class="lbl">👶 Diaper</div><div class="bar"><i></i></div></div>
+    <div class="need" data-k="cartoon"><div class="lbl">📺 Cartoons</div><div class="bar"><i></i></div></div>
+    <div class="stat"><b id="hapVal">😊</b><span>Happiness</span></div>
+    <div class="stat"><b id="pooVal">💩 0</b><span>Poo</span></div>
+    <div class="stat"><b id="timeVal">3:00</b><span>Mom back in</span></div>
+  </div>
+
+  <div class="crywrap">
+    <div class="lbl"><span>😭 Cry-o-meter</span><span id="cryPct">0%</span></div>
+    <div class="crybar"><i id="cryFill"></i></div>
+  </div>
+
+  <div class="prompt" id="prompt"></div>
+  <div class="carry" id="carry"></div>
+
+  <div class="hint">
+    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · <kbd>E</kbd> interact · <kbd>Q</kbd> drop item ·
+    <kbd>Space</kbd> pick up baby · <kbd>U</kbd> shop · scroll to zoom
+  </div>
+
+  <div class="corner">
+    <button class="btn icon" id="muteBtn" title="Mute">🔊</button>
+    <button class="btn" id="shopBtn">🛠️ Upgrades</button>
+  </div>
+</div>
+
+<!-- Intro -->
+<div class="overlay" id="intro">
+  <div class="card">
+    <div class="big">👶🍼</div>
+    <h1>Baby Care: Dad's on Duty</h1>
+    <p><b>Mom just left to go shopping</b> — and she left <b>you</b> in charge of the little one!
+       Keep the baby happy until she gets back.</p>
+    <p>Watch the four needs. If any runs out the baby cries, and the <b style="color:var(--cry)">cry-o-meter</b>
+       climbs. Let it fill up and you'll panic-call Mommy — <b>game over</b>.</p>
+    <div class="legend">
+      <div>🍎 <b>Food</b> — feed at the kitchen</div>
+      <div>🍼 <b>Milk</b> — grab from the fridge</div>
+      <div>👶 <b>Diaper</b> — change at the table</div>
+      <div>📺 <b>Cartoons</b> — switch on the TV</div>
+    </div>
+    <p style="font-size:13px;opacity:.8">The baby <b>crawls around</b> the house and plays with toys.
+       Scoop it up with <kbd>Space</kbd> to carry it anywhere and calm it down, or drop whatever you're
+       holding with <kbd>Q</kbd>. Changing diapers collects 💩 <b>poo</b> — spend it at the 🛠️ workbench
+       to upgrade everything. Survive <b>3 minutes</b> until Mom returns to win! (There's a 🚪 closet in
+       the bedroom too — but hiding in it ends the game. Don't be <i>that</i> dad.)</p>
+    <button class="btn cta" id="startBtn">Start Babysitting ▶</button>
+  </div>
+</div>
+
+<!-- Game over -->
+<div class="overlay hidden" id="gameover">
+  <div class="card">
+    <div class="big" id="goIcon">📞😱</div>
+    <h1 id="goTitle">You called Mommy!</h1>
+    <p id="goBody">The crying got to be too much and you had to phone Mom for backup.
+       She's not thrilled she had to leave her shopping…</p>
+    <p id="goStats" style="font-size:13px;opacity:.8"></p>
+    <button class="btn cta" id="retryBtn">Try Again ↻</button>
+  </div>
+</div>
+
+<!-- Win -->
+<div class="overlay hidden" id="win">
+  <div class="card">
+    <div class="big">🎉🏠</div>
+    <h1>Mom's Home!</h1>
+    <p>You did it — you kept the baby happy the whole time. Mom walks in with the groceries
+       and finds a calm, content little one. <b>Dad of the year.</b></p>
+    <p id="winStats" style="font-size:13px;opacity:.8"></p>
+    <button class="btn cta" id="winBtn">Play Again ↻</button>
+  </div>
+</div>
+
+<!-- Shop -->
+<div class="overlay hidden" id="shop">
+  <div class="card shopcard">
+    <h2>🛠️ Upgrade Workbench</h2>
+    <div class="shopbal">Balance: <b id="shopPoo">💩 0</b></div>
+    <div class="ups" id="ups"></div>
+    <button class="btn" id="closeShop">Back to the baby ▶</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script>
+/* ============================================================
+   Baby Care — isometric 3D babysitting game (single file)
+   ============================================================ */
+(function(){
+'use strict';
+if(!window.THREE){
+  document.getElementById('intro').innerHTML =
+    '<div class="card"><h1>Couldn\'t load 3D engine</h1><p>Three.js failed to load from the CDN. '+
+    'Check your internet connection, or run a local server: <code>npx serve .</code></p></div>';
+  return;
+}
+
+/* ---------- Renderer / scene / iso camera ---------- */
+const app = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+app.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#241a38');
+scene.fog = new THREE.Fog('#241a38', 120, 320);
+
+const CENTER = new THREE.Vector3(0, 0, 7);        // middle of the 2x3 room grid
+const LOOK = new THREE.Vector3(0, 0, -7);         // zoom-out framing target (whole home sits below the HUD)
+const CAM_OFFSET = new THREE.Vector3(40, 46, 40); // fixed isometric offset (keeps the view angle & controls constant)
+let BASE_VIEW = 82;                               // ortho size at zoom 1 (fits all rooms); recomputed by buildHouse()
+let zoom = 1, aspect = 1;
+let camera = new THREE.OrthographicCamera(-1,1,1,-1,0.1,400);
+const camTarget = new THREE.Vector3().copy(LOOK);
+function applyFrustum(){
+  const V = BASE_VIEW / zoom;
+  camera.left = -V*aspect/2; camera.right = V*aspect/2;
+  camera.top = V/2; camera.bottom = -V/2;
+  camera.updateProjectionMatrix();
+}
+function resize(){
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w,h); aspect = w/h; applyFrustum();
+}
+window.addEventListener('resize', resize); resize();
+// mouse-wheel zoom (zoom in follows the player)
+renderer.domElement.addEventListener('wheel', e=>{
+  e.preventDefault();
+  zoom = Math.max(1, Math.min(3.2, zoom * (e.deltaY<0 ? 1.12 : 0.89)));
+  applyFrustum();
+}, {passive:false});
+function updateCamera(){
+  const follow = Math.min(1, Math.max(0, (zoom-1)/1.3));   // 0 = whole-home overview, 1 = centred on dad
+  camTarget.set(LOOK.x + (dad.position.x-LOOK.x)*follow, 0, LOOK.z + (dad.position.z-LOOK.z)*follow);
+  camera.position.set(camTarget.x+CAM_OFFSET.x, CAM_OFFSET.y, camTarget.z+CAM_OFFSET.z);
+  camera.lookAt(camTarget);
+}
+
+/* ---------- Lights ---------- */
+scene.add(new THREE.HemisphereLight('#fff4e6', '#3a2f55', 0.9));
+const sun = new THREE.DirectionalLight('#fff1d6', 0.9);
+sun.position.set(CENTER.x+18, 40, CENTER.z+6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048,2048);
+const sunTarget = new THREE.Object3D(); sunTarget.position.copy(CENTER); scene.add(sunTarget);
+sun.target = sunTarget;
+const sc = sun.shadow.camera;
+sc.left=-38; sc.right=38; sc.top=38; sc.bottom=-38; sc.near=1; sc.far=170;
+scene.add(sun);
+
+/* ---------- Materials / helpers ---------- */
+function mat(color, opts){ return new THREE.MeshLambertMaterial(Object.assign({color:color},opts||{})); }
+function box(w,h,d,color,em){
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat(color, em?{emissive:em}:null));
+  m.castShadow = true; m.receiveShadow = true; return m;
+}
+function cyl(rt,rb,h,color){
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,20), mat(color));
+  m.castShadow=true; m.receiveShadow=true; return m;
+}
+function sph(r,color){
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r,20,16), mat(color));
+  m.castShadow=true; m.receiveShadow=true; return m;
+}
+
+/* text / emoji sprite labels */
+function makeSprite(text, {font=44, pad=14, bg='rgba(20,14,32,.82)', color='#fff', bold=true}={}){
+  const c = document.createElement('canvas'), ctx = c.getContext('2d');
+  const f = `${bold?'bold ':''}${font}px 'Trebuchet MS',sans-serif`;
+  ctx.font = f;
+  const w = Math.ceil(ctx.measureText(text).width) + pad*2;
+  const h = font + pad*2;
+  c.width = w; c.height = h;
+  ctx.font = f; ctx.textBaseline='middle'; ctx.textAlign='center';
+  if(bg){ ctx.fillStyle=bg; roundRect(ctx,0,0,w,h,14); ctx.fill(); }
+  ctx.fillStyle = color;
+  ctx.fillText(text, w/2, h/2+2);
+  const tex = new THREE.CanvasTexture(c); tex.anisotropy = 4;
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthTest:false}));
+  spr.scale.set(w/h*0.9, 0.9, 1);
+  spr.userData.aspect = w/h;
+  return spr;
+}
+function roundRect(ctx,x,y,w,h,r){ ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+/* ---------- Home construction: shared state & helpers ---------- */
+const WALL_H = 3.35, WT = 0.4, WALL_COLOR = '#efe4d2';
+const rand = (a,b)=>a+Math.random()*(b-a);
+const pick = a=>a[(Math.random()*a.length)|0];
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+
+// build state — rebuilt fresh each run by buildHouse()
+const blockAABBs = [];     // everything that stops movement (walls + furniture)
+const wallMeshes = [];     // walls that fade when they'd hide the dad/baby
+const toys = [];
+const solids = [];         // furniture/station collision circles
+const stations = {};
+let tvScreen = null, houseGroup = null;
+const houseBounds = { X0:-23, X1:23, Z0:-8, Z1:22 };
+const spawnDad = new THREE.Vector3(0,0,3), spawnBaby = new THREE.Vector3(-13,0,1);
+function disposeGroup(g){ g.traverse(o=>{ if(o.geometry) o.geometry.dispose();
+  if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{ if(m.map) m.map.dispose(); m.dispose(); }); } }); }
+
+// wall builders (added into the current houseGroup)
+function addWallMesh(m, aabb){ m.material.transparent=true; m.renderOrder=1; houseGroup.add(m); wallMeshes.push(m); blockAABBs.push(aabb); }
+function wallX(z, x1, x2){ const cx=(x1+x2)/2, len=Math.abs(x2-x1); if(len<0.06) return;
+  const m=box(len, WALL_H, WT, WALL_COLOR); m.position.set(cx, WALL_H/2, z);
+  addWallMesh(m, {minX:cx-len/2, maxX:cx+len/2, minZ:z-WT/2, maxZ:z+WT/2}); }
+function wallZ(x, z1, z2){ const cz=(z1+z2)/2, len=Math.abs(z2-z1); if(len<0.06) return;
+  const m=box(WT, WALL_H, len, WALL_COLOR); m.position.set(x, WALL_H/2, cz);
+  addWallMesh(m, {minX:x-WT/2, maxX:x+WT/2, minZ:cz-len/2, maxZ:cz+len/2}); }
+function carve(a, b, doors){ let segs=[[a,b]];
+  doors.forEach(([d0,d1])=>{ segs=segs.flatMap(([s,e])=>{ if(d1<=s||d0>=e) return [[s,e]];
+    const o=[]; if(d0>s) o.push([s,d0]); if(d1<e) o.push([d1,e]); return o; }); });
+  return segs; }
+function wallXDoors(z, x1, x2, doors){ carve(x1,x2,doors).forEach(s=>wallX(z, s[0], s[1])); }
+function wallZDoors(x, z1, z2, doors){ carve(z1,z2,doors).forEach(s=>wallZ(x, s[0], s[1])); }
+
+function addToy(g, x, z, baseY){ g.position.set(x, baseY, z); houseGroup.add(g); toys.push({x, z, mesh:g, baseY}); }
+function label(text, y){ const s=makeSprite(text); s.position.y=y; s.scale.multiplyScalar(0.85); s.renderOrder=10; return s; }
+
+/* ---------- Furniture builders (footprints measured at placement) ---------- */
+function sofa(c){ const g=new THREE.Group();
+  const base=box(2.6,0.6,1.1,c); base.position.y=0.4; g.add(base);
+  const back=box(2.6,0.8,0.3,c); back.position.set(0,0.8,-0.4); g.add(back);
+  [-1.15,1.15].forEach(x=>{ const a=box(0.3,0.7,1.1,c); a.position.set(x,0.55,0); g.add(a); }); return g; }
+function table(w,d,c){ const g=new THREE.Group();
+  const top=box(w,0.18,d,c); top.position.y=0.9; g.add(top);
+  const hw=w/2-0.2, hd=d/2-0.2;
+  [[-hw,-hd],[hw,-hd],[-hw,hd],[hw,hd]].forEach(([x,z])=>{ const l=box(0.16,0.9,0.16,'#7a5c3a'); l.position.set(x,0.45,z); g.add(l); }); return g; }
+function chair(c){ const g=new THREE.Group();
+  const s=box(0.7,0.12,0.7,c); s.position.y=0.55; g.add(s);
+  const b=box(0.7,0.7,0.12,c); b.position.set(0,0.9,-0.3); g.add(b);
+  [[-0.28,-0.28],[0.28,-0.28],[-0.28,0.28],[0.28,0.28]].forEach(([x,z])=>{ const l=box(0.1,0.55,0.1,'#6a4f32'); l.position.set(x,0.27,z); g.add(l); }); return g; }
+function plant(){ const g=new THREE.Group();
+  const pot=cyl(0.35,0.28,0.5,'#b5654a'); pot.position.y=0.25; g.add(pot);
+  const f=sph(0.55,'#4f9d5a'); f.position.y=0.95; f.scale.y=1.3; g.add(f); return g; }
+function bookshelf(c){ const g=new THREE.Group();
+  const body=box(1.8,2.6,0.6,c); body.position.y=1.3; g.add(body);
+  [0.5,1.2,1.9].forEach(y=>{ const s=box(1.7,0.08,0.55,'#e6d6b8'); s.position.y=y; g.add(s); });
+  ['#c0392b','#2e86c1','#27ae60','#e67e22'].forEach((bc,i)=>{ const bk=box(0.16,0.5,0.4,bc); bk.position.set(-0.6+i*0.34,1.55,0); g.add(bk); }); return g; }
+function bed(){ const g=new THREE.Group();
+  const frame=box(3,0.5,4.2,'#8a6a45'); frame.position.y=0.35; g.add(frame);
+  const m=box(2.8,0.4,4,'#f0e6d2'); m.position.y=0.75; g.add(m);
+  const pillow=box(2.4,0.25,0.8,'#ffffff'); pillow.position.set(0,0.95,-1.4); g.add(pillow);
+  const head=box(3,1.1,0.3,'#6f5436'); head.position.set(0,0.9,-2.05); g.add(head); return g; }
+function wardrobe(c){ const g=new THREE.Group();
+  const body=box(2,3,1,c); body.position.y=1.5; g.add(body);
+  const split=box(0.06,2.8,1.02,'#5a4630'); split.position.y=1.5; g.add(split);
+  [-0.5,0.5].forEach(x=>{ const h=box(0.1,0.3,0.1,'#d8c088'); h.position.set(x,1.5,0.55); g.add(h); }); return g; }
+function dresser(c){ const g=new THREE.Group();
+  const body=box(2.2,1.3,1,c); body.position.y=0.65; g.add(body);
+  [0.4,0.95].forEach(y=>{ const d=box(2,0.4,0.06,'#e6d6b8'); d.position.set(0,y,0.52); g.add(d); }); return g; }
+function bathtub(){ const g=new THREE.Group();
+  const shell=box(3,0.9,1.6,'#ffffff'); shell.position.y=0.55; g.add(shell);
+  const water=box(2.6,0.1,1.2,'#8fd3ff'); water.position.y=0.95; g.add(water); return g; }
+function toilet(){ const g=new THREE.Group();
+  const base=cyl(0.42,0.34,0.7,'#ffffff'); base.position.y=0.35; g.add(base);
+  const seat=cyl(0.5,0.5,0.15,'#f2f2f2'); seat.position.y=0.72; g.add(seat);
+  const tank=box(0.9,0.9,0.32,'#ffffff'); tank.position.set(0,0.9,-0.5); g.add(tank); return g; }
+function sink(){ const g=new THREE.Group();
+  const ped=cyl(0.28,0.32,1,'#ffffff'); ped.position.y=0.5; g.add(ped);
+  const basin=box(1,0.4,0.8,'#ffffff'); basin.position.y=1.05; g.add(basin); return g; }
+function lamp(){ const g=new THREE.Group();
+  const pole=cyl(0.06,0.06,1.8,'#555'); pole.position.y=0.9; g.add(pole);
+  const shade=cyl(0.45,0.3,0.5,'#ffe6a0'); shade.position.y=1.9; g.add(shade); return g; }
+function mirror(){ const g=new THREE.Group();
+  const frame=box(0.9,1.1,0.08,'#8a7052'); g.add(frame);
+  const glass=box(0.74,0.94,0.02,'#bfe3f0'); glass.position.z=0.05; g.add(glass); return g; }
+function shower(){ const g=new THREE.Group();
+  const tray=cyl(0.62,0.62,0.12,'#dfeef5'); tray.position.y=0.06; g.add(tray);
+  const pole=cyl(0.05,0.05,2.1,'#9fb3bb'); pole.position.set(0,1.1,-0.5); g.add(pole);
+  const head=cyl(0.16,0.1,0.12,'#9fb3bb'); head.position.set(0,2.05,-0.5); g.add(head);
+  const gA=box(0.06,1.9,1.3,'#bcdff0'); gA.material.transparent=true; gA.material.opacity=0.5; gA.position.set(-0.62,0.95,0); g.add(gA);
+  const gB=box(1.3,1.9,0.06,'#bcdff0'); gB.material.transparent=true; gB.material.opacity=0.5; gB.position.set(0,0.95,-0.62); g.add(gB);
+  return g; }
+function blockTower(){ const g=new THREE.Group();
+  ['#e5533d','#f2c14e','#4f9dde'].forEach((c,i)=>{ const b=box(0.5,0.5,0.5,c); b.position.y=0.25+i*0.5; g.add(b); }); return g; }
+function rattle(){ const g=new THREE.Group();
+  const s=cyl(0.08,0.08,0.7,'#c9a24b'); s.position.y=0.35; g.add(s);
+  const k=sph(0.28,'#8ed1e6'); k.position.y=0.8; g.add(k); return g; }
+const TOY_KINDS = [
+  {build:blockTower, base:0}, {build:()=>sph(0.5,'#ff6b97'), base:0.5},
+  {build:rattle, base:0}, {build:()=>sph(0.45,'#7ed957'), base:0.45},
+];
+function buildFoodGroup(){ const g=new THREE.Group();
+  const counter=box(2.4,1.1,1.2,'#b56b3d'); counter.position.y=0.55; g.add(counter);
+  const top=box(2.5,0.16,1.3,'#e9d8b8'); top.position.y=1.18; g.add(top);
+  const pot=cyl(0.35,0.3,0.4,'#5a5a66'); pot.position.set(-0.5,1.45,0); g.add(pot);
+  const plate=cyl(0.4,0.4,0.06,'#fff'); plate.position.set(0.55,1.29,0); g.add(plate);
+  const food=sph(0.2,'#ff6b3d'); food.scale.y=0.6; food.position.set(0.55,1.4,0); g.add(food);
+  return g; }
+function buildFridgeGroup(){ const g=new THREE.Group();
+  const fr=box(1.4,3,1.2,'#eef3f6'); fr.position.y=1.5; g.add(fr);
+  const seam=box(1.42,0.06,1.22,'#cdd6da'); seam.position.y=1.7; g.add(seam);
+  const h1=box(0.1,0.5,0.1,'#9aa6ab'); h1.position.set(0.55,2.3,0.62); g.add(h1);
+  const h2=box(0.1,0.5,0.1,'#9aa6ab'); h2.position.set(0.55,1.1,0.62); g.add(h2);
+  return g; }
+function buildTVGroup(){ const g=new THREE.Group();
+  const stand=box(2,0.7,0.9,'#6b5a48'); stand.position.y=0.35; g.add(stand);
+  const post=box(0.3,0.7,0.3,'#40342a'); post.position.y=1.0; g.add(post);
+  const screen=box(2.6,1.6,0.12,'#20242e','#101318'); screen.position.y=2.1; g.add(screen);
+  const frame=box(2.9,1.9,0.08,'#2a2f3a'); frame.position.set(0,2.1,-0.05); g.add(frame);
+  g.userData.screen=screen; return g; }
+function buildChangingGroup(){ const g=new THREE.Group();
+  const tbl=box(2.2,1.2,1.3,'#c98fb0'); tbl.position.y=0.6; g.add(tbl);
+  const pad=box(2,0.3,1.1,'#8fd3ff'); pad.position.y=1.35; g.add(pad);
+  const rail=box(2.2,0.5,0.1,'#a86f92'); rail.position.set(0,1.6,-0.6); g.add(rail);
+  const stack=box(0.5,0.4,0.5,'#fff'); stack.position.set(0.7,1.7,0); g.add(stack);
+  return g; }
+function buildWorkbenchGroup(){ const g=new THREE.Group();
+  const bench=box(2.4,1.1,1.2,'#7a6a52'); bench.position.y=0.55; g.add(bench);
+  const top=box(2.5,0.16,1.3,'#9a8768'); top.position.y=1.18; g.add(top);
+  const vise=box(0.4,0.4,0.4,'#5a5a66'); vise.position.set(-0.7,1.4,0); g.add(vise);
+  const handle=box(0.6,0.14,0.14,'#c0392b'); handle.position.set(0.6,1.35,0); handle.rotation.z=0.5; g.add(handle);
+  const head2=box(0.16,0.34,0.3,'#888'); head2.position.set(0.78,1.55,0); g.add(head2);
+  return g; }
+function cribGroup(){ const g=new THREE.Group();
+  const base=box(2.6,0.7,1.6,'#c79a63'); base.position.y=0.55; g.add(base);
+  const mattress=box(2.2,0.22,1.3,'#f7d9e6'); mattress.position.y=0.95; g.add(mattress);
+  [[-1.2,-0.7],[1.2,-0.7],[-1.2,0.7],[1.2,0.7]].forEach(([x,z])=>{
+    const p=box(0.14,1.2,0.14,'#e6c79a'); p.position.set(x,1.0,z); g.add(p); });
+  return g; }
+
+/* ---------- Extra floor props & wall decor (fills rooms out, no-collision items don't block movement) ---------- */
+function sideTable(c){ const g=new THREE.Group();
+  const top=box(0.6,0.08,0.6,c); top.position.y=0.55; g.add(top);
+  [[-0.24,-0.24],[0.24,-0.24],[-0.24,0.24],[0.24,0.24]].forEach(([x,z])=>{ const l=box(0.07,0.55,0.07,'#6a4f32'); l.position.set(x,0.275,z); g.add(l); }); return g; }
+function nightstand(c){ const g=new THREE.Group();
+  const body=box(0.7,0.7,0.55,c); body.position.y=0.35; g.add(body);
+  const knob=sph(0.04,'#e6d6a8'); knob.position.set(0,0.35,0.29); g.add(knob); return g; }
+function cabinet(c){ const g=new THREE.Group();
+  const body=box(1.5,1.0,0.55,c); body.position.y=0.5; g.add(body);
+  const top=box(1.55,0.06,0.6,'#e9d8b8'); top.position.y=1.03; g.add(top);
+  [-0.32,0.32].forEach(x=>{ const h=box(0.05,0.05,0.06,'#8a8a8a'); h.position.set(x,0.5,0.3); g.add(h); }); return g; }
+function basket(c){ const g=new THREE.Group();
+  const b=cyl(0.32,0.26,0.4,c); b.position.y=0.2; g.add(b); return g; }
+function coatRack(){ const g=new THREE.Group();
+  const pole=cyl(0.05,0.05,1.7,'#6a4f32'); pole.position.y=0.85; g.add(pole);
+  const base=cyl(0.32,0.32,0.06,'#4a3a24'); base.position.y=0.03; g.add(base);
+  [0,2.1,4.2].forEach(ang=>{ const h=box(0.2,0.05,0.05,'#3a2a1a'); h.position.set(Math.cos(ang)*0.15,1.45,Math.sin(ang)*0.15); h.rotation.y=ang; g.add(h); }); return g; }
+function painting(fc, ac){ const g=new THREE.Group();
+  const frame=box(0.95,0.72,0.06,fc); g.add(frame);
+  const art=box(0.76,0.54,0.02,ac); art.position.z=0.035; g.add(art); return g; }
+function wallClock(){ const g=new THREE.Group();
+  const rim=cyl(0.3,0.3,0.05,'#3a2f24'); rim.rotation.x=Math.PI/2; g.add(rim);
+  const face=cyl(0.26,0.26,0.03,'#f5ede0'); face.rotation.x=Math.PI/2; face.position.z=0.02; g.add(face);
+  const hand=box(0.03,0.16,0.02,'#2a2a2a'); hand.position.set(0,0.05,0.05); g.add(hand); return g; }
+function wallShelfDecor(colors){ const g=new THREE.Group();
+  const plank=box(1.3,0.06,0.26,'#8a6a45'); g.add(plank);
+  colors.forEach((c,i)=>{ const h=rand(0.2,0.32); const b=box(0.18,h,0.18,c); b.position.set(-0.44+i*0.3,0.03+h/2,0); g.add(b); });
+  return g; }
+function towelRack(){ const g=new THREE.Group();
+  const bar=cyl(0.03,0.03,0.7,'#c9c2b4'); bar.rotation.z=Math.PI/2; g.add(bar);
+  const towel=box(0.5,0.55,0.05,pick(['#8fd3ff','#ffd58a','#c9a0dc'])); towel.position.set(0,-0.32,0.05); g.add(towel); return g; }
+function addWallDecor(mesh, x, z, y, rotY){ mesh.position.set(x,y,z); if(rotY) mesh.rotation.y=rotY; houseGroup.add(mesh); return mesh; }
+function buildMopGroup(){ const g=new THREE.Group();
+  const bucket=cyl(0.32,0.26,0.5,'#7fa8c9'); bucket.position.y=0.25; g.add(bucket);
+  const rim=cyl(0.34,0.34,0.05,'#5a7a9a'); rim.position.y=0.5; g.add(rim);
+  const water=cyl(0.28,0.28,0.04,'#bcdff0'); water.position.y=0.49; g.add(water);
+  const stick=cyl(0.04,0.04,1.5,'#c9a24b'); stick.position.set(0.22,1.05,0); stick.rotation.z=0.18; g.add(stick);
+  const head=box(0.3,0.26,0.12,'#e8e0c8'); head.position.set(0.28,0.32,0); head.rotation.z=0.18; g.add(head);
+  return g; }
+function messBlob(){ const g=new THREE.Group();                       // extra-visible: bright puddle + floating marker
+  const c1='#c3e04a', c2='#8fa02a', c3='#eef5a8';
+  const puddle=new THREE.Mesh(new THREE.CircleGeometry(0.6,20), new THREE.MeshLambertMaterial({color:c1,emissive:c1,emissiveIntensity:0.25}));
+  puddle.rotation.x=-Math.PI/2; puddle.position.y=0.015; g.add(puddle);
+  const b1=sph(0.4,c1); b1.scale.y=0.22; b1.position.set(0,0.08,0); g.add(b1);
+  const b2=sph(0.24,c2); b2.scale.y=0.2; b2.position.set(0.32,0.06,0.16); g.add(b2);
+  const b3=sph(0.18,c3); b3.scale.y=0.18; b3.position.set(-0.26,0.06,0.18); g.add(b3);
+  const shine=sph(0.09,'#ffffff'); shine.position.set(-0.1,0.17,-0.06); g.add(shine);
+  const marker=makeSprite('🤢',{bg:null,font:46}); marker.position.y=0.85; marker.scale.multiplyScalar(0.85); marker.renderOrder=10;
+  g.add(marker); g.userData.marker=marker;
+  return g; }
+
+/* ---------- Procedural placement helpers ---------- */
+function addProp(mesh, x, z, hx, hz, rotY){
+  mesh.position.set(x,0,z); if(rotY) mesh.rotation.y=rotY; houseGroup.add(mesh);
+  blockAABBs.push({minX:x-hx, maxX:x+hx, minZ:z-hz, maxZ:z+hz});
+  return mesh;
+}
+function addPropOriented(mesh, x, z, localHx, localHz, rotY){
+  const swapped = Math.abs(Math.abs(rotY||0)-Math.PI/2) < 0.01;
+  return addProp(mesh, x, z, swapped?localHz:localHx, swapped?localHx:localHz, rotY);
+}
+function addStation(key, x, z, group, labelText, labelY, rotY){
+  group.position.set(x, 0, z); if(rotY) group.rotation.y=rotY;
+  group.add(label(labelText, labelY));
+  houseGroup.add(group);
+  stations[key] = {group, x, z, radius:1.9};
+  solids.push({x, z, r:1.6});
+  return group;
+}
+// every room now has exactly one door (to the hallway); all its other walls are door-free.
+// outer is shuffled so different rooms don't all deterministically favor the same wall.
+function sidesFor(room){
+  const inner=[room.doorSide];
+  const outer=shuffle(['N','S','E','W'].filter(s=>s!==room.doorSide));
+  return {outer, inner};
+}
+const SIDE_ROT = {N:0, S:Math.PI, W:Math.PI/2, E:-Math.PI/2};
+function wallPos(room, side, t, out){                // t: 0..1 along the wall, out: inward distance from it
+  const {minX,maxX,minZ,maxZ}=room, lerp=(a,b,u)=>a+(b-a)*u, rot=SIDE_ROT[side];
+  if(side==='N') return {x:lerp(minX+1,maxX-1,t), z:minZ+out, rot};
+  if(side==='S') return {x:lerp(minX+1,maxX-1,t), z:maxZ-out, rot};
+  if(side==='W') return {x:minX+out, z:lerp(minZ+1,maxZ-1,t), rot};
+  return {x:maxX-out, z:lerp(minZ+1,maxZ-1,t), rot};
+}
+function edgeT(){ return Math.random()<0.5 ? rand(0.08,0.22) : rand(0.78,0.92); } // near a corner, clear of any doorway
+// a wall-mounted decor spot: dead-center on an unused outer wall (always door-free), else a
+// safe corner of an unused inner wall, else any wall's corner as a last resort. Returns .side too
+// so callers can exclude it from a following call and avoid stacking two items in one spot.
+function centeredWallDecorSpot(room, excludeSides, outDist){
+  const {outer, inner} = sidesFor(room);
+  const outCandidates = outer.filter(s=>!excludeSides.includes(s));
+  if(outCandidates.length){ const side=pick(outCandidates); return Object.assign(wallPos(room, side, 0.5, outDist), {side}); }
+  const inCandidates = inner.filter(s=>!excludeSides.includes(s));
+  if(inCandidates.length){ const side=pick(inCandidates); return Object.assign(wallPos(room, side, edgeT(), outDist), {side}); }
+  const side = pick(['N','S','E','W']);
+  return Object.assign(wallPos(room, side, edgeT(), outDist), {side});
+}
+function addToys(room, count, spread){
+  shuffle(TOY_KINDS.slice()).slice(0,count).forEach(k=>{
+    addToy(k.build(), room.cx+rand(-spread,spread), room.cz+rand(-spread,spread), k.base);
+  });
+}
+function addRug(room, color, frac){
+  const rug=new THREE.Mesh(new THREE.CircleGeometry(Math.min(room.w,room.h)*frac, 32), new THREE.MeshLambertMaterial({color}));
+  rug.rotation.x=-Math.PI/2; rug.position.set(room.cx, 0.02, room.cz); rug.receiveShadow=true; houseGroup.add(rug);
+}
+// a real exterior-facing window for this room: prefers a true outside wall not already used by its
+// main furniture (room.primarySide/primaryT, set by each room-type builder); falls back to the
+// opposite corner of that same wall when it's the room's only exterior side, so nothing hangs over it
+function furnishWindow(room){
+  const sides = room.exteriorSides;
+  if(!sides || !sides.length) return;
+  const alt = sides.filter(s=>s!==room.primarySide);
+  let side, t;
+  if(alt.length){ side=pick(alt); t=0.5; }
+  else if(room.primarySide){ side=room.primarySide; t = (room.primaryT!==undefined && room.primaryT<0.5) ? rand(0.7,0.86) : rand(0.14,0.3); }
+  else { side=sides[0]; t=0.5; }
+  const p = wallPos(room, side, t, 0.05);
+  const horiz = (side==='N'||side==='S');
+  const w = horiz ? box(2.4,1.4,0.12,'#bfe6ff','#6fb7e8') : box(0.12,1.4,2.4,'#bfe6ff','#6fb7e8');
+  w.position.set(p.x, 1.75, p.z); houseGroup.add(w);
+}
+function bathroomTileMaterial(room){
+  const c=document.createElement('canvas'); c.width=64; c.height=64;
+  const ctx=c.getContext('2d');
+  ctx.fillStyle='#eef6f9'; ctx.fillRect(0,0,64,64);
+  ctx.fillStyle='#7fb0c9'; ctx.fillRect(0,0,31,31); ctx.fillRect(32,32,31,31);
+  ctx.strokeStyle='#4d7690'; ctx.lineWidth=3;
+  ctx.strokeRect(1,1,62,62);
+  ctx.beginPath(); ctx.moveTo(32,0); ctx.lineTo(32,64); ctx.moveTo(0,32); ctx.lineTo(64,32); ctx.stroke();
+  const tex=new THREE.CanvasTexture(c);
+  tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.magFilter=THREE.NearestFilter;
+  tex.repeat.set(Math.max(1,Math.round(room.w/1.6)), Math.max(1,Math.round(room.h/1.6)));
+  return new THREE.MeshLambertMaterial({map:tex});
+}
+
+/* ---------- Room-type furnishing plans ---------- */
+function buildLiving(room){
+  const {outer, inner} = sidesFor(room);
+  const sofaSide = outer[0], sofaT = edgeT();
+  let p = wallPos(room, sofaSide, sofaT, 0.6);
+  addPropOriented(sofa(pick(['#c96f6f','#7fa8c9','#d0a56a'])), p.x, p.z, 1.4, 0.75, p.rot);
+  const paintT = sofaT<0.5 ? rand(0.58,0.72) : rand(0.28,0.42);
+  p = wallPos(room, sofaSide, paintT, 0.08);
+  addWallDecor(painting(pick(['#6a4f32','#8a7052','#3a2f24']), pick(['#e8c68a','#9fc7e0','#d98a9a'])), p.x, p.z, 2.0, p.rot);
+
+  const tvSide = outer[1] || pick(inner);
+  p = wallPos(room, tvSide, edgeT(), 0.5);
+  const tv = buildTVGroup(); tvScreen = tv.userData.screen;
+  addStation('cartoon', p.x, p.z, tv, '📺 TV', 3.4, p.rot);
+
+  const plantSide = pick(inner.length?inner:outer), plantT = edgeT();
+  p = wallPos(room, plantSide, plantT, 0.5);
+  addProp(plant(), p.x, p.z, 0.4, 0.4);
+  const tableT = plantT<0.5 ? rand(0.6,0.75) : rand(0.25,0.4);
+  p = wallPos(room, plantSide, tableT, 0.55);
+  addProp(sideTable(pick(['#a9743f','#8a6a45'])), p.x, p.z, 0.35, 0.35);
+
+  const spot = centeredWallDecorSpot(room, [sofaSide], 0.22);
+  addWallDecor(wallShelfDecor([pick(['#c0392b','#2e86c1']), pick(['#27ae60','#e67e22']), '#f5ede0']), spot.x, spot.z, 1.7, spot.rot);
+
+  const rackSide = pick(inner.length?inner:outer);
+  p = wallPos(room, rackSide, edgeT(), 0.4);
+  addProp(coatRack(), p.x, p.z, 0.32, 0.32);
+
+  addRug(room, '#e08fae', 0.22);
+  addToys(room, 3, Math.min(room.w,room.h)*0.2);
+  room.primarySide=sofaSide; room.primaryT=sofaT;
+}
+function buildKitchen(room){
+  const {outer, inner} = sidesFor(room);
+  const wallSide = outer[0];
+  let p = wallPos(room, wallSide, rand(0.06,0.16), 0.7);
+  addStation('food', p.x, p.z, buildFoodGroup(), '🍎 Kitchen', 2.7, p.rot);
+  p = wallPos(room, wallSide, rand(0.4,0.56), 0.65);
+  addProp(cabinet(pick(['#c9a45a','#b98b52','#9a7a4a'])), p.x, p.z, 0.78, 0.3, p.rot);
+  p = wallPos(room, wallSide, rand(0.84,0.94), 0.65);
+  addStation('milk', p.x, p.z, buildFridgeGroup(), '🍼 Fridge', 3.5, p.rot);
+
+  addProp(table(1.8,1.3,'#b98b52'), room.cx, room.cz, 0.9, 0.65);
+  addProp(chair('#d0a56a'), room.cx, room.cz-1.1, 0.35, 0.35);
+  addProp(chair('#d0a56a'), room.cx, room.cz+1.1, 0.35, 0.35, Math.PI);
+
+  const plantSide = pick(inner.length?inner:outer);
+  p = wallPos(room, plantSide, edgeT(), 0.45);
+  addProp(plant(), p.x, p.z, 0.4, 0.4);
+
+  let spot = centeredWallDecorSpot(room, [wallSide], 0.07);
+  addWallDecor(wallClock(), spot.x, spot.z, 2.1, spot.rot);
+  spot = centeredWallDecorSpot(room, [wallSide, spot.side], 0.22);
+  addWallDecor(wallShelfDecor(['#ffffff', '#8fd3ff', pick(['#e5533d','#7fa8c9'])]), spot.x, spot.z, 1.85, spot.rot);
+  room.primarySide=wallSide; room.primaryT=0.5;                 // food+cabinet+fridge span most of this wall
+}
+function buildBedroom(room){
+  const {outer, inner} = sidesFor(room);
+  const bedSide = outer[0];
+  let p = wallPos(room, bedSide, 0.5, 2.25);
+  addPropOriented(bed(), p.x, p.z, 1.5, 2.25, p.rot);
+
+  const paint = wallPos(room, bedSide, 0.5, 0.08);
+  addWallDecor(painting(pick(['#6a4f32','#3a2f24']), pick(['#c9a0dc','#9fc7e0','#e8c68a'])), paint.x, paint.z, 2.35, paint.rot);
+
+  const tangent = {x:Math.cos(p.rot), z:-Math.sin(p.rot)};
+  addProp(nightstand(pick(['#8a6ab0','#b08a6a','#6a8a9a'])), p.x+tangent.x*2.0, p.z+tangent.z*2.0, 0.35, 0.28, p.rot);
+
+  const s2 = outer[1] || pick(inner);
+  p = wallPos(room, s2, edgeT(), 0.55);
+  addStation('closet', p.x, p.z, wardrobe(pick(['#7a5aa0','#9a6a44','#6a8a9a'])), '🚪 Closet', 3.3, p.rot);
+
+  const dresserSide = pick(inner.length?inner:outer);
+  p = wallPos(room, dresserSide, edgeT(), 0.55);
+  addPropOriented(dresser(pick(['#8a6ab0','#b08a6a'])), p.x, p.z, 1.1, 0.55, p.rot);
+
+  const lampSide = pick(['N','S','E','W'].filter(s=>s!==bedSide));
+  p = wallPos(room, lampSide, edgeT(), 0.5);
+  addProp(lamp(), p.x, p.z, 0.45, 0.45);
+
+  addRug(room, pick(['#e8c68a','#9fc7e0']), 0.2);
+  room.primarySide=bedSide; room.primaryT=0.5;
+}
+function buildPlayroom(room){
+  const {outer, inner} = sidesFor(room);
+  const shelfSide = outer[0], shelfT = edgeT();
+  let p = wallPos(room, shelfSide, shelfT, 0.65);
+  addPropOriented(bookshelf(pick(['#9a6a44','#7a8a6a'])), p.x, p.z, 0.35, 0.9, p.rot);
+
+  const tableSide = outer[1] || pick(inner);
+  p = wallPos(room, tableSide, edgeT(), 0.6);
+  addProp(table(1.4,1.0,'#caa15e'), p.x, p.z, 0.7, 0.5);
+
+  const basketSide = pick(inner.length?inner:outer);
+  p = wallPos(room, basketSide, edgeT(), 0.4);
+  addProp(basket(pick(['#e5533d','#4f9dde','#7ed957'])), p.x, p.z, 0.3, 0.3);
+
+  let spot = centeredWallDecorSpot(room, [shelfSide], 0.2);
+  addWallDecor(wallShelfDecor([pick(['#e5533d','#4f9dde']), pick(['#f2c14e','#7ed957']), '#ffffff']), spot.x, spot.z, 1.55, spot.rot);
+  spot = centeredWallDecorSpot(room, [shelfSide, spot.side], 0.08);
+  addWallDecor(painting(pick(['#e5533d','#4f9dde','#7ed957']), '#ffffff'), spot.x, spot.z, 1.9, spot.rot);
+
+  addRug(room, '#9fb8e0', 0.24);
+  addToys(room, 4, Math.min(room.w,room.h)*0.22);
+  room.primarySide=shelfSide; room.primaryT=shelfT;
+}
+function buildNursery(room){
+  const {outer, inner} = sidesFor(room);
+  const changeSide = outer[0], changeT = edgeT();
+  let p = wallPos(room, changeSide, changeT, 0.7);
+  addStation('diaper', p.x, p.z, buildChangingGroup(), '👶 Changing', 2.7, p.rot);
+
+  const shopSide = outer[1] || pick(inner);
+  p = wallPos(room, shopSide, edgeT(), 0.65);
+  addStation('shop', p.x, p.z, buildWorkbenchGroup(), '🛠️ Workbench', 2.7, p.rot);
+
+  addProp(cribGroup(), room.cx, room.cz, 1.3, 0.8);
+
+  const chairSide = pick(inner.length?inner:outer);
+  p = wallPos(room, chairSide, edgeT(), 0.4);
+  addProp(chair('#a9d0c6'), p.x, p.z, 0.35, 0.35);
+
+  let spot = centeredWallDecorSpot(room, [changeSide, shopSide], 0.2);
+  addWallDecor(wallShelfDecor(['#ffffff','#ffd58a','#a0e3a0']), spot.x, spot.z, 1.6, spot.rot);
+  spot = centeredWallDecorSpot(room, [changeSide, shopSide, spot.side], 0.08);
+  addWallDecor(painting(pick(['#a86f92','#8fd3ff']), pick(['#ffe1b0','#f7d9e6'])), spot.x, spot.z, 1.9, spot.rot);
+
+  addRug(room, '#f7d9e6', 0.18);
+  room.primarySide=changeSide; room.primaryT=changeT;
+}
+function buildBathroom(room){
+  const {outer, inner} = sidesFor(room);
+  const wetSide = outer[0], wetT = edgeT();
+  let p = wallPos(room, wetSide, wetT, 0.8);
+  if(room.area < 105) addPropOriented(shower(), p.x, p.z, 0.65, 0.7, p.rot);
+  else addPropOriented(bathtub(), p.x, p.z, 1.55, 0.85, p.rot);
+
+  const sinkSide = outer[1] || pick(inner);
+  const sinkT = edgeT();
+  p = wallPos(room, sinkSide, sinkT, 0.45);
+  addPropOriented(sink(), p.x, p.z, 0.55, 0.45, p.rot);
+  const pm = wallPos(room, sinkSide, sinkT, 0.06);
+  const mir = mirror(); mir.position.set(pm.x, 1.55, pm.z); mir.rotation.y = pm.rot; houseGroup.add(mir);
+
+  const toiletSide = pick(inner.length?inner:outer);
+  p = wallPos(room, toiletSide, edgeT(), 0.7);
+  addPropOriented(toilet(), p.x, p.z, 0.5, 0.5, p.rot);
+
+  const mopT = sinkT<0.5 ? rand(0.72,0.88) : rand(0.12,0.28);
+  p = wallPos(room, sinkSide, mopT, 0.4);
+  addStation('mop', p.x, p.z, buildMopGroup(), '🧹 Mop', 2.2, p.rot);
+
+  const towel = wallPos(room, wetSide, edgeT(), 0.05);
+  addWallDecor(towelRack(), towel.x, towel.z, 1.3, towel.rot);
+
+  const spot = centeredWallDecorSpot(room, [wetSide, sinkSide], 0.2);
+  addWallDecor(wallShelfDecor(['#ffffff','#bcdff0','#f5ede0']), spot.x, spot.z, 1.7, spot.rot);
+
+  addRug(room, '#e6f4fb', 0.14);
+  room.primarySide=wetSide; room.primaryT=wetT;
+}
+const ROOM_RANK = ['bathroom','playroom','nursery','kitchen','bedroom','living']; // ascending size rank
+const ROOM_TYPES = {
+  bathroom:{floor:'#a9cfe0', build:buildBathroom},
+  playroom:{floor:'#e0c8a4', build:buildPlayroom},
+  nursery: {floor:'#bcd7cf', build:buildNursery},
+  kitchen: {floor:'#d9c39a', build:buildKitchen},
+  bedroom: {floor:'#c3b2dd', build:buildBedroom},
+  living:  {floor:'#c9a97e', build:buildLiving},
+};
+
+function buildFrontDoorGroup(){ const g=new THREE.Group();
+  const frame=box(1.7,2.7,0.16,'#6a4f32'); frame.position.y=1.35; g.add(frame);
+  const panel=box(1.3,2.35,0.08,'#7a2f2f'); panel.position.set(0,1.28,0.06); g.add(panel);
+  const knob=sph(0.06,'#e8d08a'); knob.position.set(0.42,1.2,0.15); g.add(knob);
+  const rug=box(1.5,0.04,0.55,'#c9a24b'); rug.position.set(0,0.02,0.55); g.add(rug);
+  return g; }
+function furnishHallway(hall, zB){
+  const runner=box(Math.min(hall.w-1.5,3.2), 0.03, hall.h-4, '#b06a54');
+  runner.position.set(hall.cx, 0.02, hall.cz); houseGroup.add(runner);
+  addProp(plant(), hall.cx, zB[0]+1.2, 0.4, 0.4);            // decorative, tucked at the dead-end, out of the way
+  const doorGroup = buildFrontDoorGroup();
+  addStation('frontdoor', hall.cx, zB[3]-0.6, doorGroup, '🚪 Front Door', 3.2, Math.PI);
+  // mirror the door on the outside face of the same wall so it reads as a front door from outside the house too
+  const outsideDoor = buildFrontDoorGroup();
+  outsideDoor.position.set(hall.cx, 0, zB[3]+0.35); outsideDoor.rotation.y = 0;
+  houseGroup.add(outsideDoor);
+}
+
+/* ---------- buildHouse(): randomized-but-sensible layout, rebuilt each run ---------- */
+// A central hallway spine runs the full depth of the house; every room opens onto it through
+// exactly one door (so bedroom/bathroom/etc. are single-door private rooms, not a maze of
+// doors to every neighbor), and the hallway ends at a front door out of the house.
+function buildHouse(){
+  if(houseGroup){ scene.remove(houseGroup); disposeGroup(houseGroup); }
+  houseGroup = new THREE.Group(); scene.add(houseGroup);
+  blockAABBs.length=0; wallMeshes.length=0; toys.length=0; solids.length=0;
+  for(const k in stations) delete stations[k];
+  tvScreen = null;
+
+  // randomized room-column widths / row heights -> bathroom always ends up smaller than living room etc.
+  const Lw=rand(9,12), Rw=rand(9,12), Hw=rand(5.5,7.5);
+  const rowH=[rand(10,14), rand(10,14), rand(10,14)];
+  const X0=-(Lw+Hw+Rw)/2, Z0=-3;
+  const xB=[X0, X0+Lw, X0+Lw+Hw, X0+Lw+Hw+Rw];
+  const zB=[Z0, Z0+rowH[0], Z0+rowH[0]+rowH[1], Z0+rowH[0]+rowH[1]+rowH[2]];
+
+  const cells=[];
+  for(let r=0;r<3;r++){
+    const leftExt=['W']; if(r===0) leftExt.push('N'); if(r===2) leftExt.push('S');
+    const rightExt=['E']; if(r===0) rightExt.push('N'); if(r===2) rightExt.push('S');
+    cells.push({minX:xB[0],maxX:xB[1], minZ:zB[r],maxZ:zB[r+1], doorSide:'E', exteriorSides:leftExt,
+      cx:(xB[0]+xB[1])/2, cz:(zB[r]+zB[r+1])/2, w:xB[1]-xB[0], h:zB[r+1]-zB[r]});
+    cells.push({minX:xB[2],maxX:xB[3], minZ:zB[r],maxZ:zB[r+1], doorSide:'W', exteriorSides:rightExt,
+      cx:(xB[2]+xB[3])/2, cz:(zB[r]+zB[r+1])/2, w:xB[3]-xB[2], h:zB[r+1]-zB[r]});
+  }
+  cells.forEach(c=>{ c.area = c.w*c.h; });
+  const hall = {minX:xB[1],maxX:xB[2], minZ:zB[0],maxZ:zB[3], cx:(xB[1]+xB[2])/2, cz:(zB[0]+zB[3])/2, w:xB[2]-xB[1], h:zB[3]-zB[0]};
+
+  // smallest cell gets the smallest-rank room type (bathroom), largest gets the largest (living) — every run, regardless of which side/row it lands on
+  const byArea=[...cells].sort((a,b)=>a.area-b.area);
+  byArea.forEach((cell,i)=>{ cell.type=ROOM_RANK[i]; });
+
+  cells.forEach(room=>{
+    const mat0 = room.type==='bathroom' ? bathroomTileMaterial(room) : new THREE.MeshLambertMaterial({color:ROOM_TYPES[room.type].floor});
+    const f=new THREE.Mesh(new THREE.PlaneGeometry(room.w, room.h), mat0);
+    f.rotation.x=-Math.PI/2; f.position.set(room.cx,0,room.cz); f.receiveShadow=true; houseGroup.add(f);
+  });
+  const hallFloor=new THREE.Mesh(new THREE.PlaneGeometry(hall.w, hall.h), new THREE.MeshLambertMaterial({color:'#d8c9a3'}));
+  hallFloor.rotation.x=-Math.PI/2; hallFloor.position.set(hall.cx,0,hall.cz); hallFloor.receiveShadow=true; houseGroup.add(hallFloor);
+
+  const DOOR=2.8, HD=DOOR/2;
+  const doorAt = center => [center-HD, center+HD];
+  // outer perimeter (south wall doubles as the house's front face — the front door sits flush against it)
+  wallX(zB[0], xB[0], xB[3]); wallX(zB[3], xB[0], xB[3]);
+  wallZ(xB[0], zB[0], zB[3]); wallZ(xB[3], zB[0], zB[3]);
+  // room-column internal dividers: fully closed — these rooms only ever talk to the hallway
+  [0,1].forEach(i=>{ wallX(zB[i+1], xB[0], xB[1]); wallX(zB[i+1], xB[2], xB[3]); });
+  // hallway walls: one door per room, centered on that room's row
+  const rowDoors = [0,1,2].map(r=>doorAt((zB[r]+zB[r+1])/2));
+  wallZDoors(xB[1], zB[0], zB[3], rowDoors);
+  wallZDoors(xB[2], zB[0], zB[3], rowDoors);
+
+  cells.forEach(room=>{ ROOM_TYPES[room.type].build(room); furnishWindow(room); });
+  furnishHallway(hall, zB);
+
+  houseBounds.X0=xB[0]; houseBounds.X1=xB[3]; houseBounds.Z0=zB[0]; houseBounds.Z1=zB[3];
+  const livingRoom = cells.find(c=>c.type==='living'), kitchenRoom = cells.find(c=>c.type==='kitchen');
+  spawnBaby.set(livingRoom.cx, 0, livingRoom.cz);
+  spawnDad.set(kitchenRoom.cx, 0, kitchenRoom.cz);
+
+  const midX=(xB[0]+xB[3])/2, totalW=xB[3]-xB[0], totalD=zB[3]-zB[0];
+  LOOK.set(midX, 0, zB[0]);
+  BASE_VIEW = Math.max(totalW*1.95, totalD*1.55);
+  zoom = 2.1; applyFrustum();          // start zoomed in on the player, not the whole-house overview
+  sunTarget.position.set(midX, 0, (zB[0]+zB[3])/2);
+  sun.position.set(midX+18, 40, (zB[0]+zB[3])/2+6);
+}
+
+/* ---------- Character builders ---------- */
+function buildDad(){
+  const g = new THREE.Group();
+  const legL = box(0.42,0.9,0.42,'#3a4a8a'); legL.position.set(-0.26,0.45,0); g.add(legL);
+  const legR = box(0.42,0.9,0.42,'#3a4a8a'); legR.position.set(0.26,0.45,0); g.add(legR);
+  const body = box(1.15,1.15,0.75,'#4f7ad6'); body.position.y=1.5; g.add(body);
+  const armL = box(0.3,1,0.3,'#4f7ad6'); armL.position.set(-0.72,1.55,0); g.add(armL);
+  const armR = box(0.3,1,0.3,'#4f7ad6'); armR.position.set(0.72,1.55,0); g.add(armR);
+  const head = sph(0.55,'#f3c39a'); head.position.y=2.55; g.add(head);
+  const hair = box(0.95,0.28,0.95,'#4a3320'); hair.position.y=2.95; g.add(hair);
+  // simple face
+  const eyeMat = mat('#222');
+  [-0.2,0.2].forEach(x=>{ const e=new THREE.Mesh(new THREE.SphereGeometry(0.07,8,8),eyeMat);
+    e.position.set(x,2.6,0.5); g.add(e); });
+  g.userData.legL = legL; g.userData.legR = legR;
+  g.userData.arms = [armL, armR];
+  return g;
+}
+function buildBaby(){
+  const g = new THREE.Group();
+  const mat0 = new THREE.Mesh(new THREE.CylinderGeometry(1.15,1.15,0.12,24), new THREE.MeshLambertMaterial({color:'#9be0d6'}));
+  mat0.position.y=0.06; mat0.receiveShadow=true; g.add(mat0);
+  const body = sph(0.55,'#ffe1b0'); body.scale.set(1,0.8,1); body.position.y=0.55; g.add(body);
+  const diap = new THREE.Mesh(new THREE.SphereGeometry(0.5,16,12,0,Math.PI*2,Math.PI*0.5,Math.PI*0.5), mat('#fff'));
+  diap.position.y=0.5; g.add(diap);
+  const head = sph(0.5,'#ffe1b0'); head.position.y=1.15; g.add(head);
+  const curl = sph(0.12,'#6b4a2a'); curl.position.set(0,1.6,0); g.add(curl);
+  const cheekMat = mat('#ff9aa0');
+  [-0.25,0.25].forEach(x=>{ const c=new THREE.Mesh(new THREE.SphereGeometry(0.1,8,8),cheekMat);
+    c.position.set(x,1.05,0.42); g.add(c); });
+  const eyeMat = mat('#3a2b2b');
+  [-0.18,0.18].forEach(x=>{ const e=new THREE.Mesh(new THREE.SphereGeometry(0.06,8,8),eyeMat);
+    e.position.set(x,1.2,0.44); g.add(e); });
+  g.userData.body = body; g.userData.head = head; g.userData.mat = mat0;
+  return g;
+}
+
+/* ---------- Actors ---------- */
+buildHouse();
+const dad = buildDad(); dad.position.copy(spawnDad); scene.add(dad);
+const baby = buildBaby(); baby.position.copy(spawnBaby); scene.add(baby);
+
+// carry icon above dad's head
+let carrySprite = null;
+function setCarrySprite(txt){
+  if(carrySprite){ dad.remove(carrySprite); carrySprite.material.map.dispose(); carrySprite.material.dispose(); carrySprite=null; }
+  if(txt){ carrySprite = makeSprite(txt,{bg:null,font:64}); carrySprite.position.set(0,3.5,0);
+    carrySprite.scale.set(1.3,1.3,1.3); carrySprite.renderOrder=10; dad.add(carrySprite); }
+}
+// tossed-away items: a quick arc + fade, purely cosmetic
+const thrownItems = [];
+function discardCarrying(){
+  if(S.mode!=='play' || !S.carrying) return;
+  const spr = makeSprite(CARRY_ICON[S.carrying], {bg:null, font:60});
+  spr.scale.set(1.1,1.1,1.1); spr.renderOrder=10;
+  spr.position.set(dad.position.x, dad.position.y+3.3, dad.position.z);
+  scene.add(spr);
+  const ang = dad.rotation.y + (Math.random()-0.5)*0.6;
+  thrownItems.push({mesh:spr, vx:Math.sin(ang)*3.2, vz:Math.cos(ang)*3.2, vy:4.2, life:0.9});
+  Audio.error();
+  S.carrying = null; setCarrySprite(null);
+}
+function updateThrownItems(dt){
+  for(let i=thrownItems.length-1; i>=0; i--){
+    const it = thrownItems[i];
+    it.vy -= 9*dt;
+    it.mesh.position.x += it.vx*dt; it.mesh.position.z += it.vz*dt; it.mesh.position.y += it.vy*dt;
+    it.life -= dt;
+    it.mesh.material.opacity = Math.max(0, it.life/0.9);
+    if(it.life<=0 || it.mesh.position.y<0){
+      scene.remove(it.mesh); it.mesh.material.map.dispose(); it.mesh.material.dispose();
+      thrownItems.splice(i,1);
+    }
+  }
+}
+// baby mood sprite
+let moodSprite = makeSprite('🙂',{bg:null,font:80}); moodSprite.position.set(0,2.3,0);
+moodSprite.scale.set(1.5,1.5,1.5); moodSprite.renderOrder=10; baby.add(moodSprite);
+let lastMood = '🙂';
+function setMood(m){ if(m===lastMood) return; lastMood=m;
+  const old = moodSprite; baby.remove(old); old.material.map.dispose(); old.material.dispose();
+  moodSprite = makeSprite(m,{bg:null,font:80}); moodSprite.position.set(0,2.3,0);
+  moodSprite.scale.set(1.5,1.5,1.5); moodSprite.renderOrder=10; baby.add(moodSprite);
+}
+
+/* ---------- Audio (procedural, Web Audio) ---------- */
+const Audio = (function(){
+  let ctx=null, master=null, padGain=null, muted=false, started=false, lp=null;
+  function init(){
+    if(started) return; started=true;
+    ctx = new (window.AudioContext||window.webkitAudioContext)();
+    master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
+    // delay for space
+    const delay = ctx.createDelay(); delay.delayTime.value=0.33;
+    const fb = ctx.createGain(); fb.gain.value=0.28;
+    delay.connect(fb); fb.connect(delay); delay.connect(master);
+    // ambient pad
+    padGain = ctx.createGain(); padGain.gain.value = 0.0;
+    lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=700;
+    padGain.connect(lp); lp.connect(master); lp.connect(delay);
+    // slow filter LFO
+    const lfo = ctx.createOscillator(); lfo.frequency.value=0.05;
+    const lfoG = ctx.createGain(); lfoG.gain.value=350;
+    lfo.connect(lfoG); lfoG.connect(lp.frequency); lfo.start();
+    // chord voices (gentle Cmaj9-ish)
+    [130.81,164.81,196.00,246.94,293.66].forEach((f,i)=>{
+      const o = ctx.createOscillator(); o.type = i%2? 'sine':'triangle';
+      o.frequency.value = f; o.detune.value = (i-2)*4;
+      const g = ctx.createGain(); g.gain.value = 0.12/(i*0.5+1);
+      o.connect(g); g.connect(padGain); o.start();
+    });
+    padGain.gain.linearRampToValueAtTime(muted?0:0.5, ctx.currentTime+3);
+  }
+  function blip(freq, dur, type, vol, glideTo){
+    if(!ctx||muted) return;
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.type=type||'sine'; o.frequency.setValueAtTime(freq, ctx.currentTime);
+    if(glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, ctx.currentTime+dur);
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(vol||0.25, ctx.currentTime+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+dur);
+    o.connect(g); g.connect(master); o.start(); o.stop(ctx.currentTime+dur+0.05);
+  }
+  return {
+    start(){ init(); if(ctx.state==='suspended') ctx.resume(); },
+    chime(){ blip(880,0.18,'sine',0.22); setTimeout(()=>blip(1318,0.25,'sine',0.2),90); },
+    poo(){ blip(300,0.14,'square',0.14,180); },
+    buy(){ blip(660,0.1,'triangle',0.2); setTimeout(()=>blip(990,0.16,'triangle',0.2),80); },
+    cry(){ blip(520,0.5,'sawtooth',0.12,180); },
+    error(){ blip(200,0.18,'sawtooth',0.15,120); },
+    setMuted(m){ muted=m; if(padGain&&ctx) padGain.gain.linearRampToValueAtTime(m?0:0.5, ctx.currentTime+0.4); },
+    get muted(){ return muted; }
+  };
+})();
+
+/* ---------- Game state ---------- */
+const NEEDS = ['food','milk','diaper','cartoon'];
+const NEED_ICON = {food:'🍎',milk:'🍼',diaper:'👶',cartoon:'📺',mop:'🧹'};
+const NEED_LABEL = {diaper:'a clean diaper', mop:'the mop'};
+const CARRY_ICON = {food:'🍲',milk:'🍼',diaper:'🧷',mop:'🧹'};
+const BASE_DECAY = {food:2.1, milk:2.3, diaper:1.7, cartoon:2.7};
+const UPGRADES = {
+  food:   {icon:'🍲', title:'Tasty Food',    desc:'Baby stays full longer (slower food drain)', base:5},
+  milk:   {icon:'🍼', title:'Bigger Bottle', desc:'Less thirsty (slower milk drain)',           base:5},
+  diaper: {icon:'🧷', title:'Premium Diapers',desc:'Collects more 💩 per change',                base:6},
+  cartoon:{icon:'📺', title:'Fun Cartoons',   desc:'Holds attention longer (slower drain)',      base:5},
+  speed:  {icon:'👟', title:'Quick Steps',   desc:'Dad moves faster around the house',          base:6},
+};
+const GAME_LEN = 180; // seconds until mom returns
+const MOVE_SPEED = 7.2;
+const DIAPER_CHANGE_MAX = 40; // diaper need must have decayed to at most this % before a change is allowed
+
+let S;
+function resetState(){
+  S = {
+    mode:'menu',                       // menu|play|over|win
+    need:{food:100,milk:95,diaper:100,cartoon:88},
+    cry:0,
+    joy:0,                             // topped up by play/cuddles; eases crying
+    poo:0,
+    carrying:null,                     // 'food'|'milk'|'diaper'|'mop'|null
+    holdingBaby:false,
+    cartoonsOn:false, tvTimer:0,
+    lvl:{food:0,milk:0,diaper:0,cartoon:0,speed:0},
+    timeLeft:GAME_LEN,
+    changes:0, cuddles:0,
+    messes:[],                         // active vomit puddles {x,z,mesh,playerInside}
+    vomitTimer: rand(14,26),           // seconds until the baby might throw up
+    slowTimer:0,                       // >0 while Dad's slipping around after stepping in a mess
+  };
+}
+resetState();
+
+function happiness(){ let s=0; NEEDS.forEach(k=>s+=S.need[k]); return s/NEEDS.length; }
+function decayRate(k){
+  let r = BASE_DECAY[k] * Math.pow(0.8, S.lvl[k]);   // upgrades slow decay
+  return r;
+}
+function upgradeCost(k){ return UPGRADES[k].base * (S.lvl[k]+1); }
+function moveSpeed(){
+  let s = MOVE_SPEED * (1 + 0.15*S.lvl.speed);
+  if(S.slowTimer>0) s *= 0.45;                 // slipped in a mess — walking it off
+  return s;
+}
+
+/* ---------- Input ---------- */
+const keys = {};
+window.addEventListener('keydown', e=>{
+  const k = e.key.toLowerCase();
+  if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
+  keys[k]=true;
+  if(S.mode!=='play') return;
+  if(k==='e'){ interact(); }
+  if(k===' '){ toggleHoldBaby(); }
+  if(k==='q'){ discardCarrying(); }
+  if(k==='u'){ toggleShop(); }
+  if(k==='m'){ toggleMute(); }
+});
+window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; });
+
+// isometric movement basis (screen-up = toward far corner)
+const FWD = new THREE.Vector3(-1,0,-1).normalize();
+const RIGHT = new THREE.Vector3(1,0,-1).normalize();
+
+/* ---------- Interaction ---------- */
+function babyDist(){ return Math.hypot(dad.position.x-baby.position.x, dad.position.z-baby.position.z); }
+function nearestStation(){
+  let best=null, bd=Infinity;
+  for(const k in stations){ const s = stations[k];
+    const d = Math.hypot(dad.position.x-s.x, dad.position.z-s.z);
+    if(d < 2.6 && d < bd){ bd=d; best=k; } }
+  return best;
+}
+function nearestMess(){
+  let best=null, bd=Infinity;
+  S.messes.forEach(m=>{ const d=Math.hypot(dad.position.x-m.x, dad.position.z-m.z);
+    if(d < 2.2 && d < bd){ bd=d; best=m; } });
+  return best;
+}
+function cleanMess(m){
+  houseGroup.remove(m.mesh); disposeGroup(m.mesh);
+  const i = S.messes.indexOf(m); if(i>=0) S.messes.splice(i,1);
+  Audio.buy();
+}
+function doStation(k){
+  if(k==='shop'){ openShop(); return; }
+  if(k==='cartoon'){ S.cartoonsOn=true; S.tvTimer=10+S.lvl.cartoon*3; Audio.chime(); return; }
+  if(k==='closet'){ endGame('hide'); return; }        // dad bails and hides — instant, deliberate game over
+  if(k==='frontdoor'){ endGame('leave'); return; }    // dad walks out on the baby entirely
+  if(S.holdingBaby){ Audio.error(); return; }        // hands full holding baby
+  S.carrying=k; setCarrySprite(CARRY_ICON[k]); Audio.chime(); flashCarry();
+}
+function deliverToBaby(){
+  if(S.carrying==='food'){ S.need.food=100; Audio.chime(); }
+  else if(S.carrying==='milk'){ S.need.milk=100; Audio.chime(); }
+  else if(S.carrying==='diaper'){
+    if(S.need.diaper > DIAPER_CHANGE_MAX){ Audio.error(); return; }   // not dirty enough yet — keep the diaper
+    const dirtiness = 1 - S.need.diaper/DIAPER_CHANGE_MAX;             // 0 right at the threshold, 1 when fully empty
+    const gained = Math.max(1, Math.round((1 + dirtiness*3) * (1 + 0.6*S.lvl.diaper)));
+    S.need.diaper=100;
+    S.poo += gained; S.changes++; popPoo(gained); Audio.poo();
+  }
+  S.carrying=null; setCarrySprite(null);
+}
+function interact(){                                   // the E key
+  const k = nearestStation();
+  const mess = nearestMess();
+  if(S.carrying==='mop' && mess){ cleanMess(mess); return; }
+  const near = !S.holdingBaby && babyDist() < 2.6;
+  if(S.carrying){
+    if(S.carrying!=='mop' && near){ deliverToBaby(); return; }
+    if(k){ doStation(k); return; }                     // re-grab / toggle / shop
+    Audio.error(); return;
+  }
+  if(k){ doStation(k); return; }
+  Audio.error();
+}
+function toggleHoldBaby(){                              // the Space key
+  if(S.mode!=='play') return;
+  if(S.holdingBaby){                                   // put down at dad's feet
+    S.holdingBaby=false; baby.scale.set(1,1,1);
+    baby.position.set(dad.position.x - Math.sin(dad.rotation.y)*1.1, 0,
+                      dad.position.z - Math.cos(dad.rotation.y)*1.1);
+    baby.userData.mat.visible = true;
+    pickBabyTarget(); Audio.buy();
+  } else {
+    if(S.carrying){ Audio.error(); return; }           // can't hold baby with hands full
+    if(babyDist() < 2.9){ S.holdingBaby=true; S.cuddles++; baby.scale.set(0.9,0.9,0.9);
+      baby.userData.mat.visible = false; Audio.chime(); }
+    else Audio.error();
+  }
+}
+
+/* ---------- HUD refs ---------- */
+const el = {
+  bars:{}, cryFill:document.getElementById('cryFill'), cryPct:document.getElementById('cryPct'),
+  hap:document.getElementById('hapVal'), poo:document.getElementById('pooVal'),
+  time:document.getElementById('timeVal'), prompt:document.getElementById('prompt'),
+  carry:document.getElementById('carry'), topbar:document.getElementById('topbar'),
+};
+document.querySelectorAll('.need').forEach(n=>{ el.bars[n.dataset.k] = {wrap:n, fill:n.querySelector('.bar>i'), bar:n.querySelector('.bar')}; });
+
+function flashCarry(){ el.carry.classList.remove('flash'); void el.carry.offsetWidth; el.carry.classList.add('flash'); }
+function popPoo(n){ el.poo.classList.remove('flash'); void el.poo.offsetWidth; el.poo.classList.add('flash');
+  showFloatPoo(n); }
+function showFloatPoo(n){ /* subtle: reuse prompt line briefly */ }
+
+/* ---------- Shop ---------- */
+const shopEl = document.getElementById('shop');
+const upsEl = document.getElementById('ups');
+function buildShopRows(){
+  upsEl.innerHTML='';
+  Object.keys(UPGRADES).forEach(k=>{
+    const u = UPGRADES[k];
+    const row = document.createElement('div'); row.className='up';
+    row.innerHTML =
+      `<div class="ico">${u.icon}</div>
+       <div class="info"><div class="t">${u.title}</div><div class="d">${u.desc}</div>
+         <div class="lv" data-lv="${k}"></div></div>
+       <button class="buy" data-buy="${k}"></button>`;
+    upsEl.appendChild(row);
+  });
+  upsEl.querySelectorAll('[data-buy]').forEach(btn=>{
+    btn.addEventListener('click', ()=>buyUpgrade(btn.getAttribute('data-buy')));
+  });
+}
+function refreshShop(){
+  document.getElementById('shopPoo').textContent = '💩 '+S.poo;
+  Object.keys(UPGRADES).forEach(k=>{
+    const cost = upgradeCost(k);
+    upsEl.querySelector(`[data-lv="${k}"]`).textContent = `Level ${S.lvl[k]}`;
+    const b = upsEl.querySelector(`[data-buy="${k}"]`);
+    b.textContent = `💩 ${cost}`;
+    b.disabled = S.poo < cost;
+  });
+}
+function buyUpgrade(k){
+  const cost = upgradeCost(k);
+  if(S.poo < cost){ Audio.error(); return; }
+  S.poo -= cost; S.lvl[k]++;
+  Audio.buy(); refreshShop();
+}
+function openShop(){ if(S.mode!=='play') return; buildShopRows(); refreshShop(); shopEl.classList.remove('hidden'); }
+function closeShopFn(){ shopEl.classList.add('hidden'); }
+function toggleShop(){ shopEl.classList.contains('hidden') ? openShop() : closeShopFn(); }
+document.getElementById('shopBtn').addEventListener('click', openShop);
+document.getElementById('closeShop').addEventListener('click', closeShopFn);
+
+/* ---------- Mute ---------- */
+function toggleMute(){ Audio.setMuted(!Audio.muted); document.getElementById('muteBtn').textContent = Audio.muted?'🔇':'🔊'; }
+document.getElementById('muteBtn').addEventListener('click', toggleMute);
+
+/* ---------- Flow ---------- */
+function startGame(){
+  buildHouse();                                    // fresh randomized-but-sensible room layout each run
+  resetState();
+  S.mode='play';
+  dad.position.copy(spawnDad); dad.rotation.y=0;
+  dad.userData.arms[0].rotation.x=0; dad.userData.arms[1].rotation.x=0;
+  baby.position.copy(spawnBaby); baby.rotation.y=0; baby.scale.set(1,1,1);
+  babyTarget.copy(spawnBaby); babyRetime=0; babyPlay=0; babyPlayingToy=null;
+  setCarrySprite(null);
+  thrownItems.forEach(it=>{ scene.remove(it.mesh); it.mesh.material.map.dispose(); it.mesh.material.dispose(); });
+  thrownItems.length = 0;
+  tvScreen.material.emissive.set('#101318');
+  document.getElementById('intro').classList.add('hidden');
+  document.getElementById('gameover').classList.add('hidden');
+  document.getElementById('win').classList.add('hidden');
+  closeShopFn();
+  Audio.start();
+}
+const GAMEOVER_FLAVOR = {
+  lose: {icon:'📞😱', title:'You called Mommy!',
+    body:"The crying got to be too much and you had to phone Mom for backup. She's not thrilled she had to leave her shopping…"},
+  hide: {icon:'🙈🚪', title:'You Hid in the Closet!',
+    body:"The baby needed you and you climbed in with the sweaters instead. The crying didn't stop — you just stopped listening. You're a coward."},
+  leave: {icon:'🚪🌙', title:'You Walked Out?!',
+    body:"You left an infant home alone and strolled out the front door. That's not “popping out for milk,” that's abandonment. Mom is never trusting you with babysitting again."},
+};
+function endGame(reason){                              // 'win' | 'lose' | 'hide'
+  S.mode = reason==='win' ? 'win' : 'over';
+  closeShopFn();
+  const mins = Math.floor((GAME_LEN-S.timeLeft)/60), secs = Math.round((GAME_LEN-S.timeLeft)%60);
+  if(reason==='win'){
+    document.getElementById('winStats').textContent =
+      `Diapers changed: ${S.changes} · Poo banked: 💩${S.poo}`;
+    document.getElementById('win').classList.remove('hidden');
+  } else {
+    const f = GAMEOVER_FLAVOR[reason];
+    document.getElementById('goIcon').textContent = f.icon;
+    document.getElementById('goTitle').textContent = f.title;
+    document.getElementById('goBody').textContent = f.body;
+    document.getElementById('goStats').textContent =
+      `You lasted ${mins}m ${secs}s · ${S.changes} diaper change${S.changes===1?'':'s'}.`;
+    document.getElementById('gameover').classList.remove('hidden');
+  }
+}
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('retryBtn').addEventListener('click', startGame);
+document.getElementById('winBtn').addEventListener('click', startGame);
+
+/* ---------- Collisions ---------- */
+function collide(px, pz, radius){
+  // furniture (circles)
+  for(const s of solids){
+    const dx=px-s.x, dz=pz-s.z, d=Math.hypot(dx,dz), min=s.r+radius;
+    if(d<min && d>1e-4){ px = s.x + dx/d*min; pz = s.z + dz/d*min; }
+  }
+  // walls & furniture (circle vs axis-aligned box); doorway gaps are simply absent walls
+  for(const w of blockAABBs){
+    const cx=Math.max(w.minX,Math.min(px,w.maxX)), cz=Math.max(w.minZ,Math.min(pz,w.maxZ));
+    const dx=px-cx, dz=pz-cz, d=Math.hypot(dx,dz);
+    if(d<radius){
+      if(d>1e-4){ px=cx+dx/d*radius; pz=cz+dz/d*radius; }
+      else {                                            // center inside wall: push out nearest edge
+        const tL=px-w.minX, tR=w.maxX-px, tD=pz-w.minZ, tU=w.maxZ-pz, mn=Math.min(tL,tR,tD,tU);
+        if(mn===tL) px=w.minX-radius; else if(mn===tR) px=w.maxX+radius;
+        else if(mn===tD) pz=w.minZ-radius; else pz=w.maxZ+radius;
+      }
+    }
+  }
+  return [px,pz];
+}
+
+/* ---------- Main loop ---------- */
+const clock = new THREE.Clock();
+let walkPhase = 0;
+
+// baby crawling AI
+let babyTarget = new THREE.Vector3(-13,0,1);
+let babyRetime = 0, babyPlay = 0, babyPlayingToy = null;
+function pickBabyTarget(){
+  babyRetime = 3 + Math.random()*3;
+  babyPlay = 0; babyPlayingToy = null;
+  if(toys.length && Math.random() < 0.55){                 // head to a toy and play
+    const ty = toys[(Math.random()*toys.length)|0];
+    babyTarget.set(ty.x + (Math.random()-0.5)*0.8, 0, ty.z + (Math.random()-0.5)*0.8);
+    babyPlayingToy = ty;
+  } else {                                                  // wander nearby
+    babyTarget.set(baby.position.x + (Math.random()-0.5)*11, 0, baby.position.z + (Math.random()-0.5)*11);
+  }
+  babyTarget.x = Math.max(houseBounds.X0+1.5, Math.min(houseBounds.X1-1.5, babyTarget.x));
+  babyTarget.z = Math.max(houseBounds.Z0+1.5, Math.min(houseBounds.Z1-1.5, babyTarget.z));
+}
+
+// fade walls that sit between the camera and the dad/baby so they never hide the action
+function updateWallFade(dt){
+  const k = Math.min(1, dt*10);
+  for(const m of wallMeshes){
+    let target = 1;
+    for(const p of [dad.position, baby.position]){
+      const front = (m.position.x - p.x) + (m.position.z - p.z);   // >0: wall is on the camera side of the character
+      const horiz = Math.hypot(m.position.x - p.x, m.position.z - p.z);
+      if(front > 0.5 && horiz < 6){ target = Math.min(target, 0.16 + 0.5*(horiz/6)); }
+    }
+    m.material.opacity += (target - m.material.opacity) * k;
+  }
+}
+function tick(){
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+
+  // camera gentle sway idle only? keep static. update actors.
+  if(S.mode==='play'){
+    // ---- dad movement ----
+    const dir = new THREE.Vector3();
+    if(keys['w']||keys['arrowup']) dir.add(FWD);
+    if(keys['s']||keys['arrowdown']) dir.sub(FWD);
+    if(keys['d']||keys['arrowright']) dir.add(RIGHT);
+    if(keys['a']||keys['arrowleft']) dir.sub(RIGHT);
+    const moving = dir.lengthSq()>0;
+    if(moving){
+      dir.normalize();
+      const spd = moveSpeed();
+      let nx = dad.position.x + dir.x*spd*dt, nz = dad.position.z + dir.z*spd*dt;
+      [nx,nz] = collide(nx,nz,0.55);
+      dad.position.x = nx; dad.position.z = nz;
+      dad.rotation.y = Math.atan2(dir.x, dir.z);
+      walkPhase += dt*12*(spd/MOVE_SPEED);
+    } else { walkPhase *= 0.8; }
+    const sw = Math.sin(walkPhase)*0.5*(moving?1:0);
+    dad.userData.legL.rotation.x = sw; dad.userData.legR.rotation.x = -sw;
+    dad.position.y = Math.abs(Math.sin(walkPhase))*0.06*(moving?1:0);
+    if(S.holdingBaby){ dad.userData.arms[0].rotation.x = -1.15; dad.userData.arms[1].rotation.x = -1.15; }
+    else { dad.userData.arms[0].rotation.x = -sw; dad.userData.arms[1].rotation.x = sw; }
+
+    // ---- baby: carried, or crawling & playing ----
+    let playing = false;
+    if(S.holdingBaby){
+      baby.position.x = dad.position.x + Math.sin(dad.rotation.y)*0.55;
+      baby.position.z = dad.position.z + Math.cos(dad.rotation.y)*0.55;
+      baby.position.y = 1.15 + Math.abs(Math.sin(walkPhase))*0.05;
+      baby.rotation.y = dad.rotation.y;
+    } else {
+      const toT = new THREE.Vector3(babyTarget.x-baby.position.x, 0, babyTarget.z-baby.position.z);
+      const distT = toT.length();
+      babyRetime -= dt;
+      if(babyPlay<=0 && (babyRetime<=0 || distT<0.6)){
+        if(babyPlayingToy && distT<1.6){ babyPlay = 2 + Math.random()*2; }   // arrived at a toy
+        else pickBabyTarget();
+      }
+      if(babyPlay>0){
+        babyPlay -= dt; playing = true;
+        S.joy = Math.min(1, S.joy + 0.5*dt);
+        baby.position.y = 0.15 + Math.abs(Math.sin(t*10))*0.12;              // happy bounce
+        baby.rotation.y += dt*2.5;
+        if(babyPlayingToy){                                                  // baby scoots the toy around while playing
+          const ty = babyPlayingToy;
+          if(ty.driftAngle===undefined) ty.driftAngle = Math.random()*Math.PI*2;
+          ty.driftAngle += (Math.random()-0.5)*1.4*dt;
+          ty.x = Math.max(houseBounds.X0+1, Math.min(houseBounds.X1-1, ty.x + Math.cos(ty.driftAngle)*0.55*dt));
+          ty.z = Math.max(houseBounds.Z0+1, Math.min(houseBounds.Z1-1, ty.z + Math.sin(ty.driftAngle)*0.55*dt));
+          ty.mesh.position.x = ty.x; ty.mesh.position.z = ty.z;
+        }
+        if(babyPlay<=0) pickBabyTarget();
+      } else if(distT>0.5){
+        toT.normalize();
+        let bx = baby.position.x + toT.x*1.7*dt, bz = baby.position.z + toT.z*1.7*dt;
+        [bx,bz] = collide(bx,bz,0.5);
+        baby.position.x = bx; baby.position.z = bz;
+        baby.rotation.y = Math.atan2(toT.x, toT.z);
+        baby.position.y = Math.abs(Math.sin(t*7))*0.05;                      // crawl bob
+      } else { baby.position.y *= 0.7; }
+    }
+    toys.forEach(ty=>{ ty.mesh.position.y = ty.baseY + (playing && babyPlayingToy===ty ? Math.abs(Math.sin(t*10))*0.15 : 0); });
+    S.joy = Math.max(0, S.joy - 0.06*dt);
+
+    // ---- occasional throw-up: leaves a mess only the mop can clean ----
+    S.vomitTimer -= dt;
+    if(S.vomitTimer <= 0){
+      if(S.messes.length < 3 && !S.holdingBaby){
+        const mx = Math.max(houseBounds.X0+1, Math.min(houseBounds.X1-1, baby.position.x + rand(-0.5,0.5)));
+        const mz = Math.max(houseBounds.Z0+1, Math.min(houseBounds.Z1-1, baby.position.z + rand(-0.5,0.5)));
+        const mesh = messBlob(); mesh.position.set(mx, 0.01, mz); houseGroup.add(mesh);
+        S.messes.push({x:mx, z:mz, mesh, playerInside:false});
+        Audio.error();
+      }
+      S.vomitTimer = rand(28,52);
+    }
+    // stepping in a mess: drop whatever you're carrying and slip (walk slower for a few seconds)
+    S.messes.forEach(m=>{
+      const inside = Math.hypot(dad.position.x-m.x, dad.position.z-m.z) < 0.55;
+      if(inside && !m.playerInside){
+        if(S.carrying) discardCarrying();
+        S.slowTimer = 5;
+        Audio.error();
+      }
+      m.playerInside = inside;
+      if(m.mesh.userData.marker) m.mesh.userData.marker.position.y = 0.85 + Math.sin(t*4)*0.08; // bob, catches the eye
+    });
+    if(S.slowTimer>0) S.slowTimer = Math.max(0, S.slowTimer-dt);
+
+    // ---- needs decay ----
+    NEEDS.forEach(k=>{
+      if(k==='cartoon' && S.cartoonsOn){
+        S.need.cartoon = Math.min(100, S.need.cartoon + 22*dt);
+        S.tvTimer -= dt; if(S.tvTimer<=0) S.cartoonsOn=false;
+      } else {
+        S.need[k] = Math.max(0, S.need[k] - decayRate(k)*dt);
+      }
+    });
+    tvScreen.material.emissive.set(S.cartoonsOn ? '#7fd0ff' : '#101318');
+
+    // ---- crying / cry-o-meter (eased by play joy and by cuddling) ----
+    let empties = 0; NEEDS.forEach(k=>{ if(S.need[k] <= 0.5) empties++; });
+    const crying = empties>0;
+    if(crying){
+      let fill = (3.5 + empties*3) * (1 - 0.4*S.joy);
+      if(S.holdingBaby){ fill *= 0.5; S.cry = Math.max(0, S.cry - 3.5*dt); } // holding calms a fuss, but many unmet needs still creep up
+      S.cry = Math.min(100, S.cry + fill*dt);
+    } else {
+      S.cry = Math.max(0, S.cry - (13 + S.joy*8 + (S.holdingBaby?6:0))*dt);
+    }
+
+    // baby cry sound + wobble (only when actually distressed, not while soothed)
+    if(crying && !S.holdingBaby){
+      babyCryTimer -= dt;
+      if(babyCryTimer<=0){ Audio.cry(); babyCryTimer = 1.1; }
+      baby.userData.body.position.x = Math.sin(t*30)*0.06;
+      baby.userData.head.position.x = Math.sin(t*30)*0.06;
+    } else {
+      babyCryTimer = 0;
+      baby.userData.body.position.x *= 0.8;
+      baby.userData.head.position.x *= 0.8;
+    }
+    baby.userData.body.scale.y = 0.8 + Math.sin(t*2)*0.02;
+
+    // ---- mood face ----
+    const hp = happiness();
+    setMood( crying && !S.holdingBaby ? '😭'
+           : S.holdingBaby ? '🥰'
+           : playing ? '🥳'
+           : hp>70 ? '😄' : hp>40 ? '🙂' : '😟');
+
+    // ---- timer / win / lose ----
+    S.timeLeft -= dt;
+    if(S.timeLeft<=0){ S.timeLeft=0; endGame('win'); }
+    if(S.cry>=100){ endGame('lose'); }
+
+    updateHUD();
+  }
+
+  updateCamera();
+  updateWallFade(dt);
+  updateThrownItems(dt);
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+let babyCryTimer = 0;
+
+/* ---------- HUD update ---------- */
+function updateHUD(){
+  NEEDS.forEach(k=>{
+    const v = S.need[k], b = el.bars[k];
+    b.fill.style.width = v+'%';
+    b.bar.classList.toggle('low', v<=20);
+  });
+  el.cryFill.style.width = S.cry+'%';
+  el.cryPct.textContent = Math.round(S.cry)+'%';
+  const hp = happiness();
+  el.hap.textContent = hp>70?'😄':hp>40?'🙂':hp>15?'😟':'😢';
+  el.poo.textContent = '💩 '+S.poo;
+  const m = Math.floor(S.timeLeft/60), s = Math.floor(S.timeLeft%60);
+  el.time.textContent = m+':'+String(s).padStart(2,'0');
+
+  // interaction prompt
+  const k = nearestStation();
+  const mess = nearestMess();
+  const near = !S.holdingBaby && babyDist() < 2.6;
+  let msg = '';
+  if(k==='closet'){
+    msg = '🚪 Hide in the closet? Ends the game — <kbd>E</kbd>';
+  } else if(k==='frontdoor'){
+    msg = '🚪 Walk out the front door? Ends the game — <kbd>E</kbd>';
+  } else if(S.holdingBaby){
+    if(k==='cartoon') msg = (S.cartoonsOn?'Cartoons playing':'Turn on cartoons')+' — <kbd>E</kbd> · put baby down <kbd>Space</kbd>';
+    else if(k==='shop') msg = 'Open upgrades <kbd>E</kbd> · put baby down <kbd>Space</kbd>';
+    else if(k) msg = 'Hands full! Put the baby down first — <kbd>Space</kbd>';
+    else msg = 'Cuddling the baby 🥰 — put down with <kbd>Space</kbd>';
+  } else if(S.carrying==='mop'){
+    msg = (mess ? '🧹 Clean up the mess — <kbd>E</kbd>' : 'Carrying the mop — find a mess to clean') + ' · <kbd>Q</kbd> drop';
+  } else if(S.carrying){
+    if(near){
+      if(S.carrying==='diaper' && S.need.diaper > DIAPER_CHANGE_MAX) msg = `Diaper's not dirty enough yet (${Math.round(S.need.diaper)}%) · <kbd>Q</kbd> drop`;
+      else msg = (S.carrying==='diaper'?'Change the diaper':'Give the '+S.carrying)+' — <kbd>E</kbd> · <kbd>Q</kbd> drop';
+    }
+    else msg = `Bring the ${CARRY_ICON[S.carrying]} to the baby — <kbd>Q</kbd> to drop it`;
+  } else {
+    if(near) msg = 'Pick up the baby — <kbd>Space</kbd>';
+    else if(k==='shop') msg = 'Open the <kbd>U</kbd>pgrade workbench — <kbd>E</kbd>';
+    else if(k==='cartoon') msg = (S.cartoonsOn?'Cartoons playing':'Turn on cartoons')+' — <kbd>E</kbd>';
+    else if(k) msg = `Grab ${NEED_ICON[k]} ${NEED_LABEL[k]||k} — <kbd>E</kbd>`;
+    else if(mess) msg = '🤢 Ew, a mess — go grab the 🧹 mop';
+  }
+  el.prompt.innerHTML = msg;
+  el.prompt.classList.toggle('show', !!msg);
+
+  // carry / holding indicator
+  if(S.holdingBaby){ el.carry.innerHTML = 'Carrying: 👶 baby'; el.carry.classList.add('show'); }
+  else if(S.carrying){ el.carry.innerHTML = 'Carrying: '+CARRY_ICON[S.carrying]+' '+S.carrying; el.carry.classList.add('show'); }
+  else if(S.slowTimer>0){ el.carry.innerHTML = '🐌 Slipped! Walking slower...'; el.carry.classList.add('show'); }
+  else el.carry.classList.remove('show');
+
+  if(!shopEl.classList.contains('hidden')) refreshShop();
+}
+
+tick();
+})();
+</script>
+</body>
+</html>
