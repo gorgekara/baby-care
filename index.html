@@ -190,7 +190,8 @@
        so don't wander off for too long. And keep an eye out near the 🔥 <b>oven</b> in the kitchen — an
        unsupervised baby that toddles over to it will get burned. Oh, and you're still supposed to be
        working — the 💻 <b>computer</b> in the office will occasionally ping with a message; get to it
-       and reply within the time shown or it'll cost you. Changing diapers
+       and reply within the time shown or it'll cost you — miss too many and you're <b>fired</b>,
+       game over. Changing diapers
        collects 💩 <b>poo</b> — spend it at the 🛠️ workbench to upgrade everything. Survive until Mom
        returns to win! (There's a 🚪 closet in the bedroom too —
        but hiding in it ends the game. Don't be <i>that</i> dad.)</p>
@@ -865,7 +866,10 @@ function buildOffice(room){
   p = wallPos(room, plantSide, edgeT(), 0.45);
   addProp(plant(), p.x, p.z, 0.4, 0.4);
 
-  const spot = centeredWallDecorSpot(room, [deskSide, shelfSide], 0.2);
+  const sofaSpot = centeredWallDecorSpot(room, [deskSide, shelfSide, cabinetSide], 0.6);
+  addPropOriented(sofa(pick(['#7fa8c9','#c96f6f','#8a97a8'])), sofaSpot.x, sofaSpot.z, 1.4, 0.75, sofaSpot.rot);
+
+  const spot = centeredWallDecorSpot(room, [deskSide, shelfSide, sofaSpot.side], 0.2);
   addWallDecor(wallShelfDecor([pick(['#c0392b','#2e86c1']), pick(['#27ae60','#e67e22']), '#f5ede0']), spot.x, spot.z, 1.85, spot.rot);
 
   addRug(room, '#9fb8e0', 0.24);
@@ -906,7 +910,7 @@ function buildBathroom(room){
   const sinkT = edgeT();
   p = wallPos(room, sinkSide, sinkT, 0.45);
   addPropOriented(sink(), p.x, p.z, 0.55, 0.45, p.rot);
-  const pm = wallPos(room, sinkSide, sinkT, 0.06);
+  const pm = wallPos(room, sinkSide, sinkT, 0.24);   // clear of the wall's own thickness (WT=0.4, ±0.2) so it's actually visible
   const mir = mirror(); mir.position.set(pm.x, 1.55, pm.z); mir.rotation.y = pm.rot; houseGroup.add(mir);
 
   const toiletSide = pick(inner.length?inner:outer);
@@ -1235,17 +1239,17 @@ const DIFFICULTIES = {
     decayMul:0.72, cryFillMul:0.65, cryDrainMul:1.3, vomitMin:34, vomitMax:60,
     walkChance:0.2, fallMin:9, fallMax:18, needStart:{food:100,milk:100,diaper:100,cartoon:96},
     holdBase:15, holdRecoverMul:1.4, ovenChance:0.02, penSeconds:32,
-    notifyMin:45, notifyMax:70, notifyWindow:24, notifyPenalty:12},
+    notifyMin:45, notifyMax:70, notifyWindow:24, notifyPenalty:12, fireLimit:5},
   veteran: {key:'veteran', label:"Been There, Done That", gameLen:180,
     decayMul:1, cryFillMul:1, cryDrainMul:1, vomitMin:28, vomitMax:52,
     walkChance:0.32, fallMin:6, fallMax:13, needStart:{food:100,milk:95,diaper:100,cartoon:88},
     holdBase:10, holdRecoverMul:1.3, ovenChance:0.045, penSeconds:24,
-    notifyMin:32, notifyMax:52, notifyWindow:17, notifyPenalty:16},
+    notifyMin:32, notifyMax:52, notifyWindow:17, notifyPenalty:16, fireLimit:4},
   king:    {key:'king', label:'King', gameLen:210,
     decayMul:1.4, cryFillMul:1.35, cryDrainMul:0.75, vomitMin:16, vomitMax:34,
     walkChance:0.46, fallMin:4, fallMax:9, needStart:{food:85,milk:80,diaper:88,cartoon:70},
     holdBase:6, holdRecoverMul:1.15, ovenChance:0.08, penSeconds:16,
-    notifyMin:20, notifyMax:36, notifyWindow:11, notifyPenalty:20},
+    notifyMin:20, notifyMax:36, notifyWindow:11, notifyPenalty:20, fireLimit:3},
 };
 let difficulty = 'veteran';
 function curDiff(){ return DIFFICULTIES[difficulty]; }
@@ -1281,6 +1285,7 @@ function resetState(){
     notification:false,                // an unanswered work notification is pending on the computer
     notifyDeadline:0,                  // seconds left to respond before a penalty
     missedNotifyTimer:0,               // >0 briefly after a missed notification, for the HUD message
+    missedCount:0,                     // total missed work notifications this run — too many and you're fired
   };
 }
 resetState();
@@ -1494,6 +1499,8 @@ const GAMEOVER_FLAVOR = {
     body:"The baby needed you and you climbed in with the sweaters instead. The crying didn't stop — you just stopped listening. You're a coward."},
   leave: {icon:'🚪🌙', title:'You Walked Out?!',
     body:"You left an infant home alone and strolled out the front door. That's not “popping out for milk,” that's abandonment. Mom is never trusting you with babysitting again."},
+  fired: {icon:'💻📤', title:"You've Been Fired!",
+    body:"Too many missed messages and your boss finally had enough — you're let go, mid-shift, with a baby on your hip. Remote work and babysitting don't mix as well as you thought."},
 };
 function endGame(reason){                              // 'win' | 'lose' | 'hide'
   S.mode = reason==='win' ? 'win' : 'over';
@@ -1509,8 +1516,9 @@ function endGame(reason){                              // 'win' | 'lose' | 'hide
     document.getElementById('goIcon').textContent = f.icon;
     document.getElementById('goTitle').textContent = f.title;
     document.getElementById('goBody').textContent = f.body;
+    const missedNote = reason==='fired' ? ` · ${S.missedCount} missed message${S.missedCount===1?'':'s'}` : '';
     document.getElementById('goStats').textContent =
-      `${diffLabel} · You lasted ${mins}m ${secs}s · ${S.changes} diaper change${S.changes===1?'':'s'}.`;
+      `${diffLabel} · You lasted ${mins}m ${secs}s · ${S.changes} diaper change${S.changes===1?'':'s'}${missedNote}.`;
     document.getElementById('gameover').classList.remove('hidden');
   }
 }
@@ -1710,9 +1718,10 @@ function tick(){
     if(S.notification){
       S.notifyDeadline -= dt;
       if(S.notifyDeadline <= 0){
-        S.notification=false; S.missedNotifyTimer=2.5;
+        S.notification=false; S.missedNotifyTimer=2.5; S.missedCount++;
         S.cry = Math.min(100, S.cry + dNotify.notifyPenalty); Audio.error();
         S.notifyTimer = rand(dNotify.notifyMin, dNotify.notifyMax);
+        if(S.missedCount >= dNotify.fireLimit){ endGame('fired'); }
       }
     } else {
       S.notifyTimer -= dt;
