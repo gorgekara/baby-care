@@ -46,6 +46,11 @@
   .crybar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ff8a5c,var(--cry));
     transition:width .12s linear;border-radius:9px}
 
+  .workAlert{position:absolute;top:150px;left:50%;transform:translateX(-50%);width:min(360px,80vw);
+    background:rgba(255,90,60,.18);border:1px solid #ff8a5c;border-radius:12px;padding:7px 14px;
+    font-size:13px;text-align:center;font-weight:bold;opacity:0;transition:opacity .15s}
+  .workAlert.show{opacity:1;animation:flash .9s steps(2) infinite}
+
   .prompt{position:absolute;bottom:74px;left:50%;transform:translateX(-50%);
     background:rgba(0,0,0,.6);border:1px solid var(--panelborder);border-radius:10px;
     padding:8px 16px;font-size:15px;opacity:0;transition:opacity .12s;white-space:nowrap}
@@ -85,6 +90,10 @@
   .card p{font-size:15px;line-height:1.6;opacity:.92;margin:.5em 0}
   .card .big{font-size:52px;margin:6px 0}
   .card .cta{margin-top:18px;font-size:18px;padding:14px 30px}
+  .card.hidden{display:none}
+  .stepnav{display:flex;gap:10px;justify-content:center;align-items:stretch;margin-top:18px}
+  .stepnav .btn{margin-top:0;height:52px;display:inline-flex;align-items:center;justify-content:center;
+    padding-top:0;padding-bottom:0;box-sizing:border-box}
   .legend{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;text-align:left;margin:16px auto;
     max-width:420px;font-size:14px}
   .legend b{opacity:.95}
@@ -98,6 +107,9 @@
   .diffOpt.selected{border-color:var(--good);background:rgba(126,231,135,.12)}
   .diffTitle{font-weight:bold;font-size:15px}
   .diffSub{font-size:12px;opacity:.75;margin-top:2px}
+  .musicPicker{flex-direction:row;gap:8px;margin:0}
+  .musicPicker .diffOpt{flex:1;text-align:center;padding:10px 8px}
+  .musicPicker .diffTitle{font-size:14px}
 
   /* ---------- Upgrade panel ---------- */
   #shop.hidden{display:none}
@@ -139,6 +151,7 @@
     <div class="crybar"><i id="cryFill"></i></div>
   </div>
 
+  <div class="workAlert" id="workAlert"></div>
   <div class="prompt" id="prompt"></div>
   <div class="carry" id="carry"></div>
 
@@ -155,10 +168,11 @@
 
 <!-- Intro -->
 <div class="overlay" id="intro">
-  <div class="card">
+  <div class="card" id="introStep1">
     <div class="big">👶🍼</div>
     <h1>Baby Care: Dad's on Duty</h1>
     <p><b>Mom just left to go shopping</b> — and she left <b>you</b> in charge of the little one!
+       You're working <b>remote</b> today too, so it's baby duty and your day job at once.
        Keep the baby happy until she gets back.</p>
     <p>Watch the four needs. If any runs out the baby cries, and the <b style="color:var(--cry)">cry-o-meter</b>
        climbs. Let it fill up and you'll panic-call Mommy — <b>game over</b>.</p>
@@ -171,10 +185,24 @@
     <p style="font-size:13px;opacity:.8">The baby <b>crawls around</b> the house and plays with toys.
        Scoop it up with <kbd>Space</kbd> to carry it anywhere and calm it down, or drop whatever you're
        holding with <kbd>Q</kbd> — but 💪 your arms tire out the longer you hold the baby, so you can't
-       just carry it forever (upgrade <b>Strong Arms</b> at the workbench to hold longer). Changing diapers
+       just carry it forever (upgrade <b>Strong Arms</b> at the workbench to hold longer). Need your hands
+       free? Pen the baby in the 🔒 <b>playpen</b> for a little while — it'll escape on its own after a bit,
+       so don't wander off for too long. And keep an eye out near the 🔥 <b>oven</b> in the kitchen — an
+       unsupervised baby that toddles over to it will get burned. Oh, and you're still supposed to be
+       working — the 💻 <b>computer</b> in the office will occasionally ping with a message; get to it
+       and reply within the time shown or it'll cost you. Changing diapers
        collects 💩 <b>poo</b> — spend it at the 🛠️ workbench to upgrade everything. Survive until Mom
        returns to win! (There's a 🚪 closet in the bedroom too —
        but hiding in it ends the game. Don't be <i>that</i> dad.)</p>
+    <div class="stepnav">
+      <button class="btn cta" id="introNextBtn">Next ▶</button>
+    </div>
+  </div>
+  <div class="card hidden" id="introStep2">
+    <div class="big">🎚️</div>
+    <h2>Choose Your Difficulty</h2>
+    <p style="font-size:13px;opacity:.8">This tweaks how fast needs drain, how often accidents happen, and
+       how long Mom's out shopping.</p>
     <div class="diffPicker" id="diffPicker">
       <div class="diffOpt" data-diff="first">
         <div class="diffTitle">🍼 First Born</div>
@@ -189,7 +217,19 @@
         <div class="diffSub">Hardest — 3.5 min, needs drain fast, expect chaos</div>
       </div>
     </div>
-    <button class="btn cta" id="startBtn">Start Babysitting ▶</button>
+    <p style="font-size:13px;opacity:.75;margin:16px 0 6px">🎵 Background Music</p>
+    <div class="diffPicker musicPicker" id="musicPicker">
+      <div class="diffOpt selected" data-music="games">
+        <div class="diffTitle">🎮 Game Vibes</div>
+      </div>
+      <div class="diffOpt" data-music="retro">
+        <div class="diffTitle">🕹️ Retro Arcade</div>
+      </div>
+    </div>
+    <div class="stepnav">
+      <button class="btn cta" id="introBackBtn">◀ Back</button>
+      <button class="btn cta" id="startBtn">Start Babysitting ▶</button>
+    </div>
   </div>
 </div>
 
@@ -345,7 +385,8 @@ const wallMeshes = [];     // walls that fade when they'd hide the dad/baby
 const toys = [];
 const solids = [];         // furniture/station collision circles
 const stations = {};
-let tvScreen = null, houseGroup = null;
+let tvScreen = null, computerScreen = null, houseGroup = null;
+let ovenPos = new THREE.Vector3();  // set by buildKitchen; used by the baby AI's oven hazard
 const houseBounds = { X0:-23, X1:23, Z0:-8, Z1:22 };
 const spawnDad = new THREE.Vector3(0,0,3), spawnBaby = new THREE.Vector3(-13,0,1);
 function disposeGroup(g){ g.traverse(o=>{ if(o.geometry) o.geometry.dispose();
@@ -471,6 +512,31 @@ function cribGroup(){ const g=new THREE.Group();
   [[-1.2,-0.7],[1.2,-0.7],[-1.2,0.7],[1.2,0.7]].forEach(([x,z])=>{
     const p=box(0.14,1.2,0.14,'#e6c79a'); p.position.set(x,1.0,z); g.add(p); });
   return g; }
+function playpenGroup(){ const g=new THREE.Group();               // circular mesh-walled pen — a temporary safe spot for the baby
+  const floor=cyl(1.25,1.25,0.06,'#f7e6c4'); floor.position.y=0.03; g.add(floor);
+  const railColor='#e8b23a';
+  for(let i=0;i<8;i++){ const ang=i/8*Math.PI*2;
+    const post=cyl(0.05,0.05,0.75,railColor); post.position.set(Math.cos(ang)*1.22,0.42,Math.sin(ang)*1.22); g.add(post); }
+  const railTop=cyl(1.25,1.25,0.08,railColor); railTop.position.y=0.78; g.add(railTop);
+  const net=cyl(1.28,1.28,0.68,'#fff6de'); net.material.transparent=true; net.material.opacity=0.28; net.position.y=0.4; g.add(net);
+  return g; }
+function computerDeskGroup(){ const g=new THREE.Group();          // the office job Dad's supposed to be doing while babysitting
+  const desk=box(1.8,0.9,0.9,'#8a6a45'); desk.position.y=0.45; g.add(desk);
+  const top=box(1.9,0.08,1.0,'#c9a877'); top.position.y=0.94; g.add(top);
+  const stand=box(0.12,0.3,0.12,'#333'); stand.position.set(0,1.1,-0.2); g.add(stand);
+  const monitor=box(0.9,0.6,0.06,'#20242e','#153a6b'); monitor.position.set(0,1.35,-0.2); g.add(monitor);
+  const keyboard=box(0.5,0.05,0.2,'#e8e0c8'); keyboard.position.set(0,0.99,0.15); g.add(keyboard);
+  const mug=cyl(0.1,0.08,0.14,'#e5533d'); mug.position.set(0.65,1.03,0.2); g.add(mug);
+  g.userData.screen = monitor;
+  return g; }
+function ovenGroup(){ const g=new THREE.Group();                  // hazard: baby can wander into it and get burned
+  const body=box(1.3,1.6,1.2,'#3a3a3f'); body.position.y=0.8; g.add(body);
+  const top=box(1.34,0.08,1.24,'#57575f'); top.position.y=1.62; g.add(top);
+  const door=box(1.0,1.0,0.08,'#20222a'); door.position.set(0,0.62,0.62); g.add(door);
+  const glow=box(0.62,0.5,0.02,'#ff8a3d','#ff5c1a'); glow.position.set(0,0.62,0.67); g.add(glow);
+  const handle=box(0.7,0.09,0.09,'#999'); handle.position.set(0,1.28,0.63); g.add(handle);
+  [-0.35,0.35].forEach(x=>{ const dial=cyl(0.08,0.08,0.05,'#ccc'); dial.rotation.x=Math.PI/2; dial.position.set(x,1.5,0.62); g.add(dial); });
+  return g; }
 
 /* ---------- Extra floor props & wall decor (fills rooms out, no-collision items don't block movement) ---------- */
 function sideTable(c){ const g=new THREE.Group();
@@ -578,21 +644,42 @@ function addRug(room, color, frac){
   const rug=new THREE.Mesh(new THREE.CircleGeometry(Math.min(room.w,room.h)*frac, 32), new THREE.MeshLambertMaterial({color}));
   rug.rotation.x=-Math.PI/2; rug.position.set(room.cx, 0.02, room.cz); rug.receiveShadow=true; houseGroup.add(rug);
 }
-// a real exterior-facing window for this room: prefers a true outside wall not already used by its
-// main furniture (room.primarySide/primaryT, set by each room-type builder); falls back to the
-// opposite corner of that same wall when it's the room's only exterior side, so nothing hangs over it
+// a window pane mounted on wall `side` at position `t`: placed just clear of the wall's own
+// thickness on BOTH faces (inner copy visible from the room, outer copy visible from outside the
+// house) — walls are WT=0.4 thick (±0.2 from centerline), so out=±0.26 sits fully past each face
+// rather than buried inside the solid wall geometry, which is what made earlier windows invisible.
+function addWindowPane(room, side, t){
+  const horiz = (side==='N'||side==='S');
+  [0.26, -0.26].forEach(out=>{
+    const p = wallPos(room, side, t, out);
+    const w = horiz ? box(2.4,1.4,0.12,'#bfe6ff','#6fb7e8') : box(0.12,1.4,2.4,'#bfe6ff','#6fb7e8');
+    w.position.set(p.x, 1.75, p.z); houseGroup.add(w);
+  });
+}
+// a real exterior-facing window per exterior wall this room has (so corner rooms get more than
+// one) — prefers a centered spot, but avoids the room's main furniture wall/spot when it's the
+// only exterior side available, so nothing hangs over it
 function furnishWindow(room){
   const sides = room.exteriorSides;
   if(!sides || !sides.length) return;
-  const alt = sides.filter(s=>s!==room.primarySide);
-  let side, t;
-  if(alt.length){ side=pick(alt); t=0.5; }
-  else if(room.primarySide){ side=room.primarySide; t = (room.primaryT!==undefined && room.primaryT<0.5) ? rand(0.7,0.86) : rand(0.14,0.3); }
-  else { side=sides[0]; t=0.5; }
-  const p = wallPos(room, side, t, 0.05);
-  const horiz = (side==='N'||side==='S');
-  const w = horiz ? box(2.4,1.4,0.12,'#bfe6ff','#6fb7e8') : box(0.12,1.4,2.4,'#bfe6ff','#6fb7e8');
-  w.position.set(p.x, 1.75, p.z); houseGroup.add(w);
+  sides.forEach(side=>{
+    const t = (side===room.primarySide && room.primaryT!==undefined)
+      ? (room.primaryT<0.5 ? rand(0.7,0.86) : rand(0.14,0.3))
+      : 0.5;
+    addWindowPane(room, side, t);
+  });
+}
+// scatters 1-2 random paintings around a room's walls (never called for the bathroom)
+function scatterPaintings(room){
+  const frameColors=['#6a4f32','#8a7052','#3a2f24','#5a4630','#7a5aa0'];
+  const artColors=['#e8c68a','#9fc7e0','#d98a9a','#f5d0e0','#c9a0dc','#7ed957','#ffd58a'];
+  const n = Math.random()<0.5 ? 1 : 2;
+  const used = room.primarySide ? [room.primarySide] : [];
+  for(let i=0;i<n;i++){
+    const spot = centeredWallDecorSpot(room, used, 0.08);
+    addWallDecor(painting(pick(frameColors), pick(artColors)), spot.x, spot.z, rand(1.7,2.3), spot.rot);
+    used.push(spot.side);
+  }
 }
 function bathroomTileMaterial(room){
   const c=document.createElement('canvas'); c.width=64; c.height=64;
@@ -637,6 +724,9 @@ function buildLiving(room){
   p = wallPos(room, rackSide, edgeT(), 0.4);
   addProp(coatRack(), p.x, p.z, 0.32, 0.32);
 
+  const penSpot = centeredWallDecorSpot(room, [sofaSide, tvSide, plantSide], 1.4);
+  addStation('playpen', penSpot.x, penSpot.z, playpenGroup(), '🔒 Playpen', 2.3, penSpot.rot);
+
   addRug(room, '#e08fae', 0.22);
   addToys(room, 3, Math.min(room.w,room.h)*0.2);
   room.primarySide=sofaSide; room.primaryT=sofaT;
@@ -660,9 +750,19 @@ function buildKitchen(room){
   addProp(plant(), p.x, p.z, 0.4, 0.4);
 
   let spot = centeredWallDecorSpot(room, [wallSide], 0.07);
+  const clockSide = spot.side;
   addWallDecor(wallClock(), spot.x, spot.z, 2.1, spot.rot);
-  spot = centeredWallDecorSpot(room, [wallSide, spot.side], 0.22);
+  spot = centeredWallDecorSpot(room, [wallSide, clockSide], 0.22);
+  const shelfSide = spot.side;
   addWallDecor(wallShelfDecor(['#ffffff', '#8fd3ff', pick(['#e5533d','#7fa8c9'])]), spot.x, spot.z, 1.85, spot.rot);
+
+  // the oven — a hazard: an unsupervised baby that wanders over to it will get burned (see pickBabyTarget)
+  const ovenSpot = centeredWallDecorSpot(room, [wallSide, clockSide, shelfSide], 0.65);
+  const ov = ovenGroup();
+  addPropOriented(ov, ovenSpot.x, ovenSpot.z, 0.65, 0.6, ovenSpot.rot);
+  ov.add(label('🔥 Oven', 2.1));
+  ovenPos.set(ovenSpot.x, 0, ovenSpot.z);
+
   room.primarySide=wallSide; room.primaryT=0.5;                 // food+cabinet+fridge span most of this wall
 }
 function buildBedroom(room){
@@ -692,28 +792,32 @@ function buildBedroom(room){
   addRug(room, pick(['#e8c68a','#9fc7e0']), 0.2);
   room.primarySide=bedSide; room.primaryT=0.5;
 }
-function buildPlayroom(room){
+function buildOffice(room){
   const {outer, inner} = sidesFor(room);
-  const shelfSide = outer[0], shelfT = edgeT();
-  let p = wallPos(room, shelfSide, shelfT, 0.65);
+  const deskSide = outer[0], deskT = edgeT();
+  let p = wallPos(room, deskSide, deskT, 0.65);
+  const desk = computerDeskGroup(); computerScreen = desk.userData.screen;
+  addStation('computer', p.x, p.z, desk, '💻 Computer', 2.5, p.rot);
+  const chairSpot = wallPos(room, deskSide, deskT, 1.55);          // facing back toward the desk
+  addPropOriented(chair('#5a6a8a'), chairSpot.x, chairSpot.z, 0.35, 0.35, chairSpot.rot + Math.PI);
+
+  const shelfSide = outer[1] || pick(inner);
+  p = wallPos(room, shelfSide, edgeT(), 0.65);
   addPropOriented(bookshelf(pick(['#9a6a44','#7a8a6a'])), p.x, p.z, 0.35, 0.9, p.rot);
 
-  const tableSide = outer[1] || pick(inner);
-  p = wallPos(room, tableSide, edgeT(), 0.6);
-  addProp(table(1.4,1.0,'#caa15e'), p.x, p.z, 0.7, 0.5);
+  const cabinetSide = pick(inner.length?inner:outer);
+  p = wallPos(room, cabinetSide, edgeT(), 0.55);
+  addPropOriented(cabinet(pick(['#8a97a8','#9a8a70'])), p.x, p.z, 0.78, 0.3, p.rot);
 
-  const basketSide = pick(inner.length?inner:outer);
-  p = wallPos(room, basketSide, edgeT(), 0.4);
-  addProp(basket(pick(['#e5533d','#4f9dde','#7ed957'])), p.x, p.z, 0.3, 0.3);
+  const plantSide = pick(['N','S','E','W'].filter(s=>s!==deskSide));
+  p = wallPos(room, plantSide, edgeT(), 0.45);
+  addProp(plant(), p.x, p.z, 0.4, 0.4);
 
-  let spot = centeredWallDecorSpot(room, [shelfSide], 0.2);
-  addWallDecor(wallShelfDecor([pick(['#e5533d','#4f9dde']), pick(['#f2c14e','#7ed957']), '#ffffff']), spot.x, spot.z, 1.55, spot.rot);
-  spot = centeredWallDecorSpot(room, [shelfSide, spot.side], 0.08);
-  addWallDecor(painting(pick(['#e5533d','#4f9dde','#7ed957']), '#ffffff'), spot.x, spot.z, 1.9, spot.rot);
+  const spot = centeredWallDecorSpot(room, [deskSide, shelfSide], 0.2);
+  addWallDecor(wallShelfDecor([pick(['#c0392b','#2e86c1']), pick(['#27ae60','#e67e22']), '#f5ede0']), spot.x, spot.z, 1.85, spot.rot);
 
   addRug(room, '#9fb8e0', 0.24);
-  addToys(room, 4, Math.min(room.w,room.h)*0.22);
-  room.primarySide=shelfSide; room.primaryT=shelfT;
+  room.primarySide=deskSide; room.primaryT=deskT;
 }
 function buildNursery(room){
   const {outer, inner} = sidesFor(room);
@@ -770,10 +874,10 @@ function buildBathroom(room){
   addRug(room, '#e6f4fb', 0.14);
   room.primarySide=wetSide; room.primaryT=wetT;
 }
-const ROOM_RANK = ['bathroom','playroom','nursery','kitchen','bedroom','living']; // ascending size rank
+const ROOM_RANK = ['bathroom','office','nursery','kitchen','bedroom','living']; // ascending size rank
 const ROOM_TYPES = {
   bathroom:{floor:'#a9cfe0', build:buildBathroom},
-  playroom:{floor:'#e0c8a4', build:buildPlayroom},
+  office:  {floor:'#e0c8a4', build:buildOffice},
   nursery: {floor:'#bcd7cf', build:buildNursery},
   kitchen: {floor:'#d9c39a', build:buildKitchen},
   bedroom: {floor:'#c3b2dd', build:buildBedroom},
@@ -796,6 +900,7 @@ function furnishHallway(hall, zB){
   const outsideDoor = buildFrontDoorGroup();
   outsideDoor.position.set(hall.cx, 0, zB[3]+0.35); outsideDoor.rotation.y = 0;
   houseGroup.add(outsideDoor);
+  addWindowPane(hall, 'N', 0.5);        // the hallway's dead end is an outer wall too
 }
 
 /* ---------- buildHouse(): randomized-but-sensible layout, rebuilt each run ---------- */
@@ -852,13 +957,13 @@ function buildHouse(){
   wallZDoors(xB[1], zB[0], zB[3], rowDoors);
   wallZDoors(xB[2], zB[0], zB[3], rowDoors);
 
-  cells.forEach(room=>{ ROOM_TYPES[room.type].build(room); furnishWindow(room); });
+  cells.forEach(room=>{ ROOM_TYPES[room.type].build(room); furnishWindow(room); if(room.type!=='bathroom') scatterPaintings(room); });
   furnishHallway(hall, zB);
 
   houseBounds.X0=xB[0]; houseBounds.X1=xB[3]; houseBounds.Z0=zB[0]; houseBounds.Z1=zB[3];
-  const livingRoom = cells.find(c=>c.type==='living'), kitchenRoom = cells.find(c=>c.type==='kitchen');
+  const livingRoom = cells.find(c=>c.type==='living');
   spawnBaby.set(livingRoom.cx, 0, livingRoom.cz);
-  spawnDad.set(kitchenRoom.cx, 0, kitchenRoom.cz);
+  spawnDad.set(hall.cx, 0, zB[3]-3.4);         // right next to the front door, facing into the hallway
 
   const midX=(xB[0]+xB[3])/2, totalW=xB[3]-xB[0], totalD=zB[3]-zB[0];
   LOOK.set(midX, 0, zB[0]);
@@ -992,31 +1097,11 @@ function setMood(m){ if(m===lastMood) return; lastMood=m;
 
 /* ---------- Audio (procedural, Web Audio) ---------- */
 const Audio = (function(){
-  let ctx=null, master=null, padGain=null, muted=false, started=false, lp=null;
-  function init(){
+  let ctx=null, master=null, muted=false, started=false;
+  function init(){                                  // no background music — just sets up the context for SFX
     if(started) return; started=true;
     ctx = new (window.AudioContext||window.webkitAudioContext)();
     master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
-    // delay for space
-    const delay = ctx.createDelay(); delay.delayTime.value=0.33;
-    const fb = ctx.createGain(); fb.gain.value=0.28;
-    delay.connect(fb); fb.connect(delay); delay.connect(master);
-    // ambient pad
-    padGain = ctx.createGain(); padGain.gain.value = 0.0;
-    lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=700;
-    padGain.connect(lp); lp.connect(master); lp.connect(delay);
-    // slow filter LFO
-    const lfo = ctx.createOscillator(); lfo.frequency.value=0.05;
-    const lfoG = ctx.createGain(); lfoG.gain.value=350;
-    lfo.connect(lfoG); lfoG.connect(lp.frequency); lfo.start();
-    // chord voices (gentle Cmaj9-ish)
-    [130.81,164.81,196.00,246.94,293.66].forEach((f,i)=>{
-      const o = ctx.createOscillator(); o.type = i%2? 'sine':'triangle';
-      o.frequency.value = f; o.detune.value = (i-2)*4;
-      const g = ctx.createGain(); g.gain.value = 0.12/(i*0.5+1);
-      o.connect(g); g.connect(padGain); o.start();
-    });
-    padGain.gain.linearRampToValueAtTime(muted?0:0.5, ctx.currentTime+3);
   }
   function blip(freq, dur, type, vol, glideTo){
     if(!ctx||muted) return;
@@ -1035,7 +1120,28 @@ const Audio = (function(){
     buy(){ blip(660,0.1,'triangle',0.2); setTimeout(()=>blip(990,0.16,'triangle',0.2),80); },
     cry(){ blip(520,0.5,'sawtooth',0.12,180); },
     error(){ blip(200,0.18,'sawtooth',0.15,120); },
-    setMuted(m){ muted=m; if(padGain&&ctx) padGain.gain.linearRampToValueAtTime(m?0:0.5, ctx.currentTime+0.4); },
+    setMuted(m){ muted=m; },
+    get muted(){ return muted; }
+  };
+})();
+
+/* ---------- Background music (player-selectable, real audio files, kept quiet) ---------- */
+const Music = (function(){
+  const TRACKS = { games:'music/game-vibes.mp3', retro:'music/retro-arcade.mp3' };
+  let el=null, muted=false, started=false, current='games';
+  function ensure(){ if(!el){ el=new window.Audio(); el.loop=true; el.volume=0.14; } return el; }
+  return {
+    start(){
+      started=true; const a=ensure();
+      if(!a.src) a.src = TRACKS[current];
+      if(!muted) a.play().catch(()=>{});
+    },
+    setTrack(key){
+      if(!TRACKS[key]) return; current=key;
+      const a=ensure(); a.src=TRACKS[key];
+      if(started && !muted) a.play().catch(()=>{});
+    },
+    setMuted(m){ muted=m; const a=ensure(); if(m) a.pause(); else if(started) a.play().catch(()=>{}); },
     get muted(){ return muted; }
   };
 })();
@@ -1064,15 +1170,18 @@ const DIFFICULTIES = {
   first:   {key:'first', label:'First Born', gameLen:150,
     decayMul:0.72, cryFillMul:0.65, cryDrainMul:1.3, vomitMin:34, vomitMax:60,
     walkChance:0.2, fallMin:9, fallMax:18, needStart:{food:100,milk:100,diaper:100,cartoon:96},
-    holdBase:15, holdRecoverMul:1.4},
+    holdBase:15, holdRecoverMul:1.4, ovenChance:0.02, penSeconds:32,
+    notifyMin:45, notifyMax:70, notifyWindow:24, notifyPenalty:12},
   veteran: {key:'veteran', label:"Been There, Done That", gameLen:180,
     decayMul:1, cryFillMul:1, cryDrainMul:1, vomitMin:28, vomitMax:52,
     walkChance:0.32, fallMin:6, fallMax:13, needStart:{food:100,milk:95,diaper:100,cartoon:88},
-    holdBase:10, holdRecoverMul:1.3},
+    holdBase:10, holdRecoverMul:1.3, ovenChance:0.045, penSeconds:24,
+    notifyMin:32, notifyMax:52, notifyWindow:17, notifyPenalty:16},
   king:    {key:'king', label:'King', gameLen:210,
     decayMul:1.4, cryFillMul:1.35, cryDrainMul:0.75, vomitMin:16, vomitMax:34,
     walkChance:0.46, fallMin:4, fallMax:9, needStart:{food:85,milk:80,diaper:88,cartoon:70},
-    holdBase:6, holdRecoverMul:1.15},
+    holdBase:6, holdRecoverMul:1.15, ovenChance:0.08, penSeconds:16,
+    notifyMin:20, notifyMax:36, notifyWindow:11, notifyPenalty:20},
 };
 let difficulty = 'veteran';
 function curDiff(){ return DIFFICULTIES[difficulty]; }
@@ -1098,8 +1207,16 @@ function resetState(){
     vomitTimer: rand(D.vomitMin*0.5, D.vomitMax*0.5), // first throw-up comes sooner than the steady interval
     slowTimer:0,                       // >0 while Dad's slipping around after stepping in a mess
     babyFallen:false,                  // baby took a tumble while walking — crying until Dad picks it up
+    babyBurned:false,                  // baby touched the hot oven unsupervised — crying until Dad picks it up
     holdStamina: holdMaxFor(D, 0),     // arms give out after this many seconds of continuous carrying
     armsTiredTimer:0,                  // >0 briefly after a forced put-down, for the HUD message
+    babyPenned:false,                  // baby is safely locked in the playpen (won't fall or wander)
+    penTimer:0,                        // seconds left before the baby escapes the playpen
+    penEscapedTimer:0,                 // >0 briefly after an escape, for the HUD message
+    notifyTimer: rand(D.notifyMin*0.6, D.notifyMax*0.6), // first work notification comes a bit sooner
+    notification:false,                // an unanswered work notification is pending on the computer
+    notifyDeadline:0,                  // seconds left to respond before a penalty
+    missedNotifyTimer:0,               // >0 briefly after a missed notification, for the HUD message
   };
 }
 resetState();
@@ -1160,8 +1277,19 @@ function cleanMess(m){
 function doStation(k){
   if(k==='shop'){ openShop(); return; }
   if(k==='cartoon'){ S.cartoonsOn=true; S.tvTimer=10+S.lvl.cartoon*3; Audio.chime(); return; }
+  if(k==='computer'){
+    if(S.notification){ S.notification=false; Audio.chime(); } else Audio.error();
+    return;
+  }
   if(k==='closet'){ endGame('hide'); return; }        // dad bails and hides — instant, deliberate game over
   if(k==='frontdoor'){ endGame('leave'); return; }    // dad walks out on the baby entirely
+  if(k==='playpen'){
+    if(!S.holdingBaby){ Audio.error(); return; }
+    S.holdingBaby=false; baby.scale.set(1,1,1); baby.userData.mat.visible=true;
+    baby.position.set(stations.playpen.x, 0, stations.playpen.z); baby.rotation.y=0;
+    S.babyPenned=true; S.penTimer=curDiff().penSeconds; S.babyFallen=false; S.babyBurned=false;
+    Audio.chime(); return;
+  }
   if(S.holdingBaby){ Audio.error(); return; }        // hands full holding baby
   S.carrying=k; setCarrySprite(CARRY_ICON[k]); Audio.chime(); flashCarry();
 }
@@ -1204,8 +1332,8 @@ function toggleHoldBaby(){                              // the Space key
   } else {
     if(S.carrying){ Audio.error(); return; }           // can't hold baby with hands full
     if(S.holdStamina < holdMax()*ARM_RECOVER_MIN_FRAC){ Audio.error(); return; } // arms still too tired
-    if(babyDist() < 2.9){ S.holdingBaby=true; S.cuddles++; S.babyFallen=false; baby.scale.set(0.9,0.9,0.9);
-      baby.userData.mat.visible = false; Audio.chime(); }
+    if(babyDist() < 2.9){ S.holdingBaby=true; S.cuddles++; S.babyFallen=false; S.babyBurned=false; S.babyPenned=false;
+      baby.scale.set(0.9,0.9,0.9); baby.userData.mat.visible = false; Audio.chime(); }
     else Audio.error();
   }
 }
@@ -1216,6 +1344,7 @@ const el = {
   hap:document.getElementById('hapVal'), poo:document.getElementById('pooVal'),
   time:document.getElementById('timeVal'), prompt:document.getElementById('prompt'),
   carry:document.getElementById('carry'), topbar:document.getElementById('topbar'),
+  workAlert:document.getElementById('workAlert'),
 };
 document.querySelectorAll('.need').forEach(n=>{ el.bars[n.dataset.k] = {wrap:n, fill:n.querySelector('.bar>i'), bar:n.querySelector('.bar')}; });
 
@@ -1266,7 +1395,11 @@ document.getElementById('shopBtn').addEventListener('click', openShop);
 document.getElementById('closeShop').addEventListener('click', closeShopFn);
 
 /* ---------- Mute ---------- */
-function toggleMute(){ Audio.setMuted(!Audio.muted); document.getElementById('muteBtn').textContent = Audio.muted?'🔇':'🔊'; }
+function toggleMute(){
+  const m = !Audio.muted;
+  Audio.setMuted(m); Music.setMuted(m);
+  document.getElementById('muteBtn').textContent = m?'🔇':'🔊';
+}
 document.getElementById('muteBtn').addEventListener('click', toggleMute);
 
 /* ---------- Flow ---------- */
@@ -1277,17 +1410,18 @@ function startGame(){
   dad.position.copy(spawnDad); dad.rotation.y=0;
   dad.userData.arms[0].rotation.x=0; dad.userData.arms[1].rotation.x=0;
   baby.position.copy(spawnBaby); baby.rotation.y=0; baby.scale.set(1,1,1);
-  babyTarget.copy(spawnBaby); babyRetime=0; babyPlay=0; babyPlayingToy=null;
+  babyTarget.copy(spawnBaby); babyRetime=0; babyPlay=0; babyPlayingToy=null; babyTargetIsOven=false;
   babyMode='crawl'; babyPoseT=0; fallTimer=0;
   setCarrySprite(null);
   thrownItems.forEach(it=>{ scene.remove(it.mesh); it.mesh.material.map.dispose(); it.mesh.material.dispose(); });
   thrownItems.length = 0;
   tvScreen.material.emissive.set('#101318');
+  computerScreen.material.emissive.set('#153a6b');
   document.getElementById('intro').classList.add('hidden');
   document.getElementById('gameover').classList.add('hidden');
   document.getElementById('win').classList.add('hidden');
   closeShopFn();
-  Audio.start();
+  Audio.start(); Music.start();
 }
 const GAMEOVER_FLAVOR = {
   lose: {icon:'📞😱', title:'You called Mommy!',
@@ -1323,6 +1457,21 @@ document.querySelectorAll('#diffPicker .diffOpt').forEach(opt=>{
     Audio.buy();
   });
 });
+document.querySelectorAll('#musicPicker .diffOpt').forEach(opt=>{
+  opt.addEventListener('click', ()=>{
+    Music.setTrack(opt.dataset.music);
+    document.querySelectorAll('#musicPicker .diffOpt').forEach(o=>o.classList.toggle('selected', o===opt));
+    Audio.buy();
+  });
+});
+document.getElementById('introNextBtn').addEventListener('click', ()=>{
+  document.getElementById('introStep1').classList.add('hidden');
+  document.getElementById('introStep2').classList.remove('hidden');
+});
+document.getElementById('introBackBtn').addEventListener('click', ()=>{
+  document.getElementById('introStep2').classList.add('hidden');
+  document.getElementById('introStep1').classList.remove('hidden');
+});
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('retryBtn').addEventListener('click', startGame);
 document.getElementById('winBtn').addEventListener('click', startGame);
@@ -1356,15 +1505,17 @@ let walkPhase = 0;
 
 // baby crawling AI
 let babyTarget = new THREE.Vector3(-13,0,1);
-let babyRetime = 0, babyPlay = 0, babyPlayingToy = null;
+let babyRetime = 0, babyPlay = 0, babyPlayingToy = null, babyTargetIsOven = false;
 let babyMode = 'crawl', babyPoseT = 0, fallTimer = 0;       // 'crawl' (safe) or 'walk' (risks a fall)
 function pickBabyTarget(){
   babyRetime = 3 + Math.random()*3;
-  babyPlay = 0; babyPlayingToy = null;
+  babyPlay = 0; babyPlayingToy = null; babyTargetIsOven = false;
   const D = curDiff();
   babyMode = Math.random() < D.walkChance ? 'walk' : 'crawl'; // crawling is the safe default; walking is occasional and riskier
   if(babyMode==='walk') fallTimer = rand(D.fallMin, D.fallMax);
-  if(toys.length && Math.random() < 0.55){                 // head to a toy and play
+  if(Math.random() < D.ovenChance){                         // rare: baby toddles straight for the hot oven — dangerous!
+    babyTarget.copy(ovenPos); babyTargetIsOven = true;
+  } else if(toys.length && Math.random() < 0.55){           // head to a toy and play
     const ty = toys[(Math.random()*toys.length)|0];
     babyTarget.set(ty.x + (Math.random()-0.5)*0.8, 0, ty.z + (Math.random()-0.5)*0.8);
     babyPlayingToy = ty;
@@ -1424,9 +1575,14 @@ function tick(){
       baby.position.y = 1.15 + Math.abs(Math.sin(walkPhase))*0.05;
       baby.rotation.y = dad.rotation.y;
       poseBabySit(baby.userData);
-    } else if(S.babyFallen){                                               // took a tumble — frozen & crying till picked up
+    } else if(S.babyFallen || S.babyBurned){                               // hurt — frozen & crying till picked up
       baby.position.y *= 0.9;
       poseBabySit(baby.userData);
+    } else if(S.babyPenned){                                                // safe in the playpen — counts down to an escape
+      baby.position.y *= 0.9;
+      poseBabySit(baby.userData);
+      S.penTimer -= dt;
+      if(S.penTimer <= 0){ S.babyPenned=false; S.penEscapedTimer=2.5; Audio.error(); pickBabyTarget(); babyMode='crawl'; }
     } else {
       const toT = new THREE.Vector3(babyTarget.x-baby.position.x, 0, babyTarget.z-baby.position.z);
       const distT = toT.length();
@@ -1457,6 +1613,9 @@ function tick(){
         [bx,bz] = collide(bx,bz,0.5);
         baby.position.x = bx; baby.position.z = bz;
         baby.rotation.y = Math.atan2(toT.x, toT.z);
+        if(babyTargetIsOven && Math.hypot(bx-ovenPos.x, bz-ovenPos.z) < 1.6){   // got close enough to touch it — ouch
+          S.babyBurned = true; babyTargetIsOven = false; Audio.cry();
+        }
         babyPoseT += dt*(babyMode==='walk'?9:7);
         if(babyMode==='walk'){
           poseBabyStand(baby.userData, babyPoseT);
@@ -1480,6 +1639,27 @@ function tick(){
       S.holdStamina = Math.min(holdMax(), S.holdStamina + dt*curDiff().holdRecoverMul);
     }
     if(S.armsTiredTimer>0) S.armsTiredTimer = Math.max(0, S.armsTiredTimer-dt);
+    if(S.penEscapedTimer>0) S.penEscapedTimer = Math.max(0, S.penEscapedTimer-dt);
+
+    // ---- work notifications: the computer pings now and then; answer within the window or take a cry penalty ----
+    const dNotify = curDiff();
+    if(S.notification){
+      S.notifyDeadline -= dt;
+      if(S.notifyDeadline <= 0){
+        S.notification=false; S.missedNotifyTimer=2.5;
+        S.cry = Math.min(100, S.cry + dNotify.notifyPenalty); Audio.error();
+        S.notifyTimer = rand(dNotify.notifyMin, dNotify.notifyMax);
+      }
+    } else {
+      S.notifyTimer -= dt;
+      if(S.notifyTimer <= 0){
+        S.notification=true; S.notifyDeadline=dNotify.notifyWindow;
+        S.notifyTimer = rand(dNotify.notifyMin, dNotify.notifyMax);   // primed for the one after this
+        Audio.chime();
+      }
+    }
+    if(S.missedNotifyTimer>0) S.missedNotifyTimer = Math.max(0, S.missedNotifyTimer-dt);
+    computerScreen.material.emissive.set(S.notification ? '#ff5c3d' : '#153a6b');
 
     // ---- occasional throw-up: leaves a mess only the mop can clean ----
     S.vomitTimer -= dt;
@@ -1520,7 +1700,7 @@ function tick(){
     // ---- crying / cry-o-meter (eased by play joy and by cuddling; scaled by difficulty) ----
     const diffCry = curDiff();
     let empties = 0; NEEDS.forEach(k=>{ if(S.need[k] <= 0.5) empties++; });
-    const crying = empties>0 || S.babyFallen;
+    const crying = empties>0 || S.babyFallen || S.babyBurned;
     if(crying){
       let fill = (3.5 + empties*3) * (1 - 0.4*S.joy) * diffCry.cryFillMul;
       if(S.holdingBaby){ fill *= 0.5; S.cry = Math.max(0, S.cry - 3.5*diffCry.cryDrainMul*dt); } // holding calms a fuss, but many unmet needs still creep up
@@ -1574,6 +1754,8 @@ function updateHUD(){
   });
   el.cryFill.style.width = S.cry+'%';
   el.cryPct.textContent = Math.round(S.cry)+'%';
+  if(S.notification){ el.workAlert.textContent = `💻 Work message! Reply within ${Math.ceil(S.notifyDeadline)}s`; el.workAlert.classList.add('show'); }
+  else el.workAlert.classList.remove('show');
   const hp = happiness();
   el.hap.textContent = hp>70?'😄':hp>40?'🙂':hp>15?'😟':'😢';
   el.poo.textContent = '💩 '+S.poo;
@@ -1589,11 +1771,15 @@ function updateHUD(){
     msg = '🚪 Hide in the closet? Ends the game — <kbd>E</kbd>';
   } else if(k==='frontdoor'){
     msg = '🚪 Walk out the front door? Ends the game — <kbd>E</kbd>';
-  } else if(S.babyFallen && !S.holdingBaby){
-    msg = near ? '😢 The baby fell! Pick them up — <kbd>Space</kbd>' : '😢 The baby fell and is crying — go pick them up!';
+  } else if((S.babyFallen || S.babyBurned) && !S.holdingBaby){
+    const hurtMsg = S.babyBurned ? '🔥 The baby got burned on the oven!' : '😢 The baby fell!';
+    const hurtMsgFar = S.babyBurned ? '🔥 The baby got burned and is crying — go comfort them!' : '😢 The baby fell and is crying — go pick them up!';
+    msg = near ? `${hurtMsg} Pick them up — <kbd>Space</kbd>` : hurtMsgFar;
   } else if(S.holdingBaby){
     if(k==='cartoon') msg = (S.cartoonsOn?'Cartoons playing':'Turn on cartoons')+' — <kbd>E</kbd> · put baby down <kbd>Space</kbd>';
     else if(k==='shop') msg = 'Open upgrades <kbd>E</kbd> · put baby down <kbd>Space</kbd>';
+    else if(k==='playpen') msg = '🔒 Put the baby in the playpen — <kbd>E</kbd> · put baby down <kbd>Space</kbd>';
+    else if(k==='computer') msg = S.notification ? '💻 Reply to the work message — <kbd>E</kbd> · put baby down <kbd>Space</kbd>' : 'Hands full! Put the baby down first — <kbd>Space</kbd>';
     else if(k) msg = 'Hands full! Put the baby down first — <kbd>Space</kbd>';
     else msg = 'Cuddling the baby 🥰 — put down with <kbd>Space</kbd>';
   } else if(S.carrying==='mop'){
@@ -1610,9 +1796,12 @@ function updateHUD(){
     else if(near) msg = 'Pick up the baby — <kbd>Space</kbd>';
     else if(k==='shop') msg = 'Open the <kbd>U</kbd>pgrade workbench — <kbd>E</kbd>';
     else if(k==='cartoon') msg = (S.cartoonsOn?'Cartoons playing':'Turn on cartoons')+' — <kbd>E</kbd>';
+    else if(k==='computer') msg = S.notification ? '💻 Reply to the work message — <kbd>E</kbd>' : '';
     else if(k) msg = `Grab ${NEED_ICON[k]} ${NEED_LABEL[k]||k} — <kbd>E</kbd>`;
     else if(mess) msg = '🤢 Ew, a mess — go grab the 🧹 mop';
     else if(S.armsTiredTimer>0) msg = '😩 Your arms gave out — the baby slipped down!';
+    else if(S.penEscapedTimer>0) msg = '👶 The baby escaped the playpen!';
+    else if(S.missedNotifyTimer>0) msg = '😤 You missed a work message — not great, boss noticed.';
   }
   el.prompt.innerHTML = msg;
   el.prompt.classList.toggle('show', !!msg);
@@ -1625,6 +1814,7 @@ function updateHUD(){
   }
   else if(S.carrying){ el.carry.innerHTML = 'Carrying: '+CARRY_ICON[S.carrying]+' '+S.carrying; el.carry.classList.add('show'); }
   else if(S.slowTimer>0){ el.carry.innerHTML = '🐌 Slipped! Walking slower...'; el.carry.classList.add('show'); }
+  else if(S.babyPenned){ el.carry.innerHTML = `🔒 Baby in playpen: ${Math.ceil(S.penTimer)}s`; el.carry.classList.add('show'); }
   else el.carry.classList.remove('show');
 
   if(!shopEl.classList.contains('hidden')) refreshShop();
