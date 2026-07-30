@@ -77,6 +77,9 @@
   .hint{position:absolute;bottom:14px;left:12px;max-width:250px;font-size:12px;opacity:.75;line-height:1.7;
     background:var(--panel);border:1px solid var(--panelborder);border-radius:10px;padding:8px 12px}
   .hint kbd{background:#fff;color:#222;border-radius:4px;padding:0 5px;font-weight:bold}
+  .minimapHud{position:absolute;bottom:14px;left:12px;background:var(--panel);border:1px solid var(--panelborder);
+    border-radius:10px;padding:6px}
+  .minimapHud canvas{display:block;border-radius:6px}
 
   /* ---------- Overlays ---------- */
   .overlay{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-start;justify-content:center;
@@ -97,6 +100,8 @@
   .legend{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;text-align:left;margin:16px auto;
     max-width:420px;font-size:14px}
   .legend b{opacity:.95}
+  .helpDetail{margin-top:14px}
+  .helpDetail.hidden{display:none}
   .tag{display:inline-block;background:rgba(255,255,255,.1);border-radius:20px;padding:4px 14px;
     font-size:13px;margin:4px 3px}
 
@@ -143,7 +148,8 @@
     <div class="need" data-k="cartoon"><div class="lbl">📺 Cartoons</div><div class="bar"><i></i></div></div>
     <div class="stat"><b id="hapVal">😊</b><span>Happiness</span></div>
     <div class="stat"><b id="pooVal">💩 0</b><span>Poo</span></div>
-    <div class="stat"><b id="timeVal">3:00</b><span>Mom back in</span></div>
+    <div class="stat"><b id="timeVal">3:00</b><span id="timeLabel">Mom back in</span></div>
+    <div class="stat" id="scoreStat" style="display:none"><b id="scoreVal">0</b><span>Score</span></div>
   </div>
 
   <div class="crywrap">
@@ -155,9 +161,8 @@
   <div class="prompt" id="prompt"></div>
   <div class="carry" id="carry"></div>
 
-  <div class="hint">
-    <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · <kbd>E</kbd> interact · <kbd>Q</kbd> drop item ·
-    <kbd>Space</kbd> pick up baby · <kbd>U</kbd> shop · scroll to zoom
+  <div class="minimapHud" id="minimapHud">
+    <canvas id="minimapCanvas" width="180" height="160"></canvas>
   </div>
 
   <div class="corner">
@@ -173,28 +178,33 @@
     <h1>Baby Care: Dad's on Duty</h1>
     <p><b>Mom just left to go shopping</b> — and she left <b>you</b> in charge of the little one!
        You're working <b>remote</b> today too, so it's baby duty and your day job at once.
-       Keep the baby happy until she gets back.</p>
-    <p>Watch the four needs. If any runs out the baby cries, and the <b style="color:var(--cry)">cry-o-meter</b>
-       climbs. Let it fill up and you'll panic-call Mommy — <b>game over</b>.</p>
+       Keep the baby happy until she gets back, and don't let the <b style="color:var(--cry)">cry-o-meter</b>
+       fill up.</p>
     <div class="legend">
       <div>🍎 <b>Food</b> — feed at the kitchen</div>
       <div>🍼 <b>Milk</b> — grab from the fridge</div>
       <div>👶 <b>Diaper</b> — change at the table</div>
       <div>📺 <b>Cartoons</b> — switch on the TV</div>
     </div>
-    <p style="font-size:13px;opacity:.8">The baby <b>crawls around</b> the house and plays with toys.
-       Scoop it up with <kbd>Space</kbd> to carry it anywhere and calm it down, or drop whatever you're
-       holding with <kbd>Q</kbd> — but 💪 your arms tire out the longer you hold the baby, so you can't
-       just carry it forever (upgrade <b>Strong Arms</b> at the workbench to hold longer). Need your hands
-       free? Pen the baby in the 🔒 <b>playpen</b> for a little while — it'll escape on its own after a bit,
-       so don't wander off for too long. And keep an eye out near the 🔥 <b>oven</b> in the kitchen — an
-       unsupervised baby that toddles over to it will get burned. Oh, and you're still supposed to be
-       working — the 💻 <b>computer</b> in the office will occasionally ping with a message; get to it
-       and reply within the time shown or it'll cost you — miss too many and you're <b>fired</b>,
-       game over. Changing diapers
-       collects 💩 <b>poo</b> — spend it at the 🛠️ workbench to upgrade everything. Survive until Mom
-       returns to win! (There's a 🚪 closet in the bedroom too —
-       but hiding in it ends the game. Don't be <i>that</i> dad.)</p>
+    <button class="btn" id="helpToggleBtn">▶ How does this work?</button>
+    <div class="helpDetail hidden" id="helpDetail">
+      <p>Watch the four needs. If any runs out the baby cries, and the <b style="color:var(--cry)">cry-o-meter</b>
+         climbs. Let it fill up and you'll panic-call Mommy — <b>game over</b>.</p>
+      <p style="font-size:13px;opacity:.8">The baby <b>crawls around</b> the house and plays with toys.
+         Scoop it up with <kbd>Space</kbd> to carry it anywhere and calm it down, or drop whatever you're
+         holding with <kbd>Q</kbd> — but 💪 your arms tire out the longer you hold the baby, so you can't
+         just carry it forever (upgrade <b>Strong Arms</b> at the workbench to hold longer). Need your hands
+         free? Pen the baby in the 🔒 <b>playpen</b> for a little while — it'll escape on its own after a bit,
+         so don't wander off for too long. And keep an eye out near the 🔥 <b>oven</b> in the kitchen — an
+         unsupervised baby that toddles over to it will get burned. Oh, and you're still supposed to be
+         working — the 💻 <b>computer</b> in the office will occasionally ping with a message; get to it
+         and reply within the time shown or it'll cost you — miss too many and you're <b>fired</b>,
+         game over. Changing diapers
+         collects 💩 <b>poo</b> — spend it at the 🛠️ workbench to upgrade everything. Survive until Mom
+         returns to win! (There's a 🚪 closet in the bedroom too —
+         but hiding in it ends the game. Don't be <i>that</i> dad.) Press <kbd>Esc</kbd> anytime in-game
+         for this same help, the music picker, and a map of the house.</p>
+    </div>
     <div class="stepnav">
       <button class="btn cta" id="introNextBtn">Next ▶</button>
     </div>
@@ -207,24 +217,21 @@
     <div class="diffPicker" id="diffPicker">
       <div class="diffOpt" data-diff="first">
         <div class="diffTitle">🍼 First Born</div>
-        <div class="diffSub">Easiest — 2.5 min, needs drain slowly, fewer accidents</div>
+        <div class="diffSub">Easiest — 3.5 min, needs drain slowly, fewer accidents</div>
       </div>
       <div class="diffOpt selected" data-diff="veteran">
         <div class="diffTitle">😅 Been There, Done That</div>
-        <div class="diffSub">Medium — 3 min, the standard challenge</div>
+        <div class="diffSub">Medium — 4.5 min, the standard challenge</div>
       </div>
       <div class="diffOpt" data-diff="king">
         <div class="diffTitle">👑 King</div>
-        <div class="diffSub">Hardest — 3.5 min, needs drain fast, expect chaos</div>
+        <div class="diffSub">Hardest — 5.5 min, needs drain fast, expect chaos</div>
       </div>
     </div>
-    <p style="font-size:13px;opacity:.75;margin:16px 0 6px">🎵 Background Music</p>
-    <div class="diffPicker musicPicker" id="musicPicker">
-      <div class="diffOpt selected" data-music="games">
-        <div class="diffTitle">🎮 Game Vibes</div>
-      </div>
-      <div class="diffOpt" data-music="retro">
-        <div class="diffTitle">🕹️ Retro Arcade</div>
+    <div class="diffPicker" id="endlessToggle" style="margin-top:10px">
+      <div class="diffOpt" data-endless="1">
+        <div class="diffTitle">♾️ Endless Mode</div>
+        <div class="diffSub">No timer — survive as long as you can. Best: <span id="bestScoreLabel">0</span></div>
       </div>
     </div>
     <div class="stepnav">
@@ -265,6 +272,40 @@
     <div class="shopbal">Balance: <b id="shopPoo">💩 0</b></div>
     <div class="ups" id="ups"></div>
     <button class="btn" id="closeShop">Back to the baby ▶</button>
+  </div>
+</div>
+
+<!-- Pause menu (Esc) -->
+<div class="overlay hidden" id="pauseMenu">
+  <div class="card shopcard">
+    <h2>⏸️ Paused</h2>
+    <p style="font-size:13px;opacity:.75;margin:0 0 4px">🎵 Background Music</p>
+    <div class="diffPicker musicPicker" id="pauseMusicPicker">
+      <div class="diffOpt" data-music="games">
+        <div class="diffTitle">🎮 Game Vibes</div>
+      </div>
+      <div class="diffOpt" data-music="retro">
+        <div class="diffTitle">🕹️ Retro Arcade</div>
+      </div>
+    </div>
+    <button class="btn" id="pauseHelpToggleBtn" style="margin-top:14px">▶ How does this work?</button>
+    <div class="helpDetail hidden" id="pauseHelpDetail">
+      <p style="font-size:13px;opacity:.8">The baby <b>crawls around</b> the house and plays with toys.
+         Scoop it up with <kbd>Space</kbd> to carry it anywhere and calm it down, or drop whatever you're
+         holding with <kbd>Q</kbd> — but 💪 your arms tire out the longer you hold the baby (upgrade
+         <b>Strong Arms</b> at the workbench). Pen the baby in the 🔒 <b>playpen</b> for a little while to
+         free your hands — it escapes on its own after a bit. Watch the 🔥 <b>oven</b> in the kitchen — an
+         unsupervised baby that toddles over gets burned. The 💻 <b>computer</b> in the office pings with
+         work messages; reply within the time shown or it costs you — miss too many and you're
+         <b>fired</b>. Changing diapers collects 💩 <b>poo</b> — spend it at the 🛠️ workbench. Survive
+         until Mom returns to win! (The 🚪 closet and 🚪 front door both end the game instantly if used.)</p>
+    </div>
+    <p style="font-size:13px;opacity:.75;margin:16px 0 4px">⌨️ Controls</p>
+    <div class="hint" style="position:static;max-width:none">
+      <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · <kbd>E</kbd> interact · <kbd>Q</kbd> drop item ·
+      <kbd>Space</kbd> pick up baby · <kbd>U</kbd> shop · <kbd>M</kbd> mute · <kbd>Esc</kbd> pause · scroll to zoom
+    </div>
+    <button class="btn cta" id="resumeBtn" style="margin-top:14px">▶ Resume</button>
   </div>
 </div>
 
@@ -388,6 +429,7 @@ const solids = [];         // furniture/station collision circles
 const stations = {};
 let tvScreen = null, computerScreen = null, houseGroup = null;
 let ovenPos = new THREE.Vector3();  // set by buildKitchen; used by the baby AI's oven hazard
+let lastLayout = null;              // simplified room rects set by buildHouse(); used by the pause-menu minimap
 const houseBounds = { X0:-23, X1:23, Z0:-8, Z1:22 };
 const spawnDad = new THREE.Vector3(0,0,3), spawnBaby = new THREE.Vector3(-13,0,1);
 function disposeGroup(g){ g.traverse(o=>{ if(o.geometry) o.geometry.dispose();
@@ -468,6 +510,36 @@ function wallZWindowed(x, z1, z2, wins){
     cursor = wz2;
   });
   if(cursor<z2) wallZ(x, cursor, z2);
+}
+// builds all 4 of a room's walls generically, regardless of the house's overall shape: its doorSide
+// gets a door-width gap at the room's own center, each side listed in exteriorSides gets a real
+// windowed opening (using the slot windowSlotsFor already picked, room.windowCxBySide), and any side
+// that's neither — a divider against a neighboring room — gets a plain solid wall spanning the
+// room's own width there. Every room calls this independently, so two rooms sharing a divider each
+// build it (harmless overlap) — this is what makes the wall-building shape-agnostic: no global
+// "4 sides of one big rectangle" bookkeeping, just each room closing its own 4 edges correctly.
+function buildRoomWalls(room){
+  const DOOR=2.8, HD=DOOR/2;
+  const winFor = side => (room.windowCxBySide && room.windowCxBySide[side]!==undefined) ? [{cx:room.windowCxBySide[side], halfW:1.2}] : [];
+  ['N','S','E','W'].forEach(side=>{
+    const isDoor = side===room.doorSide, isExt = (room.exteriorSides||[]).includes(side);
+    if(side==='N'||side==='S'){
+      const z = side==='N' ? room.minZ : room.maxZ;
+      if(isDoor){ const c=(room.minX+room.maxX)/2; wallXDoors(z, room.minX, room.maxX, [[c-HD,c+HD]]); }
+      else if(isExt) wallXWindowed(z, room.minX, room.maxX, winFor(side));
+      else wallX(z, room.minX, room.maxX);
+    } else {
+      const x = side==='W' ? room.minX : room.maxX;
+      if(isDoor){ const c=(room.minZ+room.maxZ)/2; wallZDoors(x, room.minZ, room.maxZ, [[c-HD,c+HD]]); }
+      else if(isExt) wallZWindowed(x, room.minZ, room.maxZ, winFor(side));
+      else wallZ(x, room.minZ, room.maxZ);
+    }
+  });
+}
+function computeBounds(rects){
+  let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
+  rects.forEach(r=>{ minX=Math.min(minX,r.minX); maxX=Math.max(maxX,r.maxX); minZ=Math.min(minZ,r.minZ); maxZ=Math.max(maxZ,r.maxZ); });
+  return {minX,maxX,minZ,maxZ};
 }
 
 function addToy(g, x, z, baseY){ g.position.set(x, baseY, z); houseGroup.add(g); toys.push({x, z, mesh:g, baseY}); }
@@ -690,12 +762,14 @@ function edgeT(){ return Math.random()<0.5 ? rand(0.08,0.22) : rand(0.78,0.92); 
 // safe corner of an unused inner wall, else any wall's corner as a last resort. Returns .side too
 // so callers can exclude it from a following call and avoid stacking two items in one spot.
 function centeredWallDecorSpot(room, excludeSides, outDist){
+  const exclude = room.windowSides ? excludeSides.concat(room.windowSides) : excludeSides;
   const {outer, inner} = sidesFor(room);
-  const outCandidates = outer.filter(s=>!excludeSides.includes(s));
+  const outCandidates = outer.filter(s=>!exclude.includes(s));
   if(outCandidates.length){ const side=pick(outCandidates); return Object.assign(wallPos(room, side, 0.5, outDist), {side}); }
-  const inCandidates = inner.filter(s=>!excludeSides.includes(s));
+  const inCandidates = inner.filter(s=>!exclude.includes(s));
   if(inCandidates.length){ const side=pick(inCandidates); return Object.assign(wallPos(room, side, edgeT(), outDist), {side}); }
-  const side = pick(['N','S','E','W']);
+  // every side is either excluded or a window — fall back to whatever's least bad (not a window if possible)
+  const side = pick(outer.filter(s=>!room.windowSides?.includes(s)).concat(inner)) || pick(['N','S','E','W']);
   return Object.assign(wallPos(room, side, edgeT(), outDist), {side});
 }
 function addToys(room, count, spread){
@@ -946,22 +1020,138 @@ function buildFrontDoorGroup(){ const g=new THREE.Group();
   const knob=sph(0.06,'#e8d08a'); knob.position.set(0.42,1.2,0.15); g.add(knob);
   const rug=box(1.5,0.04,0.55,'#c9a24b'); rug.position.set(0,0.02,0.55); g.add(rug);
   return g; }
-function furnishHallway(hall, zB){
-  const runner=box(Math.min(hall.w-1.5,3.2), 0.03, hall.h-4, '#b06a54');
-  runner.position.set(hall.cx, 0.02, hall.cz); houseGroup.add(runner);
-  addProp(plant(), hall.cx, zB[0]+1.2, 0.4, 0.4);            // decorative, tucked at the dead-end, out of the way
+// a runner rug per hallway segment, oriented along whichever axis that segment is longer on
+function furnishHalls(halls){
+  halls.forEach(h=>{
+    const w=h.maxX-h.minX, d=h.maxZ-h.minZ, vertical=d>=w;
+    const rw = vertical ? Math.min(w-1.5,3.2) : Math.max(w-4,1);
+    const rd = vertical ? Math.max(d-4,1) : Math.min(d-1.5,3.2);
+    if(rw>0.4 && rd>0.4){
+      const runner=box(rw,0.03,rd,'#b06a54');
+      runner.position.set((h.minX+h.maxX)/2, 0.02, (h.minZ+h.maxZ)/2); houseGroup.add(runner);
+    }
+  });
+}
+function furnishFrontDoor(layout){
+  const fd = layout.frontDoor;
   const doorGroup = buildFrontDoorGroup();
-  addStation('frontdoor', hall.cx, zB[3]-0.6, doorGroup, '🚪 Front Door', 3.2, Math.PI);
-  // mirror the door on the outside face of the same wall so it reads as a front door from outside the house too
-  const outsideDoor = buildFrontDoorGroup();
-  outsideDoor.position.set(hall.cx, 0, zB[3]+0.35); outsideDoor.rotation.y = 0;
-  houseGroup.add(outsideDoor);
+  addStation('frontdoor', fd.x, fd.z, doorGroup, '🚪 Front Door', 3.2, fd.rotY);
+  // mirror the door on the outside face of the same wall so it reads as a front door from outside too
+  {
+    const outsideDoor = buildFrontDoorGroup();
+    outsideDoor.position.set(fd.outX, 0, fd.outZ); outsideDoor.rotation.y = fd.outRotY;
+    houseGroup.add(outsideDoor);
+  }
 }
 
+/* ---------- house layouts: each picks its own room/hallway geometry and hands back a uniform
+   {cells, halls, buildHallWalls, frontDoor, spawnDad} contract that buildHouse() consumes generically.
+   Every room in `cells` is a plain rectangle (minX/maxX/minZ/maxZ/doorSide/exteriorSides/cx/cz/w/h) —
+   the room-type builders (buildKitchen etc.) already only ever look at a room's own rectangle, so they
+   work unchanged no matter which layout placed them. `halls` are hallway floor rects (1 for a straight
+   spine, more for a bend/branch/ring). `buildHallWalls()` builds any exterior wall that belongs to the
+   hallway itself rather than to a room (e.g. a corridor's dead-end cap) — called once, after room walls. */
+function makeCell(minX,maxX,minZ,maxZ,doorSide,exteriorSides){
+  return {minX,maxX,minZ,maxZ,doorSide,exteriorSides,cx:(minX+maxX)/2,cz:(minZ+maxZ)/2,w:maxX-minX,h:maxZ-minZ};
+}
+// the classic layout: one straight N-S hallway spine, 3 rows of rooms flanking it on both sides
+function layoutRect(){
+  const Lw=rand(9,12), Rw=rand(9,12), Hw=rand(5.5,7.5);
+  const rowH=[rand(10,14), rand(10,14), rand(10,14)];
+  const X0=-(Lw+Hw+Rw)/2, Z0=-3;
+  const xB=[X0, X0+Lw, X0+Lw+Hw, X0+Lw+Hw+Rw];
+  const zB=[Z0, Z0+rowH[0], Z0+rowH[0]+rowH[1], Z0+rowH[0]+rowH[1]+rowH[2]];
+  const cells=[];
+  for(let r=0;r<3;r++){
+    const leftExt=['W']; if(r===0) leftExt.push('N'); if(r===2) leftExt.push('S');
+    const rightExt=['E']; if(r===0) rightExt.push('N'); if(r===2) rightExt.push('S');
+    cells.push(makeCell(xB[0],xB[1],zB[r],zB[r+1],'E',leftExt));
+    cells.push(makeCell(xB[2],xB[3],zB[r],zB[r+1],'W',rightExt));
+  }
+  const hall = {minX:xB[1],maxX:xB[2],minZ:zB[0],maxZ:zB[3]};
+  function buildHallWalls(){
+    wallXWindowed(zB[0], xB[1], xB[2], [{cx:(xB[1]+xB[2])/2, halfW:1.2}]);   // hallway's own north dead end
+    wallX(zB[3], xB[1], xB[2]);                                             // hallway's own south end — the front door goes here
+  }
+  const cx=(xB[1]+xB[2])/2;
+  const frontDoor = {x:cx, z:zB[3]-0.6, rotY:Math.PI, outX:cx, outZ:zB[3]+0.35, outRotY:0};
+  return { cells, halls:[hall], buildHallWalls, frontDoor, spawnDad:{x:cx, z:zB[3]-3.4} };
+}
+// L-shape: a vertical wing (rooms on the west side) bends 90° at its foot into a horizontal wing
+// (rooms on the south side) — a real corner turn in the corridor, not just a resized room
+function layoutL(){
+  const Hw=rand(5.5,7.5), Lw=rand(9,12), footDepth=rand(9,12);
+  const rowH=[rand(10,14), rand(10,14), rand(10,14)];
+  const footW=[rand(9,12), rand(9,12), rand(9,12)];
+  const hx0=0, hx1=hx0+Hw, Z0=-3;
+  const zA=[Z0, Z0+rowH[0], Z0+rowH[0]+rowH[1], Z0+rowH[0]+rowH[1]+rowH[2]];
+  const Z1=zA[3], Z2=Z1+Hw;
+  const xB=[hx0, hx0+footW[0], hx0+footW[0]+footW[1], hx0+footW[0]+footW[1]+footW[2]];
+  const xEnd=xB[3];
+
+  const cells=[];
+  for(let r=0;r<3;r++){
+    const ext=['W']; if(r===0) ext.push('N'); if(r===2) ext.push('S');
+    cells.push(makeCell(hx0-Lw, hx0, zA[r], zA[r+1], 'E', ext));
+  }
+  for(let c=0;c<3;c++){
+    const ext=['S']; if(c===0) ext.push('W'); if(c===2) ext.push('E');
+    cells.push(makeCell(xB[c], xB[c+1], Z2, Z2+footDepth, 'N', ext));
+  }
+  const hallA={minX:hx0,maxX:hx1,minZ:Z0,maxZ:Z1}, hallB={minX:hx0,maxX:xEnd,minZ:Z1,maxZ:Z2};
+  function buildHallWalls(){
+    wallXWindowed(Z0, hx0, hx1, [{cx:(hx0+hx1)/2, halfW:1.2}]);          // wing A's north cap
+    wallZWindowed(hx1, Z0, Z1, [{cx:(Z0+Z1)/2, halfW:1.2}]);             // wing A's east wall (opposite the rooms)
+    wallZWindowed(hx0, Z1, Z2, []);                                      // inner concave corner
+    wallXWindowed(Z1, hx1, xEnd, [{cx:(hx1+xEnd)/2, halfW:1.2}]);        // wing B's north wall (opposite the rooms)
+    wallZWindowed(xEnd, Z1, Z2, []);                                     // wing B's east end cap
+  }
+  const fz=(Z1+Z2)/2;
+  const frontDoor = {x:xEnd-0.6, z:fz, rotY:-Math.PI/2, outX:xEnd+0.35, outZ:fz, outRotY:Math.PI/2};
+  return { cells, halls:[hallA,hallB], buildHallWalls, frontDoor, spawnDad:{x:xEnd-3.4, z:fz} };
+}
+// T-shape: a wide crossbar (rooms on the north side) with a stem hallway (rooms on the west side)
+// dropping from its middle — a proper 3-way corridor junction, not a resized end row
+function layoutT(){
+  const Hw=rand(5.5,7.5), Lw=rand(9,12), crossDepth=rand(9,12);
+  const stemRowH=[rand(10,14), rand(10,14)];
+  const crossW=[rand(9,12), rand(9,12), rand(9,12), rand(9,12)];
+  const XcrossLeft=0;
+  const xC=[XcrossLeft]; crossW.forEach(w=>xC.push(xC[xC.length-1]+w));
+  const XcrossRight=xC[4];
+  const Ztop0=-3, Ztop1=Ztop0+crossDepth, ZhallEnd=Ztop1+Hw;
+  const stemCx=(XcrossLeft+XcrossRight)/2, hx0=stemCx-Hw/2, hx1=stemCx+Hw/2;
+  const zS=[ZhallEnd, ZhallEnd+stemRowH[0], ZhallEnd+stemRowH[0]+stemRowH[1]];
+  const Zbottom=zS[2];
+
+  const cells=[];
+  for(let c=0;c<4;c++){
+    const ext=['N']; if(c===0) ext.push('W'); if(c===3) ext.push('E');
+    cells.push(makeCell(xC[c], xC[c+1], Ztop0, Ztop1, 'S', ext));
+  }
+  for(let r=0;r<2;r++){
+    const ext=['W']; if(r===1) ext.push('S');
+    cells.push(makeCell(hx0-Lw, hx0, zS[r], zS[r+1], 'E', ext));
+  }
+  const hallCross={minX:XcrossLeft,maxX:XcrossRight,minZ:Ztop1,maxZ:ZhallEnd};
+  const hallStem={minX:hx0,maxX:hx1,minZ:ZhallEnd,maxZ:Zbottom};
+  function buildHallWalls(){
+    wallXWindowed(ZhallEnd, XcrossLeft, hx0, [{cx:(XcrossLeft+hx0)/2, halfW:1.2}]);
+    wallXWindowed(ZhallEnd, hx1, XcrossRight, [{cx:(hx1+XcrossRight)/2, halfW:1.2}]);
+    wallZWindowed(XcrossLeft, Ztop1, ZhallEnd, [{cx:(Ztop1+ZhallEnd)/2, halfW:1.2}]);
+    wallZWindowed(XcrossRight, Ztop1, ZhallEnd, [{cx:(Ztop1+ZhallEnd)/2, halfW:1.2}]);
+    wallZWindowed(hx1, ZhallEnd, Zbottom, [{cx:(ZhallEnd+Zbottom)/2, halfW:1.2}]);
+    wallX(Zbottom, hx0, hx1);                                             // stem south cap — front door goes here, no window
+  }
+  const fx=(hx0+hx1)/2;
+  const frontDoor = {x:fx, z:Zbottom-0.6, rotY:Math.PI, outX:fx, outZ:Zbottom+0.35, outRotY:0};
+  return { cells, halls:[hallCross,hallStem], buildHallWalls, frontDoor, spawnDad:{x:fx, z:Zbottom-3.4} };
+}
 /* ---------- buildHouse(): randomized-but-sensible layout, rebuilt each run ---------- */
 // A central hallway spine runs the full depth of the house; every room opens onto it through
 // exactly one door (so bedroom/bathroom/etc. are single-door private rooms, not a maze of
 // doors to every neighbor), and the hallway ends at a front door out of the house.
+const HOUSE_LAYOUTS = {rect:layoutRect, L:layoutL, T:layoutT};
 function buildHouse(){
   if(houseGroup){ scene.remove(houseGroup); disposeGroup(houseGroup); }
   houseGroup = new THREE.Group(); scene.add(houseGroup);
@@ -969,26 +1159,12 @@ function buildHouse(){
   for(const k in stations) delete stations[k];
   tvScreen = null;
 
-  // randomized room-column widths / row heights -> bathroom always ends up smaller than living room etc.
-  const Lw=rand(9,12), Rw=rand(9,12), Hw=rand(5.5,7.5);
-  const rowH=[rand(10,14), rand(10,14), rand(10,14)];
-  const X0=-(Lw+Hw+Rw)/2, Z0=-3;
-  const xB=[X0, X0+Lw, X0+Lw+Hw, X0+Lw+Hw+Rw];
-  const zB=[Z0, Z0+rowH[0], Z0+rowH[0]+rowH[1], Z0+rowH[0]+rowH[1]+rowH[2]];
+  const shapeKind = pick(['rect','L','T']);
+  const layout = HOUSE_LAYOUTS[shapeKind]();
+  const { cells, halls, buildHallWalls, frontDoor, spawnDad:spawnDadPos } = layout;
 
-  const cells=[];
-  for(let r=0;r<3;r++){
-    const leftExt=['W']; if(r===0) leftExt.push('N'); if(r===2) leftExt.push('S');
-    const rightExt=['E']; if(r===0) rightExt.push('N'); if(r===2) rightExt.push('S');
-    cells.push({minX:xB[0],maxX:xB[1], minZ:zB[r],maxZ:zB[r+1], doorSide:'E', exteriorSides:leftExt,
-      cx:(xB[0]+xB[1])/2, cz:(zB[r]+zB[r+1])/2, w:xB[1]-xB[0], h:zB[r+1]-zB[r]});
-    cells.push({minX:xB[2],maxX:xB[3], minZ:zB[r],maxZ:zB[r+1], doorSide:'W', exteriorSides:rightExt,
-      cx:(xB[2]+xB[3])/2, cz:(zB[r]+zB[r+1])/2, w:xB[3]-xB[2], h:zB[r+1]-zB[r]});
-  }
+  // smallest cell gets the smallest-rank room type (bathroom), largest gets the largest (living) — every run, regardless of shape or which slot it lands in
   cells.forEach(c=>{ c.area = c.w*c.h; });
-  const hall = {minX:xB[1],maxX:xB[2], minZ:zB[0],maxZ:zB[3], cx:(xB[1]+xB[2])/2, cz:(zB[0]+zB[3])/2, w:xB[2]-xB[1], h:zB[3]-zB[0]};
-
-  // smallest cell gets the smallest-rank room type (bathroom), largest gets the largest (living) — every run, regardless of which side/row it lands on
   const byArea=[...cells].sort((a,b)=>a.area-b.area);
   byArea.forEach((cell,i)=>{ cell.type=ROOM_RANK[i]; });
 
@@ -997,48 +1173,54 @@ function buildHouse(){
     const f=new THREE.Mesh(new THREE.PlaneGeometry(room.w, room.h), mat0);
     f.rotation.x=-Math.PI/2; f.position.set(room.cx,0,room.cz); f.receiveShadow=true; houseGroup.add(f);
   });
-  const hallFloor=new THREE.Mesh(new THREE.PlaneGeometry(hall.w, hall.h), new THREE.MeshLambertMaterial({color:'#d8c9a3'}));
-  hallFloor.rotation.x=-Math.PI/2; hallFloor.position.set(hall.cx,0,hall.cz); hallFloor.receiveShadow=true; houseGroup.add(hallFloor);
+  halls.forEach(h=>{
+    const hf=new THREE.Mesh(new THREE.PlaneGeometry(h.maxX-h.minX, h.maxZ-h.minZ), new THREE.MeshLambertMaterial({color:'#d8c9a3'}));
+    hf.rotation.x=-Math.PI/2; hf.position.set((h.minX+h.maxX)/2,0,(h.minZ+h.maxZ)/2); hf.receiveShadow=true; houseGroup.add(hf);
+  });
 
-  // furniture goes in before the exterior walls are built: each room-type builder sets
-  // room.primarySide/primaryT, which the window placement below needs to avoid hanging a window
-  // over the main furniture — nothing here depends on the wall meshes existing yet.
-  cells.forEach(room=>{ ROOM_TYPES[room.type].build(room); if(room.type!=='bathroom') scatterPaintings(room); });
+  // furniture goes in before the walls are built: each room-type builder sets room.primarySide/primaryT,
+  // which the window placement below needs to avoid hanging a window over the main furniture — nothing
+  // here depends on the wall meshes existing yet.
+  cells.forEach(room=>{ ROOM_TYPES[room.type].build(room); });
 
-  // collect every room's window slot(s) per exterior wall run, so each run can be built with real
-  // carved openings (see wallXWindowed/wallZWindowed) instead of windows floating in front of a
-  // solid wall.
-  const winsBySide = {N:[], S:[], W:[], E:[]};
-  cells.forEach(room=>{ windowSlotsFor(room).forEach(s=>winsBySide[s.side].push({cx:s.cx, halfW:1.2})); });
-  winsBySide.N.push({cx:hall.cx, halfW:1.2});     // the hallway's dead end is an outer wall too
+  // one window slot per exterior side, recorded on the room (room.windowCxBySide for wall-building,
+  // room.windowSides so any decor placed afterwards — paintings, shelves, clocks — steers clear of it).
+  cells.forEach(room=>{
+    const slots = windowSlotsFor(room);
+    room.windowSides = slots.map(s=>s.side);
+    room.windowCxBySide = {};
+    slots.forEach(s=>{ room.windowCxBySide[s.side] = s.cx; });
+  });
 
-  const DOOR=2.8, HD=DOOR/2;
-  const doorAt = center => [center-HD, center+HD];
-  // outer perimeter (south wall doubles as the house's front face — the front door sits flush against it)
-  wallXWindowed(zB[0], xB[0], xB[3], winsBySide.N);
-  wallXWindowed(zB[3], xB[0], xB[3], winsBySide.S);
-  wallZWindowed(xB[0], zB[0], zB[3], winsBySide.W);
-  wallZWindowed(xB[3], zB[0], zB[3], winsBySide.E);
-  // room-column internal dividers: fully closed — these rooms only ever talk to the hallway
-  [0,1].forEach(i=>{ wallX(zB[i+1], xB[0], xB[1]); wallX(zB[i+1], xB[2], xB[3]); });
-  // hallway walls: one door per room, centered on that room's row
-  const rowDoors = [0,1,2].map(r=>doorAt((zB[r]+zB[r+1])/2));
-  wallZDoors(xB[1], zB[0], zB[3], rowDoors);
-  wallZDoors(xB[2], zB[0], zB[3], rowDoors);
+  cells.forEach(room=>{ if(room.type!=='bathroom') scatterPaintings(room); });
 
-  furnishHallway(hall, zB);
+  // every room closes its own 4 sides (door/window/divider) — see buildRoomWalls — then the layout
+  // adds whatever exterior wall belongs to the hallway itself rather than to any one room.
+  cells.forEach(buildRoomWalls);
+  buildHallWalls();
 
-  houseBounds.X0=xB[0]; houseBounds.X1=xB[3]; houseBounds.Z0=zB[0]; houseBounds.Z1=zB[3];
+  furnishHalls(halls);
+  furnishFrontDoor(layout);
+
+  const bounds = computeBounds(cells.concat(halls));
+  houseBounds.X0=bounds.minX; houseBounds.X1=bounds.maxX; houseBounds.Z0=bounds.minZ; houseBounds.Z1=bounds.maxZ;
   const livingRoom = cells.find(c=>c.type==='living');
   spawnBaby.set(livingRoom.cx, 0, livingRoom.cz);
-  spawnDad.set(hall.cx, 0, zB[3]-3.4);         // right next to the front door, facing into the hallway
+  spawnDad.set(spawnDadPos.x, 0, spawnDadPos.z);
 
-  const midX=(xB[0]+xB[3])/2, totalW=xB[3]-xB[0], totalD=zB[3]-zB[0];
-  LOOK.set(midX, 0, zB[0]);
-  BASE_VIEW = Math.max(totalW*1.95, totalD*1.55);
+  const midX=(bounds.minX+bounds.maxX)/2, midZ=(bounds.minZ+bounds.maxZ)/2;
+  const totalW=bounds.maxX-bounds.minX, totalD=bounds.maxZ-bounds.minZ;
+  LOOK.set(midX, 0, midZ);
+  BASE_VIEW = Math.max(totalW, totalD) * 1.7;   // generous — shapes vary in aspect ratio, so fit the larger dimension with headroom
   zoom = 2.1; applyFrustum();          // start zoomed in on the player, not the whole-house overview
-  sunTarget.position.set(midX, 0, (zB[0]+zB[3])/2);
-  sun.position.set(midX+18, 40, (zB[0]+zB[3])/2+6);
+  sunTarget.position.set(midX, 0, midZ);
+  sun.position.set(midX+18, 40, midZ+6);
+
+  lastLayout = {                        // simplified room/hallway rects, for the pause-menu minimap
+    bounds,
+    rooms: cells.map(c=>({minX:c.minX, maxX:c.maxX, minZ:c.minZ, maxZ:c.maxZ, type:c.type})),
+    halls: halls.map(h=>({minX:h.minX, maxX:h.maxX, minZ:h.minZ, maxZ:h.maxZ})),
+  };
 }
 
 /* ---------- Character builders ---------- */
@@ -1210,7 +1392,8 @@ const Music = (function(){
       if(started && !muted) a.play().catch(()=>{});
     },
     setMuted(m){ muted=m; const a=ensure(); if(m) a.pause(); else if(started) a.play().catch(()=>{}); },
-    get muted(){ return muted; }
+    get muted(){ return muted; },
+    get current(){ return current; }
   };
 })();
 
@@ -1235,24 +1418,31 @@ const ARM_RECOVER_MIN_FRAC = 0.2; // can't pick the baby back up until arms reco
 
 // ---- difficulty: picked on the intro screen, locked in for the run ----
 const DIFFICULTIES = {
-  first:   {key:'first', label:'First Born', gameLen:150,
+  first:   {key:'first', label:'First Born', gameLen:210,
     decayMul:0.72, cryFillMul:0.65, cryDrainMul:1.3, vomitMin:34, vomitMax:60,
     walkChance:0.2, fallMin:9, fallMax:18, needStart:{food:100,milk:100,diaper:100,cartoon:96},
     holdBase:15, holdRecoverMul:1.4, ovenChance:0.02, penSeconds:32,
     notifyMin:45, notifyMax:70, notifyWindow:24, notifyPenalty:12, fireLimit:5},
-  veteran: {key:'veteran', label:"Been There, Done That", gameLen:180,
+  veteran: {key:'veteran', label:"Been There, Done That", gameLen:270,
     decayMul:1, cryFillMul:1, cryDrainMul:1, vomitMin:28, vomitMax:52,
     walkChance:0.32, fallMin:6, fallMax:13, needStart:{food:100,milk:95,diaper:100,cartoon:88},
     holdBase:10, holdRecoverMul:1.3, ovenChance:0.045, penSeconds:24,
     notifyMin:32, notifyMax:52, notifyWindow:17, notifyPenalty:16, fireLimit:4},
-  king:    {key:'king', label:'King', gameLen:210,
+  king:    {key:'king', label:'King', gameLen:330,
     decayMul:1.4, cryFillMul:1.35, cryDrainMul:0.75, vomitMin:16, vomitMax:34,
     walkChance:0.46, fallMin:4, fallMax:9, needStart:{food:85,milk:80,diaper:88,cartoon:70},
     holdBase:6, holdRecoverMul:1.15, ovenChance:0.08, penSeconds:16,
     notifyMin:20, notifyMax:36, notifyWindow:11, notifyPenalty:20, fireLimit:3},
 };
 let difficulty = 'veteran';
+let endlessMode = false;
 function curDiff(){ return DIFFICULTIES[difficulty]; }
+
+// ---- endless-mode high score, persisted per difficulty ----
+function highScoreKey(){ return `babycare_hs_${difficulty}`; }
+function getHighScore(){ try{ return +(localStorage.getItem(highScoreKey())||0); }catch(e){ return 0; } }
+function setHighScore(v){ try{ localStorage.setItem(highScoreKey(), String(v)); }catch(e){} }
+function updateBestScoreLabel(){ const el2=document.getElementById('bestScoreLabel'); if(el2) el2.textContent = getHighScore(); }
 
 let S;
 function resetState(){
@@ -1268,8 +1458,11 @@ function resetState(){
     holdingBaby:false,
     cartoonsOn:false, tvTimer:0,
     lvl:{food:0,milk:0,diaper:0,cartoon:0,speed:0,arms:0},
-    gameLen: D.gameLen,
-    timeLeft: D.gameLen,
+    endless: endlessMode,               // no win-timer — plays until a lose/fired/hide/leave condition
+    gameLen: endlessMode ? Infinity : D.gameLen,
+    timeLeft: endlessMode ? Infinity : D.gameLen,
+    elapsed:0,                          // seconds survived — endless mode's clock and score basis
+    score:0,
     changes:0, cuddles:0,
     messes:[],                         // active vomit puddles {x,z,mesh,playerInside}
     vomitTimer: rand(D.vomitMin*0.5, D.vomitMax*0.5), // first throw-up comes sooner than the steady interval
@@ -1286,6 +1479,7 @@ function resetState(){
     notifyDeadline:0,                  // seconds left to respond before a penalty
     missedNotifyTimer:0,               // >0 briefly after a missed notification, for the HUD message
     missedCount:0,                     // total missed work notifications this run — too many and you're fired
+    paused:false,                      // Esc pause menu open — freezes gameplay updates, keeps rendering
   };
 }
 resetState();
@@ -1308,9 +1502,10 @@ function moveSpeed(){
 const keys = {};
 window.addEventListener('keydown', e=>{
   const k = e.key.toLowerCase();
+  if(k==='escape'){ togglePause(); return; }
   if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
   keys[k]=true;
-  if(S.mode!=='play') return;
+  if(S.mode!=='play' || S.paused) return;
   if(k==='e'){ interact(); }
   if(k===' '){ toggleHoldBaby(); }
   if(k==='q'){ discardCarrying(); }
@@ -1414,6 +1609,7 @@ const el = {
   time:document.getElementById('timeVal'), prompt:document.getElementById('prompt'),
   carry:document.getElementById('carry'), topbar:document.getElementById('topbar'),
   workAlert:document.getElementById('workAlert'),
+  timeLabel:document.getElementById('timeLabel'), scoreStat:document.getElementById('scoreStat'), scoreVal:document.getElementById('scoreVal'),
 };
 document.querySelectorAll('.need').forEach(n=>{ el.bars[n.dataset.k] = {wrap:n, fill:n.querySelector('.bar>i'), bar:n.querySelector('.bar')}; });
 
@@ -1471,6 +1667,61 @@ function toggleMute(){
 }
 document.getElementById('muteBtn').addEventListener('click', toggleMute);
 
+/* ---------- Pause menu (Esc): music, help, and a 2D house map ---------- */
+const pauseMenuEl = document.getElementById('pauseMenu');
+function syncPauseMusicPicker(){
+  document.querySelectorAll('#pauseMusicPicker .diffOpt').forEach(o=>o.classList.toggle('selected', o.dataset.music===Music.current));
+}
+function togglePause(){
+  if(S.mode!=='play') return;
+  if(!shopEl.classList.contains('hidden')){ closeShopFn(); return; }
+  S.paused = !S.paused;
+  if(S.paused){ syncPauseMusicPicker(); drawMinimap(); pauseMenuEl.classList.remove('hidden'); }
+  else { pauseMenuEl.classList.add('hidden'); }
+}
+document.getElementById('resumeBtn').addEventListener('click', togglePause);
+document.querySelectorAll('#pauseMusicPicker .diffOpt').forEach(opt=>{
+  opt.addEventListener('click', ()=>{
+    Music.setTrack(opt.dataset.music);
+    syncPauseMusicPicker();
+    Audio.buy();
+  });
+});
+document.getElementById('pauseHelpToggleBtn').addEventListener('click', ()=>{
+  const isHidden = document.getElementById('pauseHelpDetail').classList.toggle('hidden');
+  document.getElementById('pauseHelpToggleBtn').textContent = isHidden ? '▶ How does this work?' : '▼ Hide details';
+});
+const ROOM_MAP_LABEL = {bathroom:'🚿', office:'💻', nursery:'🍼', kitchen:'🍎', bedroom:'🛏️', living:'🛋️'};
+function drawMinimap(){
+  const canvas = document.getElementById('minimapCanvas');
+  if(!canvas || !lastLayout) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.fillStyle = '#241a38'; ctx.fillRect(0,0,W,H);
+  const {bounds, rooms, halls} = lastLayout;
+  const houseW = bounds.maxX-bounds.minX, houseD = bounds.maxZ-bounds.minZ, pad=8;
+  const scale = Math.min((W-pad*2)/houseW, (H-pad*2)/houseD);
+  const ox = (W - houseW*scale)/2, oy = (H - houseD*scale)/2;
+  const mapX = wx => ox + (wx - bounds.minX)*scale, mapZ = wz => oy + (wz - bounds.minZ)*scale;
+  const roomColor = {bathroom:'#4a7a9a', office:'#9a7a4a', nursery:'#4a9a72', kitchen:'#9a8a4a', bedroom:'#6a4a9a', living:'#9a5a4a'};
+  ctx.fillStyle = '#3a3050';
+  halls.forEach(hall=>{
+    ctx.fillRect(mapX(hall.minX), mapZ(hall.minZ), (hall.maxX-hall.minX)*scale, (hall.maxZ-hall.minZ)*scale);
+  });
+  rooms.forEach(r=>{
+    const x=mapX(r.minX), z=mapZ(r.minZ), w=(r.maxX-r.minX)*scale, h=(r.maxZ-r.minZ)*scale;
+    ctx.fillStyle = roomColor[r.type]||'#666';
+    ctx.fillRect(x,z,w,h);
+    ctx.strokeStyle='#1a1626'; ctx.lineWidth=1.5; ctx.strokeRect(x,z,w,h);
+    ctx.font='12px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(ROOM_MAP_LABEL[r.type]||'', x+w/2, z+h/2);
+  });
+  ctx.beginPath(); ctx.fillStyle='#ff9ec7'; ctx.arc(mapX(baby.position.x), mapZ(baby.position.z), 5, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.beginPath(); ctx.fillStyle='#4f7ad6'; ctx.arc(mapX(dad.position.x), mapZ(dad.position.z), 6, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#fff'; ctx.stroke();
+}
+
 /* ---------- Flow ---------- */
 function startGame(){
   buildHouse();                                    // fresh randomized-but-sensible room layout each run
@@ -1505,7 +1756,7 @@ const GAMEOVER_FLAVOR = {
 function endGame(reason){                              // 'win' | 'lose' | 'hide'
   S.mode = reason==='win' ? 'win' : 'over';
   closeShopFn();
-  const mins = Math.floor((S.gameLen-S.timeLeft)/60), secs = Math.round((S.gameLen-S.timeLeft)%60);
+  const mins = Math.floor(S.elapsed/60), secs = Math.round(S.elapsed%60);
   const diffLabel = DIFFICULTIES[S.diff].label;
   if(reason==='win'){
     document.getElementById('winStats').textContent =
@@ -1517,8 +1768,15 @@ function endGame(reason){                              // 'win' | 'lose' | 'hide
     document.getElementById('goTitle').textContent = f.title;
     document.getElementById('goBody').textContent = f.body;
     const missedNote = reason==='fired' ? ` · ${S.missedCount} missed message${S.missedCount===1?'':'s'}` : '';
+    let scoreNote = '';
+    if(S.endless){
+      const hs = getHighScore();
+      const isNew = S.score > hs;
+      if(isNew) setHighScore(S.score);
+      scoreNote = isNew ? ` · Score: ${S.score} — New High Score! 🏆` : ` · Score: ${S.score} · Best: ${hs}`;
+    }
     document.getElementById('goStats').textContent =
-      `${diffLabel} · You lasted ${mins}m ${secs}s · ${S.changes} diaper change${S.changes===1?'':'s'}${missedNote}.`;
+      `${diffLabel} · You lasted ${mins}m ${secs}s · ${S.changes} diaper change${S.changes===1?'':'s'}${missedNote}${scoreNote}.`;
     document.getElementById('gameover').classList.remove('hidden');
   }
 }
@@ -1526,15 +1784,20 @@ document.querySelectorAll('#diffPicker .diffOpt').forEach(opt=>{
   opt.addEventListener('click', ()=>{
     difficulty = opt.dataset.diff;
     document.querySelectorAll('#diffPicker .diffOpt').forEach(o=>o.classList.toggle('selected', o===opt));
+    updateBestScoreLabel();
     Audio.buy();
   });
 });
-document.querySelectorAll('#musicPicker .diffOpt').forEach(opt=>{
+document.querySelectorAll('#endlessToggle .diffOpt').forEach(opt=>{
   opt.addEventListener('click', ()=>{
-    Music.setTrack(opt.dataset.music);
-    document.querySelectorAll('#musicPicker .diffOpt').forEach(o=>o.classList.toggle('selected', o===opt));
+    endlessMode = !endlessMode;
+    opt.classList.toggle('selected', endlessMode);
     Audio.buy();
   });
+});
+document.getElementById('helpToggleBtn').addEventListener('click', ()=>{
+  const isHidden = document.getElementById('helpDetail').classList.toggle('hidden');
+  document.getElementById('helpToggleBtn').textContent = isHidden ? '▶ How does this work?' : '▼ Hide details';
 });
 document.getElementById('introNextBtn').addEventListener('click', ()=>{
   document.getElementById('introStep1').classList.add('hidden');
@@ -1616,7 +1879,7 @@ function tick(){
   const t = clock.elapsedTime;
 
   // camera gentle sway idle only? keep static. update actors.
-  if(S.mode==='play'){
+  if(S.mode==='play' && !S.paused){
     // ---- dad movement ----
     const dir = new THREE.Vector3();
     if(keys['w']||keys['arrowup']) dir.add(FWD);
@@ -1803,11 +2066,17 @@ function tick(){
            : hp>70 ? '😄' : hp>40 ? '🙂' : '😟');
 
     // ---- timer / win / lose ----
-    S.timeLeft -= dt;
-    if(S.timeLeft<=0){ S.timeLeft=0; endGame('win'); }
+    S.elapsed += dt;
+    if(S.endless){
+      S.score = Math.floor(S.elapsed) + S.poo*3;
+    } else {
+      S.timeLeft -= dt;
+      if(S.timeLeft<=0){ S.timeLeft=0; endGame('win'); }
+    }
     if(S.cry>=100){ endGame('lose'); }
 
     updateHUD();
+    drawMinimap();
   }
 
   updateCamera();
@@ -1832,8 +2101,18 @@ function updateHUD(){
   const hp = happiness();
   el.hap.textContent = hp>70?'😄':hp>40?'🙂':hp>15?'😟':'😢';
   el.poo.textContent = '💩 '+S.poo;
-  const m = Math.floor(S.timeLeft/60), s = Math.floor(S.timeLeft%60);
-  el.time.textContent = m+':'+String(s).padStart(2,'0');
+  if(S.endless){
+    const m = Math.floor(S.elapsed/60), s = Math.floor(S.elapsed%60);
+    el.time.textContent = m+':'+String(s).padStart(2,'0');
+    el.timeLabel.textContent = 'Survived';
+    el.scoreStat.style.display = '';
+    el.scoreVal.textContent = S.score;
+  } else {
+    const m = Math.floor(S.timeLeft/60), s = Math.floor(S.timeLeft%60);
+    el.time.textContent = m+':'+String(s).padStart(2,'0');
+    el.timeLabel.textContent = 'Mom back in';
+    el.scoreStat.style.display = 'none';
+  }
 
   // interaction prompt
   const k = nearestStation();
@@ -1893,6 +2172,7 @@ function updateHUD(){
   if(!shopEl.classList.contains('hidden')) refreshShop();
 }
 
+updateBestScoreLabel();
 tick();
 })();
 </script>
