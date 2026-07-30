@@ -393,19 +393,81 @@ function disposeGroup(g){ g.traverse(o=>{ if(o.geometry) o.geometry.dispose();
   if(o.material){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{ if(m.map) m.map.dispose(); m.dispose(); }); } }); }
 
 // wall builders (added into the current houseGroup)
-function addWallMesh(m, aabb){ m.material.transparent=true; m.renderOrder=1; houseGroup.add(m); wallMeshes.push(m); blockAABBs.push(aabb); }
-function wallX(z, x1, x2){ const cx=(x1+x2)/2, len=Math.abs(x2-x1); if(len<0.06) return;
-  const m=box(len, WALL_H, WT, WALL_COLOR); m.position.set(cx, WALL_H/2, z);
-  addWallMesh(m, {minX:cx-len/2, maxX:cx+len/2, minZ:z-WT/2, maxZ:z+WT/2}); }
-function wallZ(x, z1, z2){ const cz=(z1+z2)/2, len=Math.abs(z2-z1); if(len<0.06) return;
-  const m=box(WT, WALL_H, len, WALL_COLOR); m.position.set(x, WALL_H/2, cz);
-  addWallMesh(m, {minX:x-WT/2, maxX:x+WT/2, minZ:cz-len/2, maxZ:cz+len/2}); }
+function addWallMesh(m, aabb, pushAABB=true){ m.material.transparent=true; m.renderOrder=1; houseGroup.add(m); wallMeshes.push(m); if(pushAABB) blockAABBs.push(aabb); }
+function wallXSeg(z, x1, x2, y0, y1, pushAABB=true){ const cx=(x1+x2)/2, len=Math.abs(x2-x1), h=y1-y0; if(len<0.06||h<0.06) return;
+  const m=box(len, h, WT, WALL_COLOR); m.position.set(cx, y0+h/2, z);
+  addWallMesh(m, {minX:cx-len/2, maxX:cx+len/2, minZ:z-WT/2, maxZ:z+WT/2}, pushAABB); }
+function wallZSeg(x, z1, z2, y0, y1, pushAABB=true){ const cz=(z1+z2)/2, len=Math.abs(z2-z1), h=y1-y0; if(len<0.06||h<0.06) return;
+  const m=box(WT, h, len, WALL_COLOR); m.position.set(x, y0+h/2, cz);
+  addWallMesh(m, {minX:x-WT/2, maxX:x+WT/2, minZ:cz-len/2, maxZ:cz+len/2}, pushAABB); }
+function wallX(z, x1, x2){ wallXSeg(z, x1, x2, 0, WALL_H); }
+function wallZ(x, z1, z2){ wallZSeg(x, z1, z2, 0, WALL_H); }
 function carve(a, b, doors){ let segs=[[a,b]];
   doors.forEach(([d0,d1])=>{ segs=segs.flatMap(([s,e])=>{ if(d1<=s||d0>=e) return [[s,e]];
     const o=[]; if(d0>s) o.push([s,d0]); if(d1<e) o.push([d1,e]); return o; }); });
   return segs; }
 function wallXDoors(z, x1, x2, doors){ carve(x1,x2,doors).forEach(s=>wallX(z, s[0], s[1])); }
 function wallZDoors(x, z1, z2, doors){ carve(z1,z2,doors).forEach(s=>wallZ(x, s[0], s[1])); }
+
+// ---- windows: a real opening (sill + lintel wall segments, full width still blocks movement) with
+// an actual see-through glass pane + frame set into the gap — visible from both sides of the wall.
+const SILL_Y = 1.05, WIN_H = 1.4;
+function addWindowGlass(axis, wallCoord, cx, halfW){
+  const w = halfW*2, y = SILL_Y + WIN_H/2;
+  const frameColor = '#eee3d0', barT = 0.09;
+  const glassMat = new THREE.MeshLambertMaterial({color:'#bcdff0', transparent:true, opacity:0.4});
+  const glassGeo = axis==='X' ? new THREE.BoxGeometry(w-0.14, WIN_H-0.14, 0.04) : new THREE.BoxGeometry(0.04, WIN_H-0.14, w-0.14);
+  const glass = new THREE.Mesh(glassGeo, glassMat); glass.renderOrder = 2;
+  const bar = (bw,bh,bd)=>{ const m=box(bw,bh,bd,frameColor); m.renderOrder=2; return m; };
+  const frameParts = [];
+  if(axis==='X'){
+    glass.position.set(cx, y, wallCoord);
+    frameParts.push([bar(w,barT,WT+0.02), cx, y+WIN_H/2, wallCoord]);           // top
+    frameParts.push([bar(w,barT,WT+0.02), cx, y-WIN_H/2, wallCoord]);           // bottom
+    frameParts.push([bar(barT,WIN_H,WT+0.02), cx-w/2, y, wallCoord]);           // left
+    frameParts.push([bar(barT,WIN_H,WT+0.02), cx+w/2, y, wallCoord]);           // right
+    frameParts.push([bar(barT,WIN_H,WT+0.02), cx, y, wallCoord]);               // vertical mullion
+    frameParts.push([bar(w,barT,WT+0.02), cx, y, wallCoord]);                   // horizontal mullion
+  } else {
+    glass.position.set(wallCoord, y, cx);
+    frameParts.push([bar(WT+0.02,barT,w), wallCoord, y+WIN_H/2, cx]);
+    frameParts.push([bar(WT+0.02,barT,w), wallCoord, y-WIN_H/2, cx]);
+    frameParts.push([bar(WT+0.02,WIN_H,barT), wallCoord, y, cx-w/2]);
+    frameParts.push([bar(WT+0.02,WIN_H,barT), wallCoord, y, cx+w/2]);
+    frameParts.push([bar(WT+0.02,WIN_H,barT), wallCoord, y, cx]);
+    frameParts.push([bar(WT+0.02,barT,w), wallCoord, y, cx]);
+  }
+  houseGroup.add(glass);
+  frameParts.forEach(([m,x,y,z])=>{ m.position.set(x,y,z); houseGroup.add(m); });
+}
+// builds a wall run with real window openings cut in: solid full-height segments between windows,
+// sill/lintel segments (still block movement — you can't walk through glass) framing each opening.
+function wallXWindowed(z, x1, x2, wins){
+  const sorted=[...wins].sort((a,b)=>a.cx-b.cx); let cursor=x1;
+  sorted.forEach(win=>{
+    const wx1=Math.max(x1,win.cx-win.halfW), wx2=Math.min(x2,win.cx+win.halfW);
+    if(wx2<=cursor || wx1>=x2) return;
+    if(wx1>cursor) wallX(z, cursor, wx1);
+    wallXSeg(z, wx1, wx2, 0, SILL_Y);
+    wallXSeg(z, wx1, wx2, SILL_Y+WIN_H, WALL_H, false);
+    addWindowGlass('X', z, (wx1+wx2)/2, (wx2-wx1)/2);
+    cursor = wx2;
+  });
+  if(cursor<x2) wallX(z, cursor, x2);
+}
+function wallZWindowed(x, z1, z2, wins){
+  const sorted=[...wins].sort((a,b)=>a.cx-b.cx); let cursor=z1;
+  sorted.forEach(win=>{
+    const wz1=Math.max(z1,win.cx-win.halfW), wz2=Math.min(z2,win.cx+win.halfW);
+    if(wz2<=cursor || wz1>=z2) return;
+    if(wz1>cursor) wallZ(x, cursor, wz1);
+    wallZSeg(x, wz1, wz2, 0, SILL_Y);
+    wallZSeg(x, wz1, wz2, SILL_Y+WIN_H, WALL_H, false);
+    addWindowGlass('Z', x, (wz1+wz2)/2, (wz2-wz1)/2);
+    cursor = wz2;
+  });
+  if(cursor<z2) wallZ(x, cursor, z2);
+}
 
 function addToy(g, x, z, baseY){ g.position.set(x, baseY, z); houseGroup.add(g); toys.push({x, z, mesh:g, baseY}); }
 function label(text, y){ const s=makeSprite(text); s.position.y=y; s.scale.multiplyScalar(0.85); s.renderOrder=10; return s; }
@@ -644,29 +706,19 @@ function addRug(room, color, frac){
   const rug=new THREE.Mesh(new THREE.CircleGeometry(Math.min(room.w,room.h)*frac, 32), new THREE.MeshLambertMaterial({color}));
   rug.rotation.x=-Math.PI/2; rug.position.set(room.cx, 0.02, room.cz); rug.receiveShadow=true; houseGroup.add(rug);
 }
-// a window pane mounted on wall `side` at position `t`: placed just clear of the wall's own
-// thickness on BOTH faces (inner copy visible from the room, outer copy visible from outside the
-// house) — walls are WT=0.4 thick (±0.2 from centerline), so out=±0.26 sits fully past each face
-// rather than buried inside the solid wall geometry, which is what made earlier windows invisible.
-function addWindowPane(room, side, t){
-  const horiz = (side==='N'||side==='S');
-  [0.26, -0.26].forEach(out=>{
-    const p = wallPos(room, side, t, out);
-    const w = horiz ? box(2.4,1.4,0.12,'#bfe6ff','#6fb7e8') : box(0.12,1.4,2.4,'#bfe6ff','#6fb7e8');
-    w.position.set(p.x, 1.75, p.z); houseGroup.add(w);
-  });
-}
-// a real exterior-facing window per exterior wall this room has (so corner rooms get more than
-// one) — prefers a centered spot, but avoids the room's main furniture wall/spot when it's the
-// only exterior side available, so nothing hangs over it
-function furnishWindow(room){
+// per-room window placement: one slot per exterior side (so corner rooms get more than one),
+// preferring a centered spot but avoiding the room's main furniture wall/spot when it's the only
+// exterior side available. Returns {side, cx} — cx is the world coordinate along that wall (X for
+// N/S runs, Z for W/E runs) — for buildHouse to carve a real opening into the actual wall run.
+function windowSlotsFor(room){
   const sides = room.exteriorSides;
-  if(!sides || !sides.length) return;
-  sides.forEach(side=>{
+  if(!sides || !sides.length) return [];
+  return sides.map(side=>{
     const t = (side===room.primarySide && room.primaryT!==undefined)
       ? (room.primaryT<0.5 ? rand(0.7,0.86) : rand(0.14,0.3))
       : 0.5;
-    addWindowPane(room, side, t);
+    const p = wallPos(room, side, t, 0);
+    return {side, cx: (side==='N'||side==='S') ? p.x : p.z};
   });
 }
 // scatters 1-2 random paintings around a room's walls (never called for the bathroom)
@@ -900,7 +952,6 @@ function furnishHallway(hall, zB){
   const outsideDoor = buildFrontDoorGroup();
   outsideDoor.position.set(hall.cx, 0, zB[3]+0.35); outsideDoor.rotation.y = 0;
   houseGroup.add(outsideDoor);
-  addWindowPane(hall, 'N', 0.5);        // the hallway's dead end is an outer wall too
 }
 
 /* ---------- buildHouse(): randomized-but-sensible layout, rebuilt each run ---------- */
@@ -945,11 +996,25 @@ function buildHouse(){
   const hallFloor=new THREE.Mesh(new THREE.PlaneGeometry(hall.w, hall.h), new THREE.MeshLambertMaterial({color:'#d8c9a3'}));
   hallFloor.rotation.x=-Math.PI/2; hallFloor.position.set(hall.cx,0,hall.cz); hallFloor.receiveShadow=true; houseGroup.add(hallFloor);
 
+  // furniture goes in before the exterior walls are built: each room-type builder sets
+  // room.primarySide/primaryT, which the window placement below needs to avoid hanging a window
+  // over the main furniture — nothing here depends on the wall meshes existing yet.
+  cells.forEach(room=>{ ROOM_TYPES[room.type].build(room); if(room.type!=='bathroom') scatterPaintings(room); });
+
+  // collect every room's window slot(s) per exterior wall run, so each run can be built with real
+  // carved openings (see wallXWindowed/wallZWindowed) instead of windows floating in front of a
+  // solid wall.
+  const winsBySide = {N:[], S:[], W:[], E:[]};
+  cells.forEach(room=>{ windowSlotsFor(room).forEach(s=>winsBySide[s.side].push({cx:s.cx, halfW:1.2})); });
+  winsBySide.N.push({cx:hall.cx, halfW:1.2});     // the hallway's dead end is an outer wall too
+
   const DOOR=2.8, HD=DOOR/2;
   const doorAt = center => [center-HD, center+HD];
   // outer perimeter (south wall doubles as the house's front face — the front door sits flush against it)
-  wallX(zB[0], xB[0], xB[3]); wallX(zB[3], xB[0], xB[3]);
-  wallZ(xB[0], zB[0], zB[3]); wallZ(xB[3], zB[0], zB[3]);
+  wallXWindowed(zB[0], xB[0], xB[3], winsBySide.N);
+  wallXWindowed(zB[3], xB[0], xB[3], winsBySide.S);
+  wallZWindowed(xB[0], zB[0], zB[3], winsBySide.W);
+  wallZWindowed(xB[3], zB[0], zB[3], winsBySide.E);
   // room-column internal dividers: fully closed — these rooms only ever talk to the hallway
   [0,1].forEach(i=>{ wallX(zB[i+1], xB[0], xB[1]); wallX(zB[i+1], xB[2], xB[3]); });
   // hallway walls: one door per room, centered on that room's row
@@ -957,7 +1022,6 @@ function buildHouse(){
   wallZDoors(xB[1], zB[0], zB[3], rowDoors);
   wallZDoors(xB[2], zB[0], zB[3], rowDoors);
 
-  cells.forEach(room=>{ ROOM_TYPES[room.type].build(room); furnishWindow(room); if(room.type!=='bathroom') scatterPaintings(room); });
   furnishHallway(hall, zB);
 
   houseBounds.X0=xB[0]; houseBounds.X1=xB[3]; houseBounds.Z0=zB[0]; houseBounds.Z1=zB[3];
