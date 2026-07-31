@@ -4,6 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>Baby Care — Dad's on Duty</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg1:#2b2140; --bg2:#4a3a6a;
@@ -40,7 +42,8 @@
 
   .crywrap{position:absolute;top:96px;left:50%;transform:translateX(-50%);width:min(360px,80vw);
     background:var(--panel);border:1px solid var(--panelborder);border-radius:12px;padding:7px 12px 9px;
-    box-shadow:0 6px 20px rgba(0,0,0,.3)}
+    box-shadow:0 6px 20px rgba(0,0,0,.3);opacity:0;transition:opacity .2s}
+  .crywrap.show{opacity:1}
   .crywrap .lbl{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
   .crybar{height:16px;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden}
   .crybar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ff8a5c,var(--cry));
@@ -50,6 +53,11 @@
     background:rgba(255,90,60,.18);border:1px solid #ff8a5c;border-radius:12px;padding:7px 14px;
     font-size:13px;text-align:center;font-weight:bold;opacity:0;transition:opacity .15s}
   .workAlert.show{opacity:1;animation:flash .9s steps(2) infinite}
+
+  .chokeAlert{position:absolute;top:194px;left:50%;transform:translateX(-50%);width:min(380px,80vw);
+    background:rgba(255,60,60,.22);border:1px solid #ff5c5c;border-radius:12px;padding:7px 14px;
+    font-size:13px;text-align:center;font-weight:bold;opacity:0;transition:opacity .15s}
+  .chokeAlert.show{opacity:1;animation:flash .7s steps(2) infinite}
 
   .prompt{position:absolute;bottom:74px;left:50%;transform:translateX(-50%);
     background:rgba(0,0,0,.6);border:1px solid var(--panelborder);border-radius:10px;
@@ -134,6 +142,25 @@
   .shopbal{font-size:16px;margin:2px 0 4px}
   .flash{animation:pop .4s ease}
   @keyframes pop{40%{transform:scale(1.06)}}
+
+  /* ---------- Main menu ---------- */
+  .menuCard{background:var(--panel);border:1px solid var(--panelborder);border-radius:22px;margin:auto;
+    padding:36px 40px;max-width:780px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);
+    display:flex;align-items:center;justify-content:space-between;gap:34px;flex-wrap:wrap}
+  .menuCard.hidden{display:none}
+  .menuLeft{display:flex;flex-direction:column;gap:14px;min-width:220px}
+  .menuBtnBig{pointer-events:auto;cursor:pointer;border:1px solid var(--panelborder);background:rgba(255,255,255,.08);
+    color:var(--text);border-radius:16px;padding:16px 22px;font-size:19px;font-family:inherit;font-weight:bold;
+    text-align:left;display:flex;align-items:center;gap:12px;transition:transform .1s,background .15s}
+  .menuBtnBig:hover{background:rgba(255,255,255,.16);transform:translateX(4px)}
+  .menuBtnBig:active{transform:scale(.97)}
+  .menuRight{flex:1;text-align:center;min-width:260px}
+  .logoIcons{font-size:46px;margin-bottom:8px}
+  .gameLogo{font-family:'Baloo 2',cursive,'Comic Sans MS',sans-serif}
+  .logoTop{font-size:52px;font-weight:800;color:#ffd166;line-height:1.05;
+    text-shadow:3px 3px 0 #7a4a1a,-2px -2px 0 #7a4a1a,2px -2px 0 #7a4a1a,-2px 2px 0 #7a4a1a,2px 2px 0 #7a4a1a}
+  .logoSub{font-size:27px;font-weight:700;color:#ff9ec7;margin-top:8px;
+    text-shadow:2px 2px 0 #6a2a4a,-1px -1px 0 #6a2a4a,1px -1px 0 #6a2a4a,-1px 1px 0 #6a2a4a}
 </style>
 </head>
 <body>
@@ -158,6 +185,7 @@
   </div>
 
   <div class="workAlert" id="workAlert"></div>
+  <div class="chokeAlert" id="chokeAlert"></div>
   <div class="prompt" id="prompt"></div>
   <div class="carry" id="carry"></div>
 
@@ -171,11 +199,26 @@
   </div>
 </div>
 
-<!-- Intro -->
+<!-- Intro / main menu -->
 <div class="overlay" id="intro">
-  <div class="card" id="introStep1">
+  <div class="menuCard" id="mainMenu">
+    <div class="menuLeft">
+      <button class="menuBtnBig" id="menuPlayBtn">▶️ Play</button>
+      <button class="menuBtnBig" id="menuSettingsBtn">⚙️ Settings</button>
+      <button class="menuBtnBig" id="menuHelpBtn">❓ Help</button>
+    </div>
+    <div class="menuRight">
+      <div class="logoIcons">👶🍼</div>
+      <div class="gameLogo">
+        <div class="logoTop">Baby Care</div>
+        <div class="logoSub">Dad's on Duty</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card hidden" id="helpScreen">
     <div class="big">👶🍼</div>
-    <h1>Baby Care: Dad's on Duty</h1>
+    <h1>How to Play</h1>
     <p><b>Mom just left to go shopping</b> — and she left <b>you</b> in charge of the little one!
        You're working <b>remote</b> today too, so it's baby duty and your day job at once.
        Keep the baby happy until she gets back, and don't let the <b style="color:var(--cry)">cry-o-meter</b>
@@ -186,30 +229,52 @@
       <div>👶 <b>Diaper</b> — change at the table</div>
       <div>📺 <b>Cartoons</b> — switch on the TV</div>
     </div>
-    <button class="btn" id="helpToggleBtn">▶ How does this work?</button>
-    <div class="helpDetail hidden" id="helpDetail">
-      <p>Watch the four needs. If any runs out the baby cries, and the <b style="color:var(--cry)">cry-o-meter</b>
-         climbs. Let it fill up and you'll panic-call Mommy — <b>game over</b>.</p>
-      <p style="font-size:13px;opacity:.8">The baby <b>crawls around</b> the house and plays with toys.
-         Scoop it up with <kbd>Space</kbd> to carry it anywhere and calm it down, or drop whatever you're
-         holding with <kbd>Q</kbd> — but 💪 your arms tire out the longer you hold the baby, so you can't
-         just carry it forever (upgrade <b>Strong Arms</b> at the workbench to hold longer). Need your hands
-         free? Pen the baby in the 🔒 <b>playpen</b> for a little while — it'll escape on its own after a bit,
-         so don't wander off for too long. And keep an eye out near the 🔥 <b>oven</b> in the kitchen — an
-         unsupervised baby that toddles over to it will get burned. Oh, and you're still supposed to be
-         working — the 💻 <b>computer</b> in the office will occasionally ping with a message; get to it
-         and reply within the time shown or it'll cost you — miss too many and you're <b>fired</b>,
-         game over. Changing diapers
-         collects 💩 <b>poo</b> — spend it at the 🛠️ workbench to upgrade everything. Survive until Mom
-         returns to win! (There's a 🚪 closet in the bedroom too —
-         but hiding in it ends the game. Don't be <i>that</i> dad.) Press <kbd>Esc</kbd> anytime in-game
-         for this same help, the music picker, and a map of the house.</p>
-    </div>
+    <p style="font-size:13px;opacity:.8">Watch the four needs. If any runs out the baby cries, and the
+       <b style="color:var(--cry)">cry-o-meter</b> climbs. Let it fill up and you'll panic-call Mommy —
+       <b>game over</b>. The baby <b>crawls around</b> the house and plays with toys.
+       Scoop it up with <kbd>Space</kbd> to carry it anywhere and calm it down, or drop whatever you're
+       holding with <kbd>Q</kbd> — but 💪 your arms tire out the longer you hold the baby, so you can't
+       just carry it forever (upgrade <b>Strong Arms</b> at the workbench to hold longer). Need your hands
+       free? Pen the baby in the 🔒 <b>playpen</b> for a little while — it'll escape on its own after a bit,
+       so don't wander off for too long. And keep an eye out near the 🔥 <b>oven</b> in the kitchen — an
+       unsupervised baby that toddles over to it will get burned, and it can even <b>swallow something</b>
+       small while it's unattended — rush over and clear its airway before time runs out. Watch your own
+       back too — random <b>back pain</b> can freeze you in place for a few seconds; stock up on 💊
+       <b>Pain Medication</b> at the workbench to shorten it. Oh, and you're still supposed to be
+       working — the 💻 <b>computer</b> in the office will occasionally ping with a message; get to it
+       and reply within the time shown or it'll cost you — miss too many and you're <b>fired</b>,
+       game over. Changing diapers
+       collects 💩 <b>poo</b> — spend it at the 🛠️ workbench to upgrade everything. Survive until Mom
+       returns to win! (There's a 🚪 closet in the bedroom too —
+       but hiding in it ends the game. Don't be <i>that</i> dad.) Press <kbd>Esc</kbd> anytime in-game
+       for this same help, the music picker, and a map of the house.</p>
     <div class="stepnav">
-      <button class="btn cta" id="introNextBtn">Next ▶</button>
+      <button class="btn cta" id="helpBackBtn">◀ Back to Menu</button>
     </div>
   </div>
-  <div class="card hidden" id="introStep2">
+
+  <div class="card hidden" id="settingsScreen">
+    <h2>⚙️ Settings</h2>
+    <p style="font-size:13px;opacity:.75;margin:0 0 4px">🎵 Background Music</p>
+    <div class="diffPicker musicPicker" id="menuMusicPicker">
+      <div class="diffOpt" data-music="games">
+        <div class="diffTitle">🎮 Game Vibes</div>
+      </div>
+      <div class="diffOpt" data-music="retro">
+        <div class="diffTitle">🕹️ Retro Arcade</div>
+      </div>
+    </div>
+    <p style="font-size:13px;opacity:.75;margin:16px 0 4px">⌨️ Controls</p>
+    <div class="hint" style="position:static;max-width:none">
+      <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · <kbd>E</kbd> interact · <kbd>Q</kbd> drop item ·
+      <kbd>Space</kbd> pick up baby · <kbd>U</kbd> shop · <kbd>M</kbd> mute · <kbd>Esc</kbd> pause · scroll to zoom
+    </div>
+    <div class="stepnav">
+      <button class="btn cta" id="settingsBackBtn">◀ Back to Menu</button>
+    </div>
+  </div>
+
+  <div class="card hidden" id="diffScreen">
     <div class="big">🎚️</div>
     <h2>Choose Your Difficulty</h2>
     <p style="font-size:13px;opacity:.8">This tweaks how fast needs drain, how often accidents happen, and
@@ -235,7 +300,7 @@
       </div>
     </div>
     <div class="stepnav">
-      <button class="btn cta" id="introBackBtn">◀ Back</button>
+      <button class="btn cta" id="diffBackBtn">◀ Back</button>
       <button class="btn cta" id="startBtn">Start Babysitting ▶</button>
     </div>
   </div>
@@ -1410,6 +1475,7 @@ const UPGRADES = {
   cartoon:{icon:'📺', title:'Fun Cartoons',   desc:'Holds attention longer (slower drain)',      base:5},
   speed:  {icon:'👟', title:'Quick Steps',   desc:'Dad moves faster around the house',          base:6},
   arms:   {icon:'💪', title:'Strong Arms',   desc:'Carry the baby longer before your arms give out', base:5},
+  backpain:{icon:'💊', title:'Pain Medication', desc:'Shortens back-pain episodes (less time frozen)', base:5},
 };
 const MOVE_SPEED = 7.2;
 const DIAPER_CHANGE_MAX = 40; // diaper need must have decayed to at most this % before a change is allowed
@@ -1422,17 +1488,23 @@ const DIFFICULTIES = {
     decayMul:0.72, cryFillMul:0.65, cryDrainMul:1.3, vomitMin:34, vomitMax:60,
     walkChance:0.2, fallMin:9, fallMax:18, needStart:{food:100,milk:100,diaper:100,cartoon:96},
     holdBase:15, holdRecoverMul:1.4, ovenChance:0.02, penSeconds:32,
-    notifyMin:45, notifyMax:70, notifyWindow:24, notifyPenalty:12, fireLimit:5},
+    notifyMin:45, notifyMax:70, notifyWindow:24, notifyPenalty:12, fireLimit:5,
+    backPainMin:55, backPainMax:85, backPainCrippleBase:1.6,
+    chokeMin:50, chokeMax:80, chokeWindow:7.5},
   veteran: {key:'veteran', label:"Been There, Done That", gameLen:270,
     decayMul:1, cryFillMul:1, cryDrainMul:1, vomitMin:28, vomitMax:52,
     walkChance:0.32, fallMin:6, fallMax:13, needStart:{food:100,milk:95,diaper:100,cartoon:88},
     holdBase:10, holdRecoverMul:1.3, ovenChance:0.045, penSeconds:24,
-    notifyMin:32, notifyMax:52, notifyWindow:17, notifyPenalty:16, fireLimit:4},
+    notifyMin:32, notifyMax:52, notifyWindow:17, notifyPenalty:16, fireLimit:4,
+    backPainMin:40, backPainMax:65, backPainCrippleBase:2.6,
+    chokeMin:36, chokeMax:58, chokeWindow:6},
   king:    {key:'king', label:'King', gameLen:330,
     decayMul:1.4, cryFillMul:1.35, cryDrainMul:0.75, vomitMin:16, vomitMax:34,
     walkChance:0.46, fallMin:4, fallMax:9, needStart:{food:85,milk:80,diaper:88,cartoon:70},
     holdBase:6, holdRecoverMul:1.15, ovenChance:0.08, penSeconds:16,
-    notifyMin:20, notifyMax:36, notifyWindow:11, notifyPenalty:20, fireLimit:3},
+    notifyMin:20, notifyMax:36, notifyWindow:11, notifyPenalty:20, fireLimit:3,
+    backPainMin:26, backPainMax:45, backPainCrippleBase:3.8,
+    chokeMin:22, chokeMax:40, chokeWindow:4.5},
 };
 let difficulty = 'veteran';
 let endlessMode = false;
@@ -1457,7 +1529,7 @@ function resetState(){
     carrying:null,                     // 'food'|'milk'|'diaper'|'mop'|null
     holdingBaby:false,
     cartoonsOn:false, tvTimer:0,
-    lvl:{food:0,milk:0,diaper:0,cartoon:0,speed:0,arms:0},
+    lvl:{food:0,milk:0,diaper:0,cartoon:0,speed:0,arms:0,backpain:0},
     endless: endlessMode,               // no win-timer — plays until a lose/fired/hide/leave condition
     gameLen: endlessMode ? Infinity : D.gameLen,
     timeLeft: endlessMode ? Infinity : D.gameLen,
@@ -1480,6 +1552,11 @@ function resetState(){
     missedNotifyTimer:0,               // >0 briefly after a missed notification, for the HUD message
     missedCount:0,                     // total missed work notifications this run — too many and you're fired
     paused:false,                      // Esc pause menu open — freezes gameplay updates, keeps rendering
+    backPainTimer:0,                   // >0 while Dad's back has seized up — movement is locked
+    nextBackPain: rand(D.backPainMin*0.6, D.backPainMax*0.6),
+    babyChoking:false,                 // baby swallowed something small and needs its airway cleared
+    chokeDeadline:0,                   // seconds left to act before it's too late
+    chokeTimer: rand(D.chokeMin*0.6, D.chokeMax*0.6), // seconds until the next choking risk while unattended
   };
 }
 resetState();
@@ -1570,6 +1647,11 @@ function deliverToBaby(){
   S.carrying=null; setCarrySprite(null);
 }
 function interact(){                                   // the E key
+  if(S.babyChoking){                                   // top priority: clear the baby's airway
+    if(babyDist() < 2.6){ S.babyChoking=false; S.chokeDeadline=0; S.joy=Math.min(1,S.joy+0.3); Audio.chime(); }
+    else Audio.error();
+    return;
+  }
   const k = nearestStation();
   const mess = nearestMess();
   if(S.carrying==='mop' && mess){ cleanMess(mess); return; }
@@ -1605,10 +1687,11 @@ function toggleHoldBaby(){                              // the Space key
 /* ---------- HUD refs ---------- */
 const el = {
   bars:{}, cryFill:document.getElementById('cryFill'), cryPct:document.getElementById('cryPct'),
+  cryWrap:document.querySelector('.crywrap'),
   hap:document.getElementById('hapVal'), poo:document.getElementById('pooVal'),
   time:document.getElementById('timeVal'), prompt:document.getElementById('prompt'),
   carry:document.getElementById('carry'), topbar:document.getElementById('topbar'),
-  workAlert:document.getElementById('workAlert'),
+  workAlert:document.getElementById('workAlert'), chokeAlert:document.getElementById('chokeAlert'),
   timeLabel:document.getElementById('timeLabel'), scoreStat:document.getElementById('scoreStat'), scoreVal:document.getElementById('scoreVal'),
 };
 document.querySelectorAll('.need').forEach(n=>{ el.bars[n.dataset.k] = {wrap:n, fill:n.querySelector('.bar>i'), bar:n.querySelector('.bar')}; });
@@ -1669,21 +1752,21 @@ document.getElementById('muteBtn').addEventListener('click', toggleMute);
 
 /* ---------- Pause menu (Esc): music, help, and a 2D house map ---------- */
 const pauseMenuEl = document.getElementById('pauseMenu');
-function syncPauseMusicPicker(){
-  document.querySelectorAll('#pauseMusicPicker .diffOpt').forEach(o=>o.classList.toggle('selected', o.dataset.music===Music.current));
+function syncMusicPickers(){                          // keeps every music picker (pause menu + settings) in sync
+  document.querySelectorAll('.musicPicker .diffOpt').forEach(o=>o.classList.toggle('selected', o.dataset.music===Music.current));
 }
 function togglePause(){
   if(S.mode!=='play') return;
   if(!shopEl.classList.contains('hidden')){ closeShopFn(); return; }
   S.paused = !S.paused;
-  if(S.paused){ syncPauseMusicPicker(); drawMinimap(); pauseMenuEl.classList.remove('hidden'); }
+  if(S.paused){ syncMusicPickers(); drawMinimap(); pauseMenuEl.classList.remove('hidden'); }
   else { pauseMenuEl.classList.add('hidden'); }
 }
 document.getElementById('resumeBtn').addEventListener('click', togglePause);
-document.querySelectorAll('#pauseMusicPicker .diffOpt').forEach(opt=>{
+document.querySelectorAll('.musicPicker .diffOpt').forEach(opt=>{
   opt.addEventListener('click', ()=>{
     Music.setTrack(opt.dataset.music);
-    syncPauseMusicPicker();
+    syncMusicPickers();
     Audio.buy();
   });
 });
@@ -1752,6 +1835,8 @@ const GAMEOVER_FLAVOR = {
     body:"You left an infant home alone and strolled out the front door. That's not “popping out for milk,” that's abandonment. Mom is never trusting you with babysitting again."},
   fired: {icon:'💻📤', title:"You've Been Fired!",
     body:"Too many missed messages and your boss finally had enough — you're let go, mid-shift, with a baby on your hip. Remote work and babysitting don't mix as well as you thought."},
+  choke: {icon:'🚑😰', title:'The Baby Choked!',
+    body:"You didn't clear the airway in time. Panicked, you're rushing to the ER — Mom is going to want a very long explanation for this one."},
 };
 function endGame(reason){                              // 'win' | 'lose' | 'hide'
   S.mode = reason==='win' ? 'win' : 'over';
@@ -1795,18 +1880,17 @@ document.querySelectorAll('#endlessToggle .diffOpt').forEach(opt=>{
     Audio.buy();
   });
 });
-document.getElementById('helpToggleBtn').addEventListener('click', ()=>{
-  const isHidden = document.getElementById('helpDetail').classList.toggle('hidden');
-  document.getElementById('helpToggleBtn').textContent = isHidden ? '▶ How does this work?' : '▼ Hide details';
-});
-document.getElementById('introNextBtn').addEventListener('click', ()=>{
-  document.getElementById('introStep1').classList.add('hidden');
-  document.getElementById('introStep2').classList.remove('hidden');
-});
-document.getElementById('introBackBtn').addEventListener('click', ()=>{
-  document.getElementById('introStep2').classList.add('hidden');
-  document.getElementById('introStep1').classList.remove('hidden');
-});
+function showMenuScreen(id){
+  ['mainMenu','helpScreen','settingsScreen','diffScreen'].forEach(mid=>{
+    document.getElementById(mid).classList.toggle('hidden', mid!==id);
+  });
+}
+document.getElementById('menuPlayBtn').addEventListener('click', ()=>showMenuScreen('diffScreen'));
+document.getElementById('menuSettingsBtn').addEventListener('click', ()=>{ syncMusicPickers(); showMenuScreen('settingsScreen'); });
+document.getElementById('menuHelpBtn').addEventListener('click', ()=>showMenuScreen('helpScreen'));
+document.getElementById('helpBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
+document.getElementById('settingsBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
+document.getElementById('diffBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('retryBtn').addEventListener('click', startGame);
 document.getElementById('winBtn').addEventListener('click', startGame);
@@ -1886,7 +1970,8 @@ function tick(){
     if(keys['s']||keys['arrowdown']) dir.sub(FWD);
     if(keys['d']||keys['arrowright']) dir.add(RIGHT);
     if(keys['a']||keys['arrowleft']) dir.sub(RIGHT);
-    const moving = dir.lengthSq()>0;
+    const crippled = S.backPainTimer>0;
+    const moving = dir.lengthSq()>0 && !crippled;
     if(moving){
       dir.normalize();
       const spd = moveSpeed();
@@ -1918,6 +2003,9 @@ function tick(){
       poseBabySit(baby.userData);
       S.penTimer -= dt;
       if(S.penTimer <= 0){ S.babyPenned=false; S.penEscapedTimer=2.5; Audio.error(); pickBabyTarget(); babyMode='crawl'; }
+    } else if(S.babyChoking){                                               // frozen, choking — needs its airway cleared
+      baby.position.y *= 0.9;
+      poseBabySit(baby.userData);
     } else {
       const toT = new THREE.Vector3(babyTarget.x-baby.position.x, 0, babyTarget.z-baby.position.z);
       const distT = toT.length();
@@ -1976,6 +2064,19 @@ function tick(){
     if(S.armsTiredTimer>0) S.armsTiredTimer = Math.max(0, S.armsTiredTimer-dt);
     if(S.penEscapedTimer>0) S.penEscapedTimer = Math.max(0, S.penEscapedTimer-dt);
 
+    // ---- back pain: random episodes freeze movement for a few seconds; Pain Medication shortens them ----
+    if(S.backPainTimer>0){
+      S.backPainTimer = Math.max(0, S.backPainTimer-dt);
+    } else {
+      S.nextBackPain -= dt;
+      if(S.nextBackPain<=0){
+        const Dbp = curDiff();
+        S.backPainTimer = Math.max(0.5, Dbp.backPainCrippleBase * Math.pow(0.75, S.lvl.backpain));
+        S.nextBackPain = rand(Dbp.backPainMin, Dbp.backPainMax);
+        Audio.error();
+      }
+    }
+
     // ---- work notifications: the computer pings now and then; answer within the window or take a cry penalty ----
     const dNotify = curDiff();
     if(S.notification){
@@ -2022,6 +2123,20 @@ function tick(){
     });
     if(S.slowTimer>0) S.slowTimer = Math.max(0, S.slowTimer-dt);
 
+    // ---- choking hazard: an unattended baby on the floor might swallow something small ----
+    if(!S.holdingBaby && !S.babyPenned && !S.babyFallen && !S.babyBurned && !S.babyChoking){
+      S.chokeTimer -= dt;
+      if(S.chokeTimer<=0){
+        const Dck = curDiff();
+        S.babyChoking = true; S.chokeDeadline = Dck.chokeWindow; Audio.cry();
+        S.chokeTimer = rand(Dck.chokeMin, Dck.chokeMax);
+      }
+    }
+    if(S.babyChoking){
+      S.chokeDeadline -= dt;
+      if(S.chokeDeadline<=0){ endGame('choke'); }
+    }
+
     // ---- needs decay ----
     NEEDS.forEach(k=>{
       if(k==='cartoon' && S.cartoonsOn){
@@ -2060,7 +2175,8 @@ function tick(){
 
     // ---- mood face ----
     const hp = happiness();
-    setMood( crying && !S.holdingBaby ? '😭'
+    setMood( S.babyChoking ? '😵'
+           : crying && !S.holdingBaby ? '😭'
            : S.holdingBaby ? '🥰'
            : playing ? '🥳'
            : hp>70 ? '😄' : hp>40 ? '🙂' : '😟');
@@ -2096,8 +2212,11 @@ function updateHUD(){
   });
   el.cryFill.style.width = S.cry+'%';
   el.cryPct.textContent = Math.round(S.cry)+'%';
+  el.cryWrap.classList.toggle('show', S.cry>0);
   if(S.notification){ el.workAlert.textContent = `💻 Work message! Reply within ${Math.ceil(S.notifyDeadline)}s`; el.workAlert.classList.add('show'); }
   else el.workAlert.classList.remove('show');
+  if(S.babyChoking){ el.chokeAlert.textContent = `🚨 Baby's choking! Clear the airway within ${Math.ceil(S.chokeDeadline)}s!`; el.chokeAlert.classList.add('show'); }
+  else el.chokeAlert.classList.remove('show');
   const hp = happiness();
   el.hap.textContent = hp>70?'😄':hp>40?'🙂':hp>15?'😟':'😢';
   el.poo.textContent = '💩 '+S.poo;
@@ -2119,7 +2238,12 @@ function updateHUD(){
   const mess = nearestMess();
   const near = !S.holdingBaby && babyDist() < 2.6;
   let msg = '';
-  if(k==='closet'){
+  if(S.babyChoking){
+    msg = near ? `🚨 Baby's choking! Clear the airway — <kbd>E</kbd> (${Math.ceil(S.chokeDeadline)}s)`
+               : `🚨 The baby is choking on something! Get there now! (${Math.ceil(S.chokeDeadline)}s)`;
+  } else if(S.backPainTimer>0){
+    msg = `🤕 Your back seized up! Can't move (${S.backPainTimer.toFixed(1)}s)`;
+  } else if(k==='closet'){
     msg = '🚪 Hide in the closet? Ends the game — <kbd>E</kbd>';
   } else if(k==='frontdoor'){
     msg = '🚪 Walk out the front door? Ends the game — <kbd>E</kbd>';
@@ -2165,6 +2289,7 @@ function updateHUD(){
     el.carry.classList.add('show');
   }
   else if(S.carrying){ el.carry.innerHTML = 'Carrying: '+CARRY_ICON[S.carrying]+' '+S.carrying; el.carry.classList.add('show'); }
+  else if(S.backPainTimer>0){ el.carry.innerHTML = '🤕 Back spasm! Frozen in place...'; el.carry.classList.add('show'); }
   else if(S.slowTimer>0){ el.carry.innerHTML = '🐌 Slipped! Walking slower...'; el.carry.classList.add('show'); }
   else if(S.babyPenned){ el.carry.innerHTML = `🔒 Baby in playpen: ${Math.ceil(S.penTimer)}s`; el.carry.classList.add('show'); }
   else el.carry.classList.remove('show');
