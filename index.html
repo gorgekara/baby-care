@@ -59,6 +59,15 @@
     font-size:13px;text-align:center;font-weight:bold;opacity:0;transition:opacity .15s}
   .chokeAlert.show{opacity:1;animation:flash .7s steps(2) infinite}
 
+  .tutorialPanel{position:absolute;bottom:216px;left:50%;transform:translateX(-50%);width:min(560px,92vw);
+    background:var(--panel);border:1px solid var(--panelborder);border-radius:14px;padding:14px 18px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);pointer-events:auto}
+  .tutorialPanel.hidden{display:none}
+  .tutorialStepNum{font-size:11px;opacity:.65;margin-bottom:4px;font-weight:bold;letter-spacing:.02em}
+  .tutorialText{font-size:14px;line-height:1.55;margin-bottom:12px}
+  .tutorialText kbd{background:#fff;color:#222;border-radius:6px;padding:1px 7px;font-weight:bold;font-family:inherit}
+  .tutorialBtns{display:flex;justify-content:space-between;gap:10px}
+
   .prompt{position:absolute;bottom:74px;left:50%;transform:translateX(-50%);
     background:rgba(0,0,0,.6);border:1px solid var(--panelborder);border-radius:10px;
     padding:8px 16px;font-size:15px;opacity:0;transition:opacity .12s;white-space:nowrap}
@@ -189,6 +198,15 @@
   <div class="prompt" id="prompt"></div>
   <div class="carry" id="carry"></div>
 
+  <div class="tutorialPanel hidden" id="tutorialPanel">
+    <div class="tutorialStepNum" id="tutorialStepNum"></div>
+    <div class="tutorialText" id="tutorialText"></div>
+    <div class="tutorialBtns">
+      <button class="btn" id="tutorialExitBtn">✕ Exit Tutorial</button>
+      <button class="btn cta" id="tutorialNextBtn">Next ▶</button>
+    </div>
+  </div>
+
   <div class="minimapHud" id="minimapHud">
     <canvas id="minimapCanvas" width="180" height="160"></canvas>
   </div>
@@ -204,6 +222,7 @@
   <div class="menuCard" id="mainMenu">
     <div class="menuLeft">
       <button class="menuBtnBig" id="menuPlayBtn">▶️ Play</button>
+      <button class="menuBtnBig" id="menuTutorialBtn">🎓 Tutorial</button>
       <button class="menuBtnBig" id="menuSettingsBtn">⚙️ Settings</button>
       <button class="menuBtnBig" id="menuHelpBtn">❓ Help</button>
     </div>
@@ -219,6 +238,8 @@
   <div class="card hidden" id="helpScreen">
     <div class="big">👶🍼</div>
     <h1>How to Play</h1>
+    <p style="font-size:13px;opacity:.75">New here? The 🎓 <b>Tutorial</b> on the main menu walks through every
+       mechanic hands-on, at your own pace — nothing there can end the game.</p>
     <p><b>Mom just left to go shopping</b> — and she left <b>you</b> in charge of the little one!
        You're working <b>remote</b> today too, so it's baby duty and your day job at once.
        Keep the baby happy until she gets back, and don't let the <b style="color:var(--cry)">cry-o-meter</b>
@@ -1505,6 +1526,15 @@ const DIFFICULTIES = {
     notifyMin:20, notifyMax:36, notifyWindow:11, notifyPenalty:20, fireLimit:3,
     backPainMin:26, backPainMax:45, backPainCrippleBase:3.8,
     chokeMin:22, chokeMax:40, chokeWindow:4.5},
+  // practice mode: needs never decay and no random hazard can fire — every mechanic is either
+  // explained as plain text or triggered deliberately by the tutorial script, at the player's own pace
+  tutorial: {key:'tutorial', label:'Tutorial', gameLen:Infinity,
+    decayMul:0, cryFillMul:0, cryDrainMul:1, vomitMin:9999, vomitMax:9999,
+    walkChance:0, fallMin:9999, fallMax:9999, needStart:{food:100,milk:100,diaper:100,cartoon:100},
+    holdBase:40, holdRecoverMul:1.3, ovenChance:0, penSeconds:60,
+    notifyMin:9999, notifyMax:9999, notifyWindow:9999, notifyPenalty:0, fireLimit:9999,
+    backPainMin:9999, backPainMax:9999, backPainCrippleBase:0,
+    chokeMin:9999, chokeMax:9999, chokeWindow:9999},
 };
 let difficulty = 'veteran';
 let endlessMode = false;
@@ -1521,6 +1551,7 @@ function resetState(){
   const D = curDiff();
   S = {
     mode:'menu',                       // menu|play|over|win
+    tutorial:false,                    // true during the guided, no-pressure tutorial run
     diff: D.key,
     need:{...D.needStart},
     cry:0,
@@ -1614,41 +1645,53 @@ function cleanMess(m){
   houseGroup.remove(m.mesh); disposeGroup(m.mesh);
   const i = S.messes.indexOf(m); if(i>=0) S.messes.splice(i,1);
   Audio.buy();
+  if(S.tutorial) tutorialProgress.mopped = true;
 }
 function doStation(k){
   if(k==='shop'){ openShop(); return; }
-  if(k==='cartoon'){ S.cartoonsOn=true; S.tvTimer=10+S.lvl.cartoon*3; Audio.chime(); return; }
+  if(k==='cartoon'){ S.cartoonsOn=true; S.tvTimer=10+S.lvl.cartoon*3; Audio.chime();
+    if(S.tutorial) tutorialProgress.cartoon = true;
+    return; }
   if(k==='computer'){
-    if(S.notification){ S.notification=false; Audio.chime(); } else Audio.error();
+    if(S.notification){ S.notification=false; Audio.chime(); if(S.tutorial) tutorialProgress.notif=true; } else Audio.error();
     return;
   }
-  if(k==='closet'){ endGame('hide'); return; }        // dad bails and hides — instant, deliberate game over
-  if(k==='frontdoor'){ endGame('leave'); return; }    // dad walks out on the baby entirely
+  if(k==='closet'){                                    // dad bails and hides — instant, deliberate game over
+    if(S.tutorial){ Audio.error(); return; }
+    endGame('hide'); return;
+  }
+  if(k==='frontdoor'){                                 // dad walks out on the baby entirely
+    if(S.tutorial){ Audio.error(); return; }
+    endGame('leave'); return;
+  }
   if(k==='playpen'){
     if(!S.holdingBaby){ Audio.error(); return; }
     S.holdingBaby=false; baby.scale.set(1,1,1); baby.userData.mat.visible=true;
     baby.position.set(stations.playpen.x, 0, stations.playpen.z); baby.rotation.y=0;
     S.babyPenned=true; S.penTimer=curDiff().penSeconds; S.babyFallen=false; S.babyBurned=false;
+    if(S.tutorial) tutorialProgress.penned = true;
     Audio.chime(); return;
   }
   if(S.holdingBaby){ Audio.error(); return; }        // hands full holding baby
   S.carrying=k; setCarrySprite(CARRY_ICON[k]); Audio.chime(); flashCarry();
 }
 function deliverToBaby(){
-  if(S.carrying==='food'){ S.need.food=100; Audio.chime(); }
-  else if(S.carrying==='milk'){ S.need.milk=100; Audio.chime(); }
+  if(S.carrying==='food'){ S.need.food=100; Audio.chime(); if(S.tutorial) tutorialProgress.fed=true; }
+  else if(S.carrying==='milk'){ S.need.milk=100; Audio.chime(); if(S.tutorial) tutorialProgress.milk=true; }
   else if(S.carrying==='diaper'){
     if(S.need.diaper > DIAPER_CHANGE_MAX){ Audio.error(); return; }   // not dirty enough yet — keep the diaper
     const dirtiness = 1 - S.need.diaper/DIAPER_CHANGE_MAX;             // 0 right at the threshold, 1 when fully empty
     const gained = Math.max(1, Math.round((1 + dirtiness*3) * (1 + 0.6*S.lvl.diaper)));
     S.need.diaper=100;
     S.poo += gained; S.changes++; popPoo(gained); Audio.poo();
+    if(S.tutorial) tutorialProgress.diaper=true;
   }
   S.carrying=null; setCarrySprite(null);
 }
 function interact(){                                   // the E key
   if(S.babyChoking){                                   // top priority: clear the baby's airway
-    if(babyDist() < 2.6){ S.babyChoking=false; S.chokeDeadline=0; S.joy=Math.min(1,S.joy+0.3); Audio.chime(); }
+    if(babyDist() < 2.6){ S.babyChoking=false; S.chokeDeadline=0; S.joy=Math.min(1,S.joy+0.3); Audio.chime();
+      if(S.tutorial) tutorialProgress.choke=true; }
     else Audio.error();
     return;
   }
@@ -1679,7 +1722,8 @@ function toggleHoldBaby(){                              // the Space key
     if(S.carrying){ Audio.error(); return; }           // can't hold baby with hands full
     if(S.holdStamina < holdMax()*ARM_RECOVER_MIN_FRAC){ Audio.error(); return; } // arms still too tired
     if(babyDist() < 2.9){ S.holdingBaby=true; S.cuddles++; S.babyFallen=false; S.babyBurned=false; S.babyPenned=false;
-      baby.scale.set(0.9,0.9,0.9); baby.userData.mat.visible = false; Audio.chime(); }
+      baby.scale.set(0.9,0.9,0.9); baby.userData.mat.visible = false; Audio.chime();
+      if(S.tutorial) tutorialProgress.held=true; }
     else Audio.error();
   }
 }
@@ -1735,6 +1779,7 @@ function buyUpgrade(k){
   if(S.poo < cost){ Audio.error(); return; }
   S.poo -= cost; S.lvl[k]++;
   Audio.buy(); refreshShop();
+  if(S.tutorial) tutorialProgress.bought = true;
 }
 function openShop(){ if(S.mode!=='play') return; buildShopRows(); refreshShop(); shopEl.classList.remove('hidden'); }
 function closeShopFn(){ shopEl.classList.add('hidden'); }
@@ -1806,10 +1851,13 @@ function drawMinimap(){
 }
 
 /* ---------- Flow ---------- */
-function startGame(){
+function startGame(isTutorial){
+  if(isTutorial){ preTutorialDifficulty = difficulty; difficulty = 'tutorial'; }
   buildHouse();                                    // fresh randomized-but-sensible room layout each run
   resetState();
   S.mode='play';
+  S.tutorial = !!isTutorial;
+  if(isTutorial) S.endless = false;                // ignore any earlier Endless Mode toggle during the tutorial
   dad.position.copy(spawnDad); dad.rotation.y=0;
   dad.userData.arms[0].rotation.x=0; dad.userData.arms[1].rotation.x=0;
   baby.position.copy(spawnBaby); baby.rotation.y=0; baby.scale.set(1,1,1);
@@ -1825,6 +1873,8 @@ function startGame(){
   document.getElementById('win').classList.add('hidden');
   closeShopFn();
   Audio.start(); Music.start();
+  document.getElementById('tutorialPanel').classList.toggle('hidden', !isTutorial);
+  if(isTutorial) tutorialStepEnter(0);
 }
 const GAMEOVER_FLAVOR = {
   lose: {icon:'📞😱', title:'You called Mommy!',
@@ -1888,12 +1938,97 @@ function showMenuScreen(id){
 document.getElementById('menuPlayBtn').addEventListener('click', ()=>showMenuScreen('diffScreen'));
 document.getElementById('menuSettingsBtn').addEventListener('click', ()=>{ syncMusicPickers(); showMenuScreen('settingsScreen'); });
 document.getElementById('menuHelpBtn').addEventListener('click', ()=>showMenuScreen('helpScreen'));
+document.getElementById('menuTutorialBtn').addEventListener('click', ()=>startGame(true));
 document.getElementById('helpBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('settingsBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('diffBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
-document.getElementById('startBtn').addEventListener('click', startGame);
-document.getElementById('retryBtn').addEventListener('click', startGame);
-document.getElementById('winBtn').addEventListener('click', startGame);
+document.getElementById('startBtn').addEventListener('click', ()=>startGame(false));
+document.getElementById('retryBtn').addEventListener('click', ()=>startGame(false));
+document.getElementById('winBtn').addEventListener('click', ()=>startGame(false));
+
+/* ---------- Tutorial: a guided, no-pressure walkthrough of every mechanic, at the player's own pace ---------- */
+let tutorialStepIdx = 0;
+let preTutorialDifficulty = null;
+const tutorialProgress = {};             // flags set by gameplay hooks; each step's own auto() reads one of them
+function spawnTutorialMess(){                          // a single mess to practice mopping, right by the player
+  const mx = Math.max(houseBounds.X0+1, Math.min(houseBounds.X1-1, dad.position.x + 1.5));
+  const mz = Math.max(houseBounds.Z0+1, Math.min(houseBounds.Z1-1, dad.position.z + 1.5));
+  const mesh = messBlob(); mesh.position.set(mx, 0.01, mz); houseGroup.add(mesh);
+  S.messes.push({x:mx, z:mz, mesh, playerInside:false});
+}
+const TUTORIAL_STEPS = [
+  { text:"Welcome! This is a completely safe practice run — nothing here can end the game. Use "+
+         "<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> (or arrow keys) to walk Dad around the house. "+
+         "Press <b>Next</b> whenever you're ready to move on." },
+  { text:"🍎 <b>Food:</b> Walk to the kitchen counter and press <kbd>E</kbd> to grab food, then walk it "+
+         "over to the baby and press <kbd>E</kbd> again to feed them.",
+    auto:()=>tutorialProgress.fed },
+  { text:"🍼 <b>Milk:</b> Grab a bottle from the fridge the same way, then bring it to the baby.",
+    auto:()=>tutorialProgress.milk },
+  { text:"👶 <b>Diapers:</b> I've made the diaper nice and dirty for practice. Grab a diaper at the "+
+         "changing table and bring it to the baby to change them — this is how you earn 💩 poo.",
+    onEnter:()=>{ S.need.diaper = 20; },
+    auto:()=>tutorialProgress.diaper },
+  { text:"📺 <b>Cartoons:</b> Walk up to the TV and press <kbd>E</kbd> to turn it on — it keeps the baby entertained.",
+    auto:()=>tutorialProgress.cartoon },
+  { text:"💪 <b>Holding the baby:</b> Get close to the baby and press <kbd>Space</kbd> to pick them up — "+
+         "watch the stamina bar appear. Your arms tire out over time (upgradeable later), so press "+
+         "<kbd>Space</kbd> again to put the baby back down.",
+    auto:()=>tutorialProgress.held },
+  { text:"🔒 <b>Playpen:</b> Pick the baby up again, carry them to the 🔒 playpen, and press <kbd>E</kbd> to "+
+         "place them inside. It's a safe way to free up your hands for a little while — they'll climb out "+
+         "on their own eventually.",
+    auto:()=>tutorialProgress.penned },
+  { text:"🧹 <b>Messes:</b> I've left a little mess nearby — babies do that sometimes! Only the 🧹 mop can "+
+         "clean it up. Grab the mop and press <kbd>E</kbd> on the mess.",
+    onEnter:()=>spawnTutorialMess(),
+    auto:()=>tutorialProgress.mopped },
+  { text:"💻 <b>Work:</b> You're still on the clock while babysitting — I've triggered a work message now. "+
+         "Walk to the computer and press <kbd>E</kbd> to reply. Take your time.",
+    onEnter:()=>{ S.notification=true; S.notifyDeadline=9999; },
+    auto:()=>tutorialProgress.notif },
+  { text:"🚨 <b>Choking:</b> An unattended baby on the floor can occasionally swallow something small. I've "+
+         "triggered that now too — walk over and press <kbd>E</kbd> to clear the airway. No rush here, but "+
+         "in a real run you'd need to hurry!",
+    onEnter:()=>{ if(S.holdingBaby) putBabyDown(); S.babyChoking=true; },
+    auto:()=>tutorialProgress.choke },
+  { text:"🤕 <b>Back pain:</b> Randomly, Dad's back can seize up and freeze him in place for a few seconds. "+
+         "Buy 💊 Pain Medication at the workbench to shorten it. (Not triggering it right now — just "+
+         "something to watch for out there!)" },
+  { text:"🔥🚪 <b>Hazards to avoid:</b> An unattended baby that wanders to the 🔥 oven gets burned. And "+
+         "whatever you do, never hide in the 🚪 closet or walk out the 🚪 front door — both instantly end "+
+         "a real game!" },
+  { text:"💩 <b>Upgrades:</b> Diaper changes bank 💩 poo. I've topped up your balance — press <kbd>U</kbd> "+
+         "or visit the 🛠️ workbench and buy an upgrade.",
+    onEnter:()=>{ S.poo = Math.max(S.poo, 20); },
+    auto:()=>tutorialProgress.bought },
+  { text:"😭 <b>Winning & losing:</b> In a real run, if any need hits 0 the baby cries and the 😭 cry-o-meter "+
+         "climbs — filling it means game over. Survive until the timer runs out (or forever in Endless Mode) "+
+         "to win. That's everything — you're ready to babysit for real!" },
+];
+function tutorialStepEnter(i){
+  tutorialStepIdx = i;
+  for(const k in tutorialProgress) delete tutorialProgress[k];
+  const step = TUTORIAL_STEPS[i];
+  if(step.onEnter) step.onEnter();
+  document.getElementById('tutorialStepNum').textContent = `Step ${i+1} of ${TUTORIAL_STEPS.length}`;
+  document.getElementById('tutorialText').innerHTML = step.text;
+  document.getElementById('tutorialNextBtn').textContent = (i===TUTORIAL_STEPS.length-1) ? 'Start Playing ▶' : 'Next ▶';
+}
+function tutorialAdvance(){
+  if(tutorialStepIdx >= TUTORIAL_STEPS.length-1){ endTutorial(true); return; }
+  Audio.chime();
+  tutorialStepEnter(tutorialStepIdx+1);
+}
+function endTutorial(goToPlay){
+  S.mode='menu';
+  document.getElementById('tutorialPanel').classList.add('hidden');
+  difficulty = preTutorialDifficulty || 'veteran'; preTutorialDifficulty=null;
+  document.getElementById('intro').classList.remove('hidden');
+  showMenuScreen(goToPlay ? 'diffScreen' : 'mainMenu');
+}
+document.getElementById('tutorialNextBtn').addEventListener('click', tutorialAdvance);
+document.getElementById('tutorialExitBtn').addEventListener('click', ()=>endTutorial(false));
 
 /* ---------- Collisions ---------- */
 function collide(px, pz, radius){
@@ -2065,50 +2200,59 @@ function tick(){
     if(S.penEscapedTimer>0) S.penEscapedTimer = Math.max(0, S.penEscapedTimer-dt);
 
     // ---- back pain: random episodes freeze movement for a few seconds; Pain Medication shortens them ----
-    if(S.backPainTimer>0){
-      S.backPainTimer = Math.max(0, S.backPainTimer-dt);
-    } else {
-      S.nextBackPain -= dt;
-      if(S.nextBackPain<=0){
-        const Dbp = curDiff();
-        S.backPainTimer = Math.max(0.5, Dbp.backPainCrippleBase * Math.pow(0.75, S.lvl.backpain));
-        S.nextBackPain = rand(Dbp.backPainMin, Dbp.backPainMax);
-        Audio.error();
+    // (skipped entirely in the tutorial — back pain is explained as text, never forced on the player)
+    if(!S.tutorial){
+      if(S.backPainTimer>0){
+        S.backPainTimer = Math.max(0, S.backPainTimer-dt);
+      } else {
+        S.nextBackPain -= dt;
+        if(S.nextBackPain<=0){
+          const Dbp = curDiff();
+          S.backPainTimer = Math.max(0.5, Dbp.backPainCrippleBase * Math.pow(0.75, S.lvl.backpain));
+          S.nextBackPain = rand(Dbp.backPainMin, Dbp.backPainMax);
+          Audio.error();
+        }
       }
     }
 
     // ---- work notifications: the computer pings now and then; answer within the window or take a cry penalty ----
-    const dNotify = curDiff();
-    if(S.notification){
-      S.notifyDeadline -= dt;
-      if(S.notifyDeadline <= 0){
-        S.notification=false; S.missedNotifyTimer=2.5; S.missedCount++;
-        S.cry = Math.min(100, S.cry + dNotify.notifyPenalty); Audio.error();
-        S.notifyTimer = rand(dNotify.notifyMin, dNotify.notifyMax);
-        if(S.missedCount >= dNotify.fireLimit){ endGame('fired'); }
+    // (in the tutorial the script triggers one directly, with no countdown penalty)
+    if(!S.tutorial){
+      const dNotify = curDiff();
+      if(S.notification){
+        S.notifyDeadline -= dt;
+        if(S.notifyDeadline <= 0){
+          S.notification=false; S.missedNotifyTimer=2.5; S.missedCount++;
+          S.cry = Math.min(100, S.cry + dNotify.notifyPenalty); Audio.error();
+          S.notifyTimer = rand(dNotify.notifyMin, dNotify.notifyMax);
+          if(S.missedCount >= dNotify.fireLimit){ endGame('fired'); }
+        }
+      } else {
+        S.notifyTimer -= dt;
+        if(S.notifyTimer <= 0){
+          S.notification=true; S.notifyDeadline=dNotify.notifyWindow;
+          S.notifyTimer = rand(dNotify.notifyMin, dNotify.notifyMax);   // primed for the one after this
+          Audio.chime();
+        }
       }
-    } else {
-      S.notifyTimer -= dt;
-      if(S.notifyTimer <= 0){
-        S.notification=true; S.notifyDeadline=dNotify.notifyWindow;
-        S.notifyTimer = rand(dNotify.notifyMin, dNotify.notifyMax);   // primed for the one after this
-        Audio.chime();
-      }
+      if(S.missedNotifyTimer>0) S.missedNotifyTimer = Math.max(0, S.missedNotifyTimer-dt);
     }
-    if(S.missedNotifyTimer>0) S.missedNotifyTimer = Math.max(0, S.missedNotifyTimer-dt);
     computerScreen.material.emissive.set(S.notification ? '#ff5c3d' : '#153a6b');
 
     // ---- occasional throw-up: leaves a mess only the mop can clean ----
-    S.vomitTimer -= dt;
-    if(S.vomitTimer <= 0){
-      if(S.messes.length < 3 && !S.holdingBaby){
-        const mx = Math.max(houseBounds.X0+1, Math.min(houseBounds.X1-1, baby.position.x + rand(-0.5,0.5)));
-        const mz = Math.max(houseBounds.Z0+1, Math.min(houseBounds.Z1-1, baby.position.z + rand(-0.5,0.5)));
-        const mesh = messBlob(); mesh.position.set(mx, 0.01, mz); houseGroup.add(mesh);
-        S.messes.push({x:mx, z:mz, mesh, playerInside:false});
-        Audio.error();
+    // (in the tutorial the script spawns exactly one mess to practice on — no random ones)
+    if(!S.tutorial){
+      S.vomitTimer -= dt;
+      if(S.vomitTimer <= 0){
+        if(S.messes.length < 3 && !S.holdingBaby){
+          const mx = Math.max(houseBounds.X0+1, Math.min(houseBounds.X1-1, baby.position.x + rand(-0.5,0.5)));
+          const mz = Math.max(houseBounds.Z0+1, Math.min(houseBounds.Z1-1, baby.position.z + rand(-0.5,0.5)));
+          const mesh = messBlob(); mesh.position.set(mx, 0.01, mz); houseGroup.add(mesh);
+          S.messes.push({x:mx, z:mz, mesh, playerInside:false});
+          Audio.error();
+        }
+        S.vomitTimer = rand(curDiff().vomitMin, curDiff().vomitMax);
       }
-      S.vomitTimer = rand(curDiff().vomitMin, curDiff().vomitMax);
     }
     // stepping in a mess: drop whatever you're carrying and slip (walk slower for a few seconds)
     S.messes.forEach(m=>{
@@ -2124,17 +2268,20 @@ function tick(){
     if(S.slowTimer>0) S.slowTimer = Math.max(0, S.slowTimer-dt);
 
     // ---- choking hazard: an unattended baby on the floor might swallow something small ----
-    if(!S.holdingBaby && !S.babyPenned && !S.babyFallen && !S.babyBurned && !S.babyChoking){
-      S.chokeTimer -= dt;
-      if(S.chokeTimer<=0){
-        const Dck = curDiff();
-        S.babyChoking = true; S.chokeDeadline = Dck.chokeWindow; Audio.cry();
-        S.chokeTimer = rand(Dck.chokeMin, Dck.chokeMax);
+    // (in the tutorial the script triggers this directly and it never auto-expires)
+    if(!S.tutorial){
+      if(!S.holdingBaby && !S.babyPenned && !S.babyFallen && !S.babyBurned && !S.babyChoking){
+        S.chokeTimer -= dt;
+        if(S.chokeTimer<=0){
+          const Dck = curDiff();
+          S.babyChoking = true; S.chokeDeadline = Dck.chokeWindow; Audio.cry();
+          S.chokeTimer = rand(Dck.chokeMin, Dck.chokeMax);
+        }
       }
-    }
-    if(S.babyChoking){
-      S.chokeDeadline -= dt;
-      if(S.chokeDeadline<=0){ endGame('choke'); }
+      if(S.babyChoking){
+        S.chokeDeadline -= dt;
+        if(S.chokeDeadline<=0){ endGame('choke'); }
+      }
     }
 
     // ---- needs decay ----
@@ -2181,15 +2328,23 @@ function tick(){
            : playing ? '🥳'
            : hp>70 ? '😄' : hp>40 ? '🙂' : '😟');
 
-    // ---- timer / win / lose ----
-    S.elapsed += dt;
-    if(S.endless){
-      S.score = Math.floor(S.elapsed) + S.poo*3;
-    } else {
-      S.timeLeft -= dt;
-      if(S.timeLeft<=0){ S.timeLeft=0; endGame('win'); }
+    // ---- timer / win / lose ---- (none of this applies during the tutorial — it can't be won or lost)
+    if(!S.tutorial){
+      S.elapsed += dt;
+      if(S.endless){
+        S.score = Math.floor(S.elapsed) + S.poo*3;
+      } else {
+        S.timeLeft -= dt;
+        if(S.timeLeft<=0){ S.timeLeft=0; endGame('win'); }
+      }
+      if(S.cry>=100){ endGame('lose'); }
     }
-    if(S.cry>=100){ endGame('lose'); }
+
+    // ---- tutorial: auto-advance once the player actually performs the demonstrated action ----
+    if(S.tutorial){
+      const step = TUTORIAL_STEPS[tutorialStepIdx];
+      if(step && step.auto && step.auto()) tutorialAdvance();
+    }
 
     updateHUD();
     drawMinimap();
@@ -2213,14 +2368,24 @@ function updateHUD(){
   el.cryFill.style.width = S.cry+'%';
   el.cryPct.textContent = Math.round(S.cry)+'%';
   el.cryWrap.classList.toggle('show', S.cry>0);
-  if(S.notification){ el.workAlert.textContent = `💻 Work message! Reply within ${Math.ceil(S.notifyDeadline)}s`; el.workAlert.classList.add('show'); }
-  else el.workAlert.classList.remove('show');
-  if(S.babyChoking){ el.chokeAlert.textContent = `🚨 Baby's choking! Clear the airway within ${Math.ceil(S.chokeDeadline)}s!`; el.chokeAlert.classList.add('show'); }
-  else el.chokeAlert.classList.remove('show');
+  if(S.notification){
+    el.workAlert.textContent = S.tutorial ? `💻 Work message! Walk to the computer and press E to reply (no rush)`
+                                           : `💻 Work message! Reply within ${Math.ceil(S.notifyDeadline)}s`;
+    el.workAlert.classList.add('show');
+  } else el.workAlert.classList.remove('show');
+  if(S.babyChoking){
+    el.chokeAlert.textContent = S.tutorial ? `🚨 Practice: clear the airway — walk to the baby and press E (no rush)`
+                                            : `🚨 Baby's choking! Clear the airway within ${Math.ceil(S.chokeDeadline)}s!`;
+    el.chokeAlert.classList.add('show');
+  } else el.chokeAlert.classList.remove('show');
   const hp = happiness();
   el.hap.textContent = hp>70?'😄':hp>40?'🙂':hp>15?'😟':'😢';
   el.poo.textContent = '💩 '+S.poo;
-  if(S.endless){
+  if(S.tutorial){
+    el.time.textContent = '∞';
+    el.timeLabel.textContent = 'Practice run';
+    el.scoreStat.style.display = 'none';
+  } else if(S.endless){
     const m = Math.floor(S.elapsed/60), s = Math.floor(S.elapsed%60);
     el.time.textContent = m+':'+String(s).padStart(2,'0');
     el.timeLabel.textContent = 'Survived';
@@ -2239,8 +2404,12 @@ function updateHUD(){
   const near = !S.holdingBaby && babyDist() < 2.6;
   let msg = '';
   if(S.babyChoking){
-    msg = near ? `🚨 Baby's choking! Clear the airway — <kbd>E</kbd> (${Math.ceil(S.chokeDeadline)}s)`
-               : `🚨 The baby is choking on something! Get there now! (${Math.ceil(S.chokeDeadline)}s)`;
+    if(S.tutorial){
+      msg = near ? `🚨 Practice: clear the airway — <kbd>E</kbd>` : `🚨 Head over to the baby to practice clearing its airway`;
+    } else {
+      msg = near ? `🚨 Baby's choking! Clear the airway — <kbd>E</kbd> (${Math.ceil(S.chokeDeadline)}s)`
+                 : `🚨 The baby is choking on something! Get there now! (${Math.ceil(S.chokeDeadline)}s)`;
+    }
   } else if(S.backPainTimer>0){
     msg = `🤕 Your back seized up! Can't move (${S.backPainTimer.toFixed(1)}s)`;
   } else if(k==='closet'){
