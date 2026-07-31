@@ -72,15 +72,36 @@
   .crybar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ff8a5c,var(--cry));
     transition:width .12s linear;border-radius:9px}
 
+  /* solid, near-opaque backdrops (not a tinted-transparent fill) so text stays legible over any room */
   .workAlert{position:absolute;top:150px;left:50%;transform:translateX(-50%);width:min(360px,80vw);
-    background:rgba(255,90,60,.18);border:1px solid #ff8a5c;border-radius:12px;padding:7px 14px;
-    font-size:13px;text-align:center;font-weight:bold;opacity:0;transition:opacity .15s}
+    background:rgba(18,13,24,.94);border:1px solid #ff8a5c;border-radius:12px;padding:7px 14px;
+    font-size:13px;text-align:center;font-weight:bold;color:#ffd7c2;text-shadow:0 1px 3px rgba(0,0,0,.7);
+    box-shadow:0 6px 20px rgba(0,0,0,.4);opacity:0;transition:opacity .15s}
   .workAlert.show{opacity:1;animation:flash .9s steps(2) infinite}
 
   .chokeAlert{position:absolute;top:194px;left:50%;transform:translateX(-50%);width:min(380px,80vw);
-    background:rgba(255,60,60,.22);border:1px solid #ff5c5c;border-radius:12px;padding:7px 14px;
-    font-size:13px;text-align:center;font-weight:bold;opacity:0;transition:opacity .15s}
+    background:rgba(24,10,10,.94);border:1px solid #ff5c5c;border-radius:12px;padding:7px 14px;
+    font-size:13px;text-align:center;font-weight:bold;color:#ffcaca;text-shadow:0 1px 3px rgba(0,0,0,.7);
+    box-shadow:0 6px 20px rgba(0,0,0,.4);opacity:0;transition:opacity .15s}
   .chokeAlert.show{opacity:1;animation:flash .7s steps(2) infinite}
+
+  .backPainAlert{position:absolute;top:238px;left:50%;transform:translateX(-50%);width:min(360px,80vw);
+    background:rgba(24,16,10,.94);border:1px solid #ffb15c;border-radius:12px;padding:7px 14px;
+    font-size:13px;text-align:center;font-weight:bold;color:#ffe0c2;text-shadow:0 1px 3px rgba(0,0,0,.7);
+    box-shadow:0 6px 20px rgba(0,0,0,.4);opacity:0;transition:opacity .15s}
+  .backPainAlert.show{opacity:1;animation:flash .8s steps(2) infinite}
+
+  .bathroomAlert{position:absolute;top:282px;left:50%;transform:translateX(-50%);width:min(360px,80vw);
+    background:rgba(10,20,24,.94);border:1px solid #5cd0ff;border-radius:12px;padding:7px 14px;
+    font-size:13px;text-align:center;font-weight:bold;color:#cdeeff;text-shadow:0 1px 3px rgba(0,0,0,.7);
+    box-shadow:0 6px 20px rgba(0,0,0,.4);opacity:0;transition:opacity .15s}
+  .bathroomAlert.show{opacity:1;animation:flash .9s steps(2) infinite}
+
+  .mpPlayerHud{position:absolute;top:10px;right:12px;display:flex;flex-direction:column;gap:5px;
+    background:var(--panel);border:1px solid var(--panelborder);border-radius:14px;padding:8px 12px;
+    box-shadow:0 8px 30px rgba(0,0,0,.35);font-size:13px;max-width:180px;z-index:6}
+  .mpPlayerRow{display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mpPlayerDot{width:10px;height:10px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.25)}
 
   .tutorialPanel{position:absolute;bottom:216px;left:50%;transform:translateX(-50%);width:min(560px,92vw);
     background:var(--panel);border:1px solid var(--panelborder);border-radius:14px;padding:14px 18px;
@@ -226,8 +247,11 @@
 
   <div class="workAlert" id="workAlert"></div>
   <div class="chokeAlert" id="chokeAlert"></div>
+  <div class="backPainAlert" id="backPainAlert"></div>
+  <div class="bathroomAlert" id="bathroomAlert"></div>
   <div class="prompt" id="prompt"></div>
   <div class="carry" id="carry"></div>
+  <div class="mpPlayerHud hidden" id="mpPlayerHud"></div>
 
   <div class="tutorialPanel hidden" id="tutorialPanel">
     <div class="tutorialStepNum" id="tutorialStepNum"></div>
@@ -295,8 +319,9 @@
       <h3>⚠️ Hazards to Watch For</h3>
       <p>An unsupervised baby near the 🔥 <b>oven</b> gets burned. They can also swallow something small —
          rush over and clear their airway before time runs out. Messes appear on the floor sometimes — only
-         the 🧹 <b>mop</b> cleans them up. And watch your <i>own</i> back: random <b>back pain</b> freezes
-         you in place for a few seconds (upgrade 💊 <b>Pain Medication</b> to shorten it).</p>
+         the 🧹 <b>mop</b> cleans them up. And watch your <i>own</i> body: random <b>back pain</b> freezes
+         you in place for a few seconds (upgrade 💊 <b>Pain Medication</b> to shorten it), and every so often
+         you'll need the 🚽 <b>toilet</b> — get there before time runs out or it's an awkward miss.</p>
     </div>
 
     <div class="helpSection">
@@ -797,7 +822,7 @@ function computeBounds(rects){
 }
 
 function addToy(g, x, z, baseY){ g.position.set(x, baseY, z); houseGroup.add(g); toys.push({x, z, mesh:g, baseY}); }
-function label(text, y){ const s=makeSprite(text); s.position.y=y; s.scale.multiplyScalar(0.85); s.renderOrder=10; return s; }
+function label(text, y){ const s=makeSprite(text); s.position.y=y; s.scale.multiplyScalar(0.62); s.renderOrder=10; return s; }
 
 /* ---------- Furniture builders (footprints measured at placement) ---------- */
 function sofa(c){ const g=new THREE.Group();
@@ -1251,7 +1276,7 @@ function buildBathroom(room){
 
   const toiletSide = pick(inner.length?inner:outer);
   p = wallPos(room, toiletSide, edgeT(), 0.7);
-  addPropOriented(toilet(), p.x, p.z, 0.5, 0.5, p.rot);
+  addStation('toilet', p.x, p.z, toilet(), '🚽 Toilet', 1.5, p.rot);
 
   const mopT = sinkT<0.5 ? rand(0.72,0.88) : rand(0.12,0.28);
   p = wallPos(room, sinkSide, mopT, 0.4);
@@ -1740,21 +1765,24 @@ const DIFFICULTIES = {
     holdBase:15, holdRecoverMul:1.4, ovenChance:0.02, penSeconds:32,
     notifyMin:45, notifyMax:70, notifyWindow:24, notifyPenalty:12, fireLimit:5,
     backPainMin:55, backPainMax:85, backPainCrippleBase:1.6,
-    chokeMin:70, chokeMax:110, chokeWindow:12},
+    chokeMin:70, chokeMax:110, chokeWindow:12,
+    bathroomMin:160, bathroomMax:230, bathroomWindow:35},
   veteran: {key:'veteran', label:"Been There, Done That", gameLen:270,
     decayMul:1, cryFillMul:1, cryDrainMul:1, vomitMin:28, vomitMax:52,
     walkChance:0.32, fallMin:6, fallMax:13, needStart:{food:100,milk:95,diaper:100,cartoon:88},
     holdBase:10, holdRecoverMul:1.3, ovenChance:0.045, penSeconds:24,
     notifyMin:32, notifyMax:52, notifyWindow:17, notifyPenalty:16, fireLimit:4,
     backPainMin:40, backPainMax:65, backPainCrippleBase:2.6,
-    chokeMin:55, chokeMax:90, chokeWindow:9},
+    chokeMin:55, chokeMax:90, chokeWindow:9,
+    bathroomMin:120, bathroomMax:180, bathroomWindow:28},
   king:    {key:'king', label:'King', gameLen:330,
     decayMul:1.4, cryFillMul:1.35, cryDrainMul:0.75, vomitMin:16, vomitMax:34,
     walkChance:0.46, fallMin:4, fallMax:9, needStart:{food:85,milk:80,diaper:88,cartoon:70},
     holdBase:6, holdRecoverMul:1.15, ovenChance:0.08, penSeconds:16,
     notifyMin:20, notifyMax:36, notifyWindow:11, notifyPenalty:20, fireLimit:3,
     backPainMin:26, backPainMax:45, backPainCrippleBase:3.8,
-    chokeMin:40, chokeMax:65, chokeWindow:7},
+    chokeMin:40, chokeMax:65, chokeWindow:7,
+    bathroomMin:90, bathroomMax:140, bathroomWindow:22},
   // practice mode: needs never decay and no random hazard can fire — every mechanic is either
   // explained as plain text or triggered deliberately by the tutorial script, at the player's own pace
   tutorial: {key:'tutorial', label:'Tutorial', gameLen:Infinity,
@@ -1763,7 +1791,8 @@ const DIFFICULTIES = {
     holdBase:40, holdRecoverMul:1.3, ovenChance:0, penSeconds:60,
     notifyMin:9999, notifyMax:9999, notifyWindow:9999, notifyPenalty:0, fireLimit:9999,
     backPainMin:9999, backPainMax:9999, backPainCrippleBase:0,
-    chokeMin:9999, chokeMax:9999, chokeWindow:9999},
+    chokeMin:9999, chokeMax:9999, chokeWindow:9999,
+    bathroomMin:9999, bathroomMax:9999, bathroomWindow:9999},
 };
 let difficulty = 'veteran';
 let endlessMode = false;
@@ -1792,6 +1821,7 @@ function freshPlayer(name, colorIdx){
     carrying:null,                   // 'food'|'milk'|'diaper'|'mop'|null
     holdingBaby:-1,                  // index into babies[], or -1
     holdStamina:0, armsTiredTimer:0, backPainTimer:0, nextBackPain:0, slowTimer:0,
+    bathroomUrge:0, nextBathroom:0,   // >0 while an urge is active (counts down to "too late")
     changes:0, cuddles:0,
     x:0, z:0, rotY:0,                // synced transform — read directly from `dad` for me, else from Firebase
     avatar:null,                     // remote-only: {group, nameSprite} rendered in the scene
@@ -1853,6 +1883,7 @@ function resetState(){
   const P = players[myId];
   P.holdStamina = holdMaxFor(D, 0);
   P.nextBackPain = rand(D.backPainMin*0.6, D.backPainMax*0.6);
+  P.nextBathroom = rand(D.bathroomMin*0.7, D.bathroomMax*0.7);
   // dispose the previous run's baby meshes here — they live directly in `scene` (not under houseGroup,
   // which buildHouse() already tears down each run), so without this they'd leak as permanent "ghost"
   // babies: spawnBabies()'s own cleanup loop runs after babies is already reset to [], too late to catch them
@@ -1945,11 +1976,17 @@ function doStation(k){
   }
   if(k==='closet'){                                    // dad bails and hides — instant, deliberate game over
     if(S.tutorial){ Audio.error(); return; }
-    endGame('hide'); return;
+    personLeftGame('hide'); return;
   }
   if(k==='frontdoor'){                                 // dad walks out on the baby entirely
     if(S.tutorial){ Audio.error(); return; }
-    endGame('leave'); return;
+    personLeftGame('leave'); return;
+  }
+  if(k==='toilet'){
+    if(P.bathroomUrge>0){ P.bathroomUrge=0; P.nextBathroom=rand(curDiff().bathroomMin, curDiff().bathroomMax);
+      S.joy=Math.min(1,S.joy+0.15); Audio.chime(); }
+    else Audio.error();
+    return;
   }
   if(k==='playpen'){
     if(P.holdingBaby<0){ Audio.error(); return; }
@@ -2048,6 +2085,8 @@ const el = {
   time:document.getElementById('timeVal'), prompt:document.getElementById('prompt'),
   carry:document.getElementById('carry'), topbar:document.getElementById('topbar'),
   workAlert:document.getElementById('workAlert'), chokeAlert:document.getElementById('chokeAlert'),
+  backPainAlert:document.getElementById('backPainAlert'), bathroomAlert:document.getElementById('bathroomAlert'),
+  mpPlayerHud:document.getElementById('mpPlayerHud'),
   timeLabel:document.getElementById('timeLabel'), scoreStat:document.getElementById('scoreStat'), scoreVal:document.getElementById('scoreVal'),
 };
 function buildBabyNeedsHUD(){                          // one compact 4-bar cluster per baby (labeled once >1)
@@ -2274,6 +2313,12 @@ function endGame(reason){                              // 'win' | 'lose' | 'hide
   }
   if(roomCode && isHost) Net.setGameOver(reason);         // let every guest's client know the round is over
 }
+function personLeftGame(reason){                        // closet/front-door: solo, or the host doing it in
+  const P = actingPlayer();                               // multiplayer, ends the round for everyone as usual —
+  if(P.holdingBaby>=0) putBabyDown(P);                     // but a GUEST doing it only ends their own session,
+  if(!roomCode || actingPlayerId===myId){ endGame(reason); return; } // leaving everyone else's round running
+  Net.setPlayerLeft(actingPlayerId, reason);
+}
 document.querySelectorAll('#diffPicker .diffOpt').forEach(opt=>{
   opt.addEventListener('click', ()=>{
     difficulty = opt.dataset.diff;
@@ -2453,6 +2498,7 @@ const Net = (function(){
           poo:players[id].poo, lvl:players[id].lvl}); }
     },
     setGameOver(reason){ if(isHost && metaRef) metaRef.update({state:'ended', reason}); },
+    setPlayerLeft(id, reason){ if(isHost && playersRef) playersRef.child(id).update({gameOverReason:reason}); },
     reopenLobby(){ if(isHost && metaRef) metaRef.update({state:'lobby'}); }, // host's "Back to Lobby" — keeps
                                                             // everyone in the same room; flips the shared state
                                                             // so guests' difficulty/baby-count pickers live-sync
@@ -2653,6 +2699,11 @@ function applyPlayerSnapshot(id, data){
     if(data.lvl) P.lvl = data.lvl;
     if(P.carrying !== prevCarrying) setCarrySprite(P.carrying ? CARRY_ICON[P.carrying] : null);
     if(!shopEl.classList.contains('hidden')) refreshShop();
+    if(data.gameOverReason && S.mode==='play'){             // the host saw ME hide/walk out — my round ends,
+      endGame(data.gameOverReason);                          // but the room stays alive for everyone else, so
+      retryAction = 'menu';                                   // there's no shared lobby left to rejoin alone
+      document.getElementById('retryBtn').textContent = 'Back to Menu ↻';
+    }
     return;
   }
   let p = players[id];
@@ -3074,6 +3125,18 @@ function tick(){
       }
     }
 
+    // ---- bathroom: a rare personal urge — reach the toilet before time's up or it's an awkward miss ----
+    // (per-player, like back pain — no shared state touched, so it never needs to disagree with a guest)
+    if(!S.tutorial){
+      if(P.bathroomUrge>0){
+        P.bathroomUrge -= dt;
+        if(P.bathroomUrge<=0){ P.bathroomUrge=0; P.slowTimer=Math.max(P.slowTimer,6); Audio.error(); }
+      } else {
+        P.nextBathroom -= dt;
+        if(P.nextBathroom<=0){ P.bathroomUrge = curDiff().bathroomWindow; Audio.error(); }
+      }
+    }
+
     if(isHost){
       // ---- work notifications: the computer pings now and then; answer within the window or take a cry penalty ----
       // (in the tutorial the script triggers one directly, with no countdown penalty)
@@ -3208,8 +3271,24 @@ function tick(){
 }
 
 /* ---------- HUD update ---------- */
+let mpPlayerHudSig = '';
+function updateMpPlayerHud(){                            // top-right roster during a multiplayer round —
+  const hud = el.mpPlayerHud;                              // just names + color dots, not full lobby detail
+  if(!roomCode){ hud.classList.add('hidden'); return; }
+  hud.classList.remove('hidden');
+  const ids = Object.keys(players).filter(id=>players[id].connected!==false);
+  const sig = ids.map(id=>`${id}:${players[id].name}:${players[id].colorIdx}`).join('|');
+  if(sig===mpPlayerHudSig) return;                          // skip the rebuild when nothing actually changed
+  mpPlayerHudSig = sig;
+  hud.innerHTML = ids.map(id=>{
+    const p = players[id], c = PLAYER_COLORS[(p.colorIdx||0)%PLAYER_COLORS.length];
+    return `<div class="mpPlayerRow"><span class="mpPlayerDot" style="background:${c.body}"></span>`+
+           `${p.name||'Player'}${id===myId?' (you)':''}</div>`;
+  }).join('');
+}
 function updateHUD(){
   const P = me();
+  updateMpPlayerHud();
   babies.forEach((b,i)=>{
     const bars = el.babyBars[i]; if(!bars) return;
     if(bars.label && b.name && bars.label.textContent!==b.name) bars.label.textContent = b.name;
@@ -3241,6 +3320,14 @@ function updateHUD(){
                                             : `🚨 ${babyLabel(chokingBaby)}'s choking! Clear the airway within ${Math.ceil(chokingBaby.chokeDeadline)}s!`;
     el.chokeAlert.classList.add('show');
   } else el.chokeAlert.classList.remove('show');
+  if(P.backPainTimer>0){
+    el.backPainAlert.textContent = `🤕 Back seized up! Frozen in place (${P.backPainTimer.toFixed(1)}s)`;
+    el.backPainAlert.classList.add('show');
+  } else el.backPainAlert.classList.remove('show');
+  if(P.bathroomUrge>0){
+    el.bathroomAlert.textContent = `🚽 Gotta go! Reach the toilet within ${Math.ceil(P.bathroomUrge)}s`;
+    el.bathroomAlert.classList.add('show');
+  } else el.bathroomAlert.classList.remove('show');
   const hp = happiness();
   el.hap.textContent = hp>70?'😄':hp>40?'🙂':hp>15?'😟':'😢';
   el.poo.textContent = '💩 '+P.poo;
@@ -3306,6 +3393,9 @@ function updateHUD(){
     else if(k==='shop') msg = 'Open the <kbd>U</kbd>pgrade workbench — <kbd>E</kbd>';
     else if(k==='cartoon') msg = (S.cartoonsOn?'Cartoons playing':'Turn on cartoons')+' — <kbd>E</kbd>';
     else if(k==='computer') msg = S.notification ? '💻 Reply to the work message — <kbd>E</kbd>' : '';
+    else if(k==='toilet') msg = P.bathroomUrge>0 ? '🚽 Go now — <kbd>E</kbd>' : '';
+    else if(k==='closet') msg = 'Hide in the closet (ends your shift) — <kbd>E</kbd>';
+    else if(k==='frontdoor') msg = 'Walk out the front door (ends your shift) — <kbd>E</kbd>';
     else if(k) msg = `Grab ${NEED_ICON[k]} ${NEED_LABEL[k]||k} — <kbd>E</kbd>`;
     else if(mess) msg = '🤢 Ew, a mess — go grab the 🧹 mop';
     else if(P.armsTiredTimer>0) msg = '😩 Your arms gave out — the baby slipped down!';
