@@ -1500,8 +1500,17 @@ function buildDad(bodyColor, legColor){
     e.position.set(x,2.6-HIP_Y,0.5); upper.add(e); });
   g.userData.legL = legL; g.userData.legR = legR;
   g.userData.arms = [armL, armR];
+  g.userData.body = body;
   g.userData.upper = upper;
   return g;
+}
+function recolorDad(colorIdx){                            // re-tint the local avatar to match a chosen/assigned
+  const c = PLAYER_COLORS[(colorIdx||0)%PLAYER_COLORS.length]; // colorIdx — dad's mesh is built once at load
+  dad.userData.legL.material.color.set(c.leg);              // time and reused for every game, so switching to a
+  dad.userData.legR.material.color.set(c.leg);               // multiplayer color pick needs an explicit re-tint
+  dad.userData.body.material.color.set(c.body);
+  dad.userData.arms[0].material.color.set(c.body);
+  dad.userData.arms[1].material.color.set(c.body);
 }
 function buildBaby(){                                  // blocky/low-poly to match Dad's isometric style
   const g = new THREE.Group();
@@ -2168,6 +2177,8 @@ function drawMinimap(){
 function enterHouseCommon(){                            // shared teardown/setup used by every game-start path
   dad.position.copy(spawnDad); dad.rotation.y=0;
   dad.userData.arms[0].rotation.x=0; dad.userData.arms[1].rotation.x=0;
+  recolorDad(me().colorIdx);                            // solo/tutorial always reset to colorIdx 0 via
+                                                         // resetState(); multiplayer keeps whatever was picked
   setCarrySprite(null);
   thrownItems.forEach(it=>{ scene.remove(it.mesh); it.mesh.material.map.dispose(); it.mesh.material.dispose(); });
   thrownItems.length = 0;
@@ -2342,12 +2353,14 @@ const Net = (function(){
         const p = players[a.playerId]; if(!p) return;
         p.x=a.x; p.z=a.z; p.rotY=a.rotY;
         actingPlayerId = a.playerId;
-        if(a.type==='interact') interact();
-        else if(a.type==='hold') toggleHoldBaby();
-        else if(a.type==='drop') discardCarrying();
-        else if(a.type==='buy') buyUpgrade(a.arg);
-        actingPlayerId = myId;
-      });
+        try{
+          if(a.type==='interact') interact();
+          else if(a.type==='hold') toggleHoldBaby();
+          else if(a.type==='drop') discardCarrying();
+          else if(a.type==='buy') buyUpgrade(a.arg);
+        } finally { actingPlayerId = myId; }              // always hand control back, even if a handler throws —
+      });                                                  // otherwise every future action (incl. the host's own
+                                                            // input) would misfire as this guest until it recovers
     },
     listenWorldAsGuest(){                                // non-host: mirror the host's authoritative snapshot
       babiesRef.on('value', snap=>applyRemoteBabies(snap.val()));
@@ -2532,8 +2545,8 @@ function handleRemoteGameOver(meta){
       document.getElementById('goStats').textContent='';
       document.getElementById('gameover').classList.remove('hidden');
     } else {
-      document.getElementById('intro').classList.remove('hidden');
-      showMenuScreen('mainMenu');
+      leaveToMainMenu();                                  // also hides any gameover/win overlay still stuck
+                                                            // on screen from an earlier real round in this room
     }
     return;
   }
@@ -2603,13 +2616,21 @@ function applyRemoteBabies(snap){
   if(!snap) return;
   Object.keys(snap).forEach(i=>{
     const d = snap[i], b = babies[i]; if(!b) return;
-    b.mesh.position.x += (d.x-b.mesh.position.x)*0.35; b.mesh.position.z += (d.z-b.mesh.position.z)*0.35;
-    if(d.name) b.name = d.name;                            // host is authoritative — replaces my own local guess
+    b.netTarget = {x:d.x, z:d.z};                          // smoothed every frame in updateRemoteBabies(),
+    if(d.name) b.name = d.name;                            // not just when a snapshot arrives — otherwise
     b.need = d.need || b.need; b.fallen=!!d.fallen; b.burned=!!d.burned; b.choking=!!d.choking; b.penned=!!d.penned; b.heldBy=d.heldBy||null;
     setMood(b, d.mood||'🙂');
     if(b.heldBy){ b.mesh.scale.set(0.9,0.9,0.9); b.mesh.userData.mat.visible=false; }
     else { b.mesh.scale.set(1,1,1); b.mesh.userData.mat.visible=true; }
     poseBabySit(b.mesh.userData);                        // simplified pose for remote-observed babies (v1)
+  });
+}
+function updateRemoteBabies(dt){                          // guest-only: continuous per-frame lerp toward the
+  const k = Math.min(1, dt*8);                             // host's last-known baby positions, so movement stays
+  babies.forEach(b=>{                                      // smooth between the ~8Hz Firebase snapshots instead
+    if(!b.netTarget) return;                                // of visibly stepping every time one arrives
+    b.mesh.position.x += (b.netTarget.x-b.mesh.position.x)*k;
+    b.mesh.position.z += (b.netTarget.z-b.mesh.position.z)*k;
   });
 }
 function applyRemoteWorld(w){
@@ -3062,6 +3083,7 @@ function tick(){
       netSyncTimer -= dt;
       if(netSyncTimer<=0){ netSyncTimer=0.12; Net.pushMyTransform(); if(isHost) Net.pushWorldSnapshot(); }
       updateRemoteAvatars(dt);
+      if(!isHost) updateRemoteBabies(dt);
     }
 
     updateHUD();
