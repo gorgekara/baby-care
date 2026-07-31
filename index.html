@@ -348,7 +348,10 @@
     <div class="big">👥</div>
     <h2>Lobby</h2>
     <p style="font-size:13px;opacity:.75">Room code — share this with friends</p>
-    <div style="font-size:32px;font-weight:800;letter-spacing:.2em;margin:2px 0 14px" id="mpRoomCodeLabel">-----</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:2px 0 14px">
+      <div style="font-size:32px;font-weight:800;letter-spacing:.2em" id="mpRoomCodeLabel">-----</div>
+      <button class="btn icon" id="mpCopyCodeBtn" title="Copy room code">📋</button>
+    </div>
 
     <div id="mpHostControls">
       <p style="font-size:13px;opacity:.75;margin:0 0 4px">Difficulty</p>
@@ -1647,21 +1650,21 @@ const DIFFICULTIES = {
     holdBase:15, holdRecoverMul:1.4, ovenChance:0.02, penSeconds:32,
     notifyMin:45, notifyMax:70, notifyWindow:24, notifyPenalty:12, fireLimit:5,
     backPainMin:55, backPainMax:85, backPainCrippleBase:1.6,
-    chokeMin:50, chokeMax:80, chokeWindow:7.5},
+    chokeMin:70, chokeMax:110, chokeWindow:12},
   veteran: {key:'veteran', label:"Been There, Done That", gameLen:270,
     decayMul:1, cryFillMul:1, cryDrainMul:1, vomitMin:28, vomitMax:52,
     walkChance:0.32, fallMin:6, fallMax:13, needStart:{food:100,milk:95,diaper:100,cartoon:88},
     holdBase:10, holdRecoverMul:1.3, ovenChance:0.045, penSeconds:24,
     notifyMin:32, notifyMax:52, notifyWindow:17, notifyPenalty:16, fireLimit:4,
     backPainMin:40, backPainMax:65, backPainCrippleBase:2.6,
-    chokeMin:36, chokeMax:58, chokeWindow:6},
+    chokeMin:55, chokeMax:90, chokeWindow:9},
   king:    {key:'king', label:'King', gameLen:330,
     decayMul:1.4, cryFillMul:1.35, cryDrainMul:0.75, vomitMin:16, vomitMax:34,
     walkChance:0.46, fallMin:4, fallMax:9, needStart:{food:85,milk:80,diaper:88,cartoon:70},
     holdBase:6, holdRecoverMul:1.15, ovenChance:0.08, penSeconds:16,
     notifyMin:20, notifyMax:36, notifyWindow:11, notifyPenalty:20, fireLimit:3,
     backPainMin:26, backPainMax:45, backPainCrippleBase:3.8,
-    chokeMin:22, chokeMax:40, chokeWindow:4.5},
+    chokeMin:40, chokeMax:65, chokeWindow:7},
   // practice mode: needs never decay and no random hazard can fire — every mechanic is either
   // explained as plain text or triggered deliberately by the tutorial script, at the player's own pace
   tutorial: {key:'tutorial', label:'Tutorial', gameLen:Infinity,
@@ -1714,12 +1717,14 @@ function actingPos(){                                    // position/heading of 
 }
 function maxLvl(k){ let m=0; for(const id in players) m=Math.max(m, (players[id].lvl[k]||0)); return m; }
 function freshBaby(pos){
+  const D = curDiff();
   return {
     mesh:null,
     need:{food:100,milk:100,diaper:100,cartoon:100},
     heldBy:null,                     // playerId currently holding this baby, or null
     fallen:false, burned:false,
-    choking:false, chokeDeadline:0, chokeTimer:0,
+    choking:false, chokeDeadline:0,
+    chokeTimer: rand(D.chokeMin, D.chokeMax) + 15,  // generous grace period before the first choking risk
     penned:false, penTimer:0,
     target:new THREE.Vector3().copy(pos), retime:0, play:0, playingToy:null, targetIsOven:false,
     mode:'crawl', poseT:0, fallTimer:0,
@@ -2355,7 +2360,24 @@ document.querySelectorAll('#mpBabyCountPicker .diffOpt').forEach(opt=>{
   });
 });
 document.getElementById('mpStartBtn').addEventListener('click', ()=>Net.startGameFromHost());
+function fallbackCopyText(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){}
+  document.body.removeChild(ta);
+}
+document.getElementById('mpCopyCodeBtn').addEventListener('click', ()=>{
+  const code = document.getElementById('mpRoomCodeLabel').textContent;
+  const btn = document.getElementById('mpCopyCodeBtn');
+  const flash = ()=>{ btn.textContent='✅'; setTimeout(()=>{ btn.textContent='📋'; }, 1400); };
+  if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(flash).catch(()=>fallbackCopyText(code, flash));
+  else fallbackCopyText(code, flash);
+});
 function renderLobbyPlayers(snap){
+  // defensive re-assertion: only the host should ever see Start Game, even if some earlier state was stale
+  document.getElementById('mpStartBtn').classList.toggle('hidden', !isHost);
+  document.getElementById('mpWaitNote').classList.toggle('hidden', isHost);
   const ids = Object.keys(snap);
   document.getElementById('mpPlayerList').innerHTML = ids.map(id=>{
     const p = snap[id], colors = PLAYER_COLORS[(p.colorIdx||0)%PLAYER_COLORS.length];
