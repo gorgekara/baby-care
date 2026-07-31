@@ -4,6 +4,30 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <title>Baby Care — Dad's on Duty</title>
+<meta name="description" content="Mom's gone shopping and left you (Dad) in charge of the baby. Keep every need topped up across a randomly-generated house until she's back — or the cry-o-meter fills and it's game over. Free isometric 3D browser game, solo or multiplayer, no install.">
+
+<link rel="canonical" href="https://gorgekara.github.io/baby-care/">
+<link rel="icon" href="assets/favicon.ico" sizes="any">
+<link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="assets/favicon-16.png" type="image/png" sizes="16x16">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="icon" href="assets/icon-192.png" type="image/png" sizes="192x192">
+<meta name="theme-color" content="#2b2140">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://gorgekara.github.io/baby-care/">
+<meta property="og:title" content="Baby Care — Dad's on Duty">
+<meta property="og:description" content="Mom's gone shopping and left you (Dad) in charge of the baby. Keep every need topped up across a randomly-generated house until she's back — or the cry-o-meter fills and it's game over. Free isometric 3D browser game, solo or multiplayer, no install.">
+<meta property="og:image" content="https://gorgekara.github.io/baby-care/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Baby Care — Dad's on Duty: a cozy isometric babysitting game">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Baby Care — Dad's on Duty">
+<meta name="twitter:description" content="Mom's gone shopping and left you (Dad) in charge of the baby. Keep every need topped up until she's back — or the cry-o-meter fills and it's game over.">
+<meta name="twitter:image" content="https://gorgekara.github.io/baby-care/assets/og-image.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
 <style>
@@ -227,12 +251,19 @@
   .menuBtnBig:hover{background:rgba(255,255,255,.16);transform:translateX(4px)}
   .menuBtnBig:active{transform:scale(.97)}
   .menuRight{flex:1;text-align:center;min-width:260px}
-  .logoIcons{font-size:46px;margin-bottom:8px}
+  .logoIcons{font-size:72px;margin-bottom:6px;filter:drop-shadow(0 6px 18px rgba(0,0,0,.45));
+    animation:logoFloat 3.6s ease-in-out infinite}
   .gameLogo{font-family:'Baloo 2',cursive,'Comic Sans MS',sans-serif}
-  .logoTop{font-size:52px;font-weight:800;color:#ffd166;line-height:1.05;
-    text-shadow:3px 3px 0 #7a4a1a,-2px -2px 0 #7a4a1a,2px -2px 0 #7a4a1a,-2px 2px 0 #7a4a1a,2px 2px 0 #7a4a1a}
-  .logoSub{font-size:27px;font-weight:700;color:#ff9ec7;margin-top:8px;
-    text-shadow:2px 2px 0 #6a2a4a,-1px -1px 0 #6a2a4a,1px -1px 0 #6a2a4a,-1px 1px 0 #6a2a4a}
+  .logoTop{font-size:76px;font-weight:800;color:#ffd166;line-height:1.05;letter-spacing:.5px;
+    text-shadow:4px 4px 0 #7a4a1a,-3px -3px 0 #7a4a1a,3px -3px 0 #7a4a1a,-3px 3px 0 #7a4a1a,3px 3px 0 #7a4a1a,
+      0 0 46px rgba(255,209,102,.5)}
+  .logoSub{font-size:36px;font-weight:700;color:#ff9ec7;margin-top:10px;
+    text-shadow:3px 3px 0 #6a2a4a,-2px -2px 0 #6a2a4a,2px -2px 0 #6a2a4a,-2px 2px 0 #6a2a4a,2px 2px 0 #6a2a4a}
+  @keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  .creditFooter{position:fixed;left:0;right:0;bottom:14px;text-align:center;font-size:13px;
+    color:var(--text);opacity:.6;z-index:1}
+  .creditFooter a{color:inherit;text-decoration:underline;text-decoration-color:rgba(244,238,252,.4)}
+  .creditFooter a:hover{opacity:.85;text-decoration-color:currentColor}
 </style>
 </head>
 <body>
@@ -292,6 +323,7 @@
       <button class="menuBtnBig" id="menuTutorialBtn">🎓 Tutorial</button>
       <button class="menuBtnBig" id="menuSettingsBtn">⚙️ Settings</button>
       <button class="menuBtnBig" id="menuHelpBtn">❓ Help</button>
+      <button class="menuBtnBig" id="menuAboutBtn">ℹ️ About</button>
     </div>
     <div class="menuRight">
       <div class="logoIcons">👶🍼</div>
@@ -301,6 +333,8 @@
       </div>
     </div>
   </div>
+
+  <div class="creditFooter">Made with ❤️ by <a href="https://karakabakov.com" target="_blank" rel="noopener">Gjorge Karakabakov</a></div>
 
   <div class="card hidden" id="helpScreen">
     <div class="big">👶🍼</div>
@@ -386,6 +420,22 @@
     </div>
     <div class="stepnav">
       <button class="btn cta" id="settingsBackBtn">◀ Back to Menu</button>
+    </div>
+  </div>
+
+  <div class="card hidden" id="aboutScreen">
+    <div class="big">🧑‍💻👶</div>
+    <h2>About</h2>
+    <p>Hi, I'm <b>Gjorge Karakabakov</b> — a frontend engineer by trade, and (much more importantly)
+       dad to a very energetic one-year-old.</p>
+    <p>This game is inspired by real events: keeping a toddler fed, changed, entertained, and
+       un-burned while also trying to get a workday done really does feel like this. One creative
+       liberty — in real life <b>Mom</b> doesn't get a relaxing solo trip to the shops while Dad holds
+       the fort. Nobody in this house has that kind of free time.</p>
+    <p style="font-size:13px;opacity:.75">More of my work at
+       <a href="https://karakabakov.com" target="_blank" rel="noopener" style="color:inherit">karakabakov.com</a>.</p>
+    <div class="stepnav">
+      <button class="btn cta" id="aboutBackBtn">◀ Back to Menu</button>
     </div>
   </div>
 
@@ -2415,16 +2465,18 @@ document.querySelectorAll('#tasksToggle .diffOpt').forEach(opt=>{
   });
 });
 function showMenuScreen(id){
-  ['mainMenu','helpScreen','settingsScreen','diffScreen','mpChoiceScreen','mpJoinScreen','mpLobbyScreen'].forEach(mid=>{
+  ['mainMenu','helpScreen','settingsScreen','aboutScreen','diffScreen','mpChoiceScreen','mpJoinScreen','mpLobbyScreen'].forEach(mid=>{
     document.getElementById(mid).classList.toggle('hidden', mid!==id);
   });
 }
 document.getElementById('menuPlayBtn').addEventListener('click', ()=>showMenuScreen('diffScreen'));
 document.getElementById('menuSettingsBtn').addEventListener('click', ()=>{ syncMusicPickers(); showMenuScreen('settingsScreen'); });
 document.getElementById('menuHelpBtn').addEventListener('click', ()=>showMenuScreen('helpScreen'));
+document.getElementById('menuAboutBtn').addEventListener('click', ()=>showMenuScreen('aboutScreen'));
 document.getElementById('menuTutorialBtn').addEventListener('click', ()=>startGame(true));
 document.getElementById('helpBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('settingsBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
+document.getElementById('aboutBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('diffBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('startBtn').addEventListener('click', ()=>startGame(false));
 function leaveToMainMenu(){                             // shared "abandon the current run" used by Quit
