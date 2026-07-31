@@ -97,11 +97,19 @@
     box-shadow:0 6px 20px rgba(0,0,0,.4);opacity:0;transition:opacity .15s}
   .bathroomAlert.show{opacity:1;animation:flash .9s steps(2) infinite}
 
-  .mpPlayerHud{position:absolute;top:10px;right:12px;display:flex;flex-direction:column;gap:5px;
+  .topRightHud{position:absolute;top:10px;right:12px;display:flex;flex-direction:column;gap:8px;
+    align-items:flex-end;z-index:6}
+  .mpPlayerHud{display:flex;flex-direction:column;gap:5px;
     background:var(--panel);border:1px solid var(--panelborder);border-radius:14px;padding:8px 12px;
-    box-shadow:0 8px 30px rgba(0,0,0,.35);font-size:13px;max-width:180px;z-index:6}
+    box-shadow:0 8px 30px rgba(0,0,0,.35);font-size:13px;max-width:180px}
   .mpPlayerRow{display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .mpPlayerDot{width:10px;height:10px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.25)}
+
+  .tasksHud{background:var(--panel);border:1px solid var(--panelborder);border-radius:14px;padding:8px 12px;
+    box-shadow:0 8px 30px rgba(0,0,0,.35);font-size:13px;max-width:220px}
+  .tasksHud h4{margin:0 0 4px;font-size:12px;opacity:.7;font-weight:normal;text-align:right}
+  .taskRow{display:flex;align-items:center;gap:6px;white-space:nowrap;margin:3px 0;justify-content:flex-end}
+  .taskRow.done{opacity:.45;text-decoration:line-through}
 
   .tutorialPanel{position:absolute;bottom:216px;left:50%;transform:translateX(-50%);width:min(560px,92vw);
     background:var(--panel);border:1px solid var(--panelborder);border-radius:14px;padding:14px 18px;
@@ -251,7 +259,10 @@
   <div class="bathroomAlert" id="bathroomAlert"></div>
   <div class="prompt" id="prompt"></div>
   <div class="carry" id="carry"></div>
-  <div class="mpPlayerHud hidden" id="mpPlayerHud"></div>
+  <div class="topRightHud">
+    <div class="mpPlayerHud hidden" id="mpPlayerHud"></div>
+    <div class="tasksHud hidden" id="tasksHud"></div>
+  </div>
 
   <div class="tutorialPanel hidden" id="tutorialPanel">
     <div class="tutorialStepNum" id="tutorialStepNum"></div>
@@ -334,6 +345,13 @@
       <h3>💩 Poo &amp; Upgrades</h3>
       <p>Changing diapers banks 💩 <b>poo</b> — spend it at the 🛠️ <b>workbench</b> to upgrade everything
          above (faster needs, more poo per change, longer arm stamina, shorter back pain, and more).</p>
+    </div>
+
+    <div class="helpSection">
+      <h3>📋 Chores Mode (optional)</h3>
+      <p>Turn it on before you start and you'll get a random checklist for the run — things like tidying the
+         🛏️ bed, grabbing lunch from the 🍱 oven, or cleaning the 🚽 toilet/🚿 sink. Walk up and press
+         <kbd>E</kbd> to check each one off — purely a bonus challenge, no penalty for skipping any.</p>
     </div>
 
     <div class="helpSection">
@@ -438,6 +456,10 @@
       </div>
       <p style="font-size:12px;opacity:.6;margin:6px 0 0">More than 4 babies moves the need bars to a
          vertical list in the top-left corner, to keep things readable.</p>
+      <div class="diffPicker" id="mpTasksToggle" style="margin-top:14px">
+        <div class="diffOpt" data-tasks="1"><div class="diffTitle">📋 Chores Mode</div>
+          <div class="diffSub">A random checklist everyone shares for the run</div></div>
+      </div>
     </div>
     <p id="mpNonHostNote" class="hidden" style="font-size:13px;opacity:.75;margin-top:10px">
       The host picks the difficulty and how many babies are in the house.</p>
@@ -475,6 +497,12 @@
       <div class="diffOpt" data-endless="1">
         <div class="diffTitle">♾️ Endless Mode</div>
         <div class="diffSub">No timer — survive as long as you can. Best: <span id="bestScoreLabel">0</span></div>
+      </div>
+    </div>
+    <div class="diffPicker" id="tasksToggle" style="margin-top:10px">
+      <div class="diffOpt" data-tasks="1">
+        <div class="diffTitle">📋 Chores Mode</div>
+        <div class="diffSub">A random checklist for the run — tidy the bed, get lunch from the oven, and more</div>
       </div>
     </div>
     <div class="stepnav">
@@ -1176,6 +1204,9 @@ function buildKitchen(room){
   addPropOriented(ov, ovenSpot.x, ovenSpot.z, 0.65, 0.6, ovenSpot.rot);
   ov.add(label('🔥 Oven', 2.1));
   ovenPos.set(ovenSpot.x, 0, ovenSpot.z);
+  // registered as an interactable station too (for the "get lunch out" chore) — but manually, not via
+  // addStation(), so its existing oriented collision box above isn't replaced with a generic circle
+  stations.oven = {group: ov, x: ovenSpot.x, z: ovenSpot.z, radius: 1.9};
 
   room.primarySide=wallSide; room.primaryT=0.5;                 // food+cabinet+fridge span most of this wall
 }
@@ -1183,7 +1214,10 @@ function buildBedroom(room){
   const {outer, inner} = sidesFor(room);
   const bedSide = outer[0];
   let p = wallPos(room, bedSide, 0.5, 2.25);
-  addPropOriented(bed(), p.x, p.z, 1.5, 2.25, p.rot);
+  const bedMesh = bed();
+  addPropOriented(bedMesh, p.x, p.z, 1.5, 2.25, p.rot);
+  bedMesh.add(label('🛏️ Bed', 1.3));
+  stations.bed = {group: bedMesh, x: p.x, z: p.z, radius: 1.9};  // manual registration, see oven note above
 
   const paint = wallPos(room, bedSide, 0.5, 0.08);
   addWallDecor(painting(pick(['#6a4f32','#3a2f24']), pick(['#c9a0dc','#9fc7e0','#e8c68a'])), paint.x, paint.z, 2.35, paint.rot);
@@ -1270,7 +1304,10 @@ function buildBathroom(room){
   const sinkSide = outer[1] || pick(inner);
   const sinkT = edgeT();
   p = wallPos(room, sinkSide, sinkT, 0.45);
-  addPropOriented(sink(), p.x, p.z, 0.55, 0.45, p.rot);
+  const sinkMesh = sink();
+  addPropOriented(sinkMesh, p.x, p.z, 0.55, 0.45, p.rot);
+  sinkMesh.add(label('🚿 Sink', 1.4));
+  stations.sink = {group: sinkMesh, x: p.x, z: p.z, radius: 1.9};  // manual registration, see oven note above
   const pm = wallPos(room, sinkSide, sinkT, 0.24);   // clear of the wall's own thickness (WT=0.4, ±0.2) so it's actually visible
   const mir = mirror(); mir.position.set(pm.x, 1.55, pm.z); mir.rotation.y = pm.rot; houseGroup.add(mir);
 
@@ -1511,6 +1548,11 @@ function buildHouse(seed){
     rooms: cells.map(c=>({minX:c.minX, maxX:c.maxX, minZ:c.minZ, maxZ:c.maxZ, type:c.type})),
     halls: halls.map(h=>({minX:h.minX, maxX:h.maxX, minZ:h.minZ, maxZ:h.maxZ})),
   };
+  // Chores Mode: pick the run's task list here, still inside the seeded RNG window, so every client in a
+  // multiplayer room ends up with the byte-for-byte same checklist from the same shared seed. Guarded
+  // because buildHouse()'s very first, top-level call (building the main-menu background) runs before
+  // resetState() has ever given S a real value.
+  if(S) S.tasks = S.tasksEnabled ? shuffle(TASK_POOL.slice()).slice(0, Math.min(4, TASK_POOL.length)).map(t=>({...t, done:false})) : [];
   houseRng = null;   // done — runtime gameplay randomness (hazard timing etc.) goes back to Math.random
 }
 
@@ -1616,7 +1658,9 @@ const PLAYER_COLORS = [                             // must exist before buildDa
   {body:'#b73dd6', leg:'#6f2183'}, {body:'#d63dc7', leg:'#832179'},
   {body:'#d63d99', leg:'#83215b'}, {body:'#d63d6b', leg:'#83213e'},
 ];
-buildHouse();
+let S;                                                    // must exist (even if undefined) before buildHouse()'s
+buildHouse();                                             // very first bootstrap call, below — see the `if(S)`
+                                                           // guard around its Chores Mode task-generation line
 const dad = buildDad(PLAYER_COLORS[0].body, PLAYER_COLORS[0].leg); dad.position.copy(spawnDad); scene.add(dad);
 
 // carry icon above dad's head
@@ -1796,6 +1840,14 @@ const DIFFICULTIES = {
 };
 let difficulty = 'veteran';
 let endlessMode = false;
+let tasksMode = false;                                  // "Chores Mode" — a random checklist for the run
+const TASK_POOL = [                                       // each ties to a real station so completing it is
+  {key:'bed', icon:'🛏️', label:'Tidy the bed'},           // just "walk over and press E" like everything else
+  {key:'oven', icon:'🍱', label:'Get lunch out of the oven'},
+  {key:'toilet', icon:'🚽', label:'Clean the toilet'},
+  {key:'sink', icon:'🚿', label:'Clean the sink'},
+  {key:'toys', icon:'🧸', label:'Put away the toys'},      // the one exception — any toy will do, no station
+];
 function curDiff(){ return DIFFICULTIES[difficulty]; }
 
 // ---- endless-mode high score, persisted per difficulty ----
@@ -1852,7 +1904,6 @@ function freshBaby(pos){
   };
 }
 
-let S;
 function resetState(){
   const D = curDiff();
   S = {
@@ -1864,6 +1915,7 @@ function resetState(){
     joy:0,                             // topped up by play/cuddles; eases crying
     cartoonsOn:false, tvTimer:0,
     endless: endlessMode,               // no win-timer — plays until a lose/fired/hide/leave condition
+    tasksEnabled: tasksMode, tasks:[],   // tasks[] is actually filled in by buildHouse() (needs the seed)
     gameLen: endlessMode ? Infinity : D.gameLen,
     timeLeft: endlessMode ? Infinity : D.gameLen,
     elapsed:0,                          // seconds survived — endless mode's clock and score basis
@@ -1965,6 +2017,20 @@ function cleanMess(m){
   Audio.buy();
   if(S.tutorial) tutorialProgress.mopped = true;
 }
+function hasTask(key){ return S.tasksEnabled && S.tasks.some(t=>t.key===key && !t.done); }
+function completeTask(key){                              // shared, host-authoritative-by-nature since it only
+  if(!S.tasksEnabled) return;                              // ever runs from inside doStation()/interact(), which
+  const t = S.tasks.find(t=>t.key===key && !t.done);        // already only mutate real state on the host
+  if(!t) return;
+  t.done=true; Audio.chime();
+  if(S.tasks.every(x=>x.done)) Audio.buy();                // a little extra flourish for finishing the whole list
+}
+function nearestToyDist(){
+  const p = actingPos();
+  let bd = Infinity;
+  toys.forEach(ty=>{ const d = Math.hypot(p.x-ty.x, p.z-ty.z); if(d<bd) bd=d; });
+  return bd;
+}
 function doStation(k){
   const P = actingPlayer();
   if(k==='cartoon'){ S.cartoonsOn=true; S.tvTimer=10+P.lvl.cartoon*3; Audio.chime();
@@ -1983,11 +2049,17 @@ function doStation(k){
     personLeftGame('leave'); return;
   }
   if(k==='toilet'){
+    const hadTask = hasTask('toilet');
+    completeTask('toilet');                             // cleaning counts regardless of your own urge state
     if(P.bathroomUrge>0){ P.bathroomUrge=0; P.nextBathroom=rand(curDiff().bathroomMin, curDiff().bathroomMax);
       S.joy=Math.min(1,S.joy+0.15); Audio.chime(); }
+    else if(hadTask) Audio.chime();
     else Audio.error();
     return;
   }
+  if(k==='bed'){ const had=hasTask('bed'); completeTask('bed'); (had?Audio.chime():Audio.error()); return; }
+  if(k==='oven'){ const had=hasTask('oven'); completeTask('oven'); (had?Audio.chime():Audio.error()); return; }
+  if(k==='sink'){ const had=hasTask('sink'); completeTask('sink'); (had?Audio.chime():Audio.error()); return; }
   if(k==='playpen'){
     if(P.holdingBaby<0){ Audio.error(); return; }
     const b = babies[P.holdingBaby];
@@ -2034,6 +2106,7 @@ function interact(){                                   // core logic for the E k
     Audio.error(); return;
   }
   if(k){ doStation(k); return; }
+  if(hasTask('toys') && nearestToyDist()<1.8){ completeTask('toys'); Audio.chime(); return; }
   Audio.error();
 }
 function putBabyDown(player){                          // shared by voluntary put-down and forced (arms-tired) drop
@@ -2086,7 +2159,7 @@ const el = {
   carry:document.getElementById('carry'), topbar:document.getElementById('topbar'),
   workAlert:document.getElementById('workAlert'), chokeAlert:document.getElementById('chokeAlert'),
   backPainAlert:document.getElementById('backPainAlert'), bathroomAlert:document.getElementById('bathroomAlert'),
-  mpPlayerHud:document.getElementById('mpPlayerHud'),
+  mpPlayerHud:document.getElementById('mpPlayerHud'), tasksHud:document.getElementById('tasksHud'),
   timeLabel:document.getElementById('timeLabel'), scoreStat:document.getElementById('scoreStat'), scoreVal:document.getElementById('scoreVal'),
 };
 function buildBabyNeedsHUD(){                          // one compact 4-bar cluster per baby (labeled once >1)
@@ -2261,7 +2334,7 @@ function startGame(isTutorial){
   roomCode = null; isHost = true;                       // solo & tutorial are always local-only
   resetState();
   S.tutorial = !!isTutorial;
-  if(isTutorial) S.endless = false;                // ignore any earlier Endless Mode toggle during the tutorial
+  if(isTutorial){ S.endless = false; S.tasksEnabled = false; } // ignore Endless/Chores toggles during the tutorial
   buildHouse();                                    // fresh randomized-but-sensible room layout each run
   spawnBabies();
   enterHouseCommon();
@@ -2331,6 +2404,13 @@ document.querySelectorAll('#endlessToggle .diffOpt').forEach(opt=>{
   opt.addEventListener('click', ()=>{
     endlessMode = !endlessMode;
     opt.classList.toggle('selected', endlessMode);
+    Audio.buy();
+  });
+});
+document.querySelectorAll('#tasksToggle .diffOpt').forEach(opt=>{
+  opt.addEventListener('click', ()=>{
+    tasksMode = !tasksMode;
+    opt.classList.toggle('selected', tasksMode);
     Audio.buy();
   });
 });
@@ -2411,7 +2491,7 @@ const Net = (function(){
     async hostCreate(name){
       attach(code5());
       isHost = true; myName = name;
-      await metaRef.set({hostId:myId, state:'lobby', difficulty:'veteran', babyCount:1, createdAt:Date.now()});
+      await metaRef.set({hostId:myId, state:'lobby', difficulty:'veteran', babyCount:1, tasksMode:false, createdAt:Date.now()});
       metaRef.onDisconnect().update({state:'ended', reason:'hostleft'});
       await playersRef.child(myId).set({name, colorIdx:0, poo:0, x:0, z:0, rotY:0, carrying:null, holdingBaby:-1});
       me().colorIdx = 0;
@@ -2436,6 +2516,7 @@ const Net = (function(){
     },
     setDifficulty(d){ if(isHost && metaRef) metaRef.update({difficulty:d}); },
     setBabyCount(n){ if(isHost && metaRef) metaRef.update({babyCount:n}); },
+    setTasksMode(on){ if(isHost && metaRef) metaRef.update({tasksMode:on}); },
     setMyColor(idx){ if(playersRef) playersRef.child(myId).update({colorIdx:idx}); },
     startGameFromHost(){ if(isHost && metaRef) metaRef.update({state:'playing', seed:Math.floor(Math.random()*1e9)}); },
     sendAction(type, arg){
@@ -2492,7 +2573,9 @@ const Net = (function(){
       babiesRef.set(bSnap);                                 // saw the baby dragging along the ground at the
       worldRef.set({cry:S.cry, cartoonsOn:S.cartoonsOn, notification:S.notification,   // holder's feet instead
         elapsed:S.elapsed, timeLeft: isFinite(S.timeLeft)?S.timeLeft:-1, score:S.score, // of lifted into their arms
-        messes:S.messes.map(m=>({x:m.x,z:m.z}))});
+        messes:S.messes.map(m=>({x:m.x,z:m.z})),
+        tasksDone:S.tasks.map(t=>t.done)});      // task identity/order is already deterministic from the shared
+                                                  // seed — only the done-flags actually need to be synced
       for(const id in players){ if(id===myId) continue;
         playersRef.child(id).update({carrying:players[id].carrying||'', holdingBaby:players[id].holdingBaby,
           poo:players[id].poo, lvl:players[id].lvl}); }
@@ -2566,6 +2649,14 @@ document.querySelectorAll('#mpBabyCountPicker .diffOpt').forEach(opt=>{
     Net.setBabyCount(+opt.dataset.babies); Audio.buy();
   });
 });
+document.querySelectorAll('#mpTasksToggle .diffOpt').forEach(opt=>{
+  opt.addEventListener('click', ()=>{
+    if(!isHost) return;
+    const on = !opt.classList.contains('selected');
+    opt.classList.toggle('selected', on);
+    Net.setTasksMode(on); Audio.buy();
+  });
+});
 document.getElementById('mpStartBtn').addEventListener('click', ()=>Net.startGameFromHost());
 function fallbackCopyText(text, cb){
   const ta = document.createElement('textarea');
@@ -2628,9 +2719,11 @@ function updateLobbyHostInfo(meta){
   if(isHost || S.mode==='play') return;                 // host's own clicks already reflect locally
   if(meta.difficulty) document.querySelectorAll('#mpDiffPicker .diffOpt').forEach(o=>o.classList.toggle('selected', o.dataset.diff===meta.difficulty));
   if(meta.babyCount) document.querySelectorAll('#mpBabyCountPicker .diffOpt').forEach(o=>o.classList.toggle('selected', +o.dataset.babies===meta.babyCount));
+  document.querySelectorAll('#mpTasksToggle .diffOpt').forEach(o=>o.classList.toggle('selected', !!meta.tasksMode));
 }
 function beginMultiplayerRound(meta){
   difficulty = meta.difficulty || 'veteran';
+  tasksMode = !!meta.tasksMode;
   const myColorIdx = players[myId] ? players[myId].colorIdx : 0;
   // a room can now host several rounds in a row (Back to Lobby, play again) without ever leaving/rejoining,
   // and listenPlayers() is idempotent — so child_added won't fire again for players already known from an
@@ -2802,6 +2895,7 @@ function applyRemoteWorld(w){
   while(S.messes.length>list.length){ const m=S.messes.pop(); if(m.mesh){ houseGroup.remove(m.mesh); disposeGroup(m.mesh); } }
   while(S.messes.length<list.length){ const mesh=messBlob(); houseGroup.add(mesh); S.messes.push({x:0,z:0,mesh,playerInside:false}); }
   list.forEach((pt,i)=>{ S.messes[i].x=pt.x; S.messes[i].z=pt.z; S.messes[i].mesh.position.set(pt.x,0.01,pt.z); });
+  if(w.tasksDone) w.tasksDone.forEach((done,i)=>{ if(S.tasks[i]) S.tasks[i].done = !!done; });
 }
 
 /* ---------- Tutorial: a guided, no-pressure walkthrough of every mechanic, at the player's own pace ---------- */
@@ -3286,9 +3380,22 @@ function updateMpPlayerHud(){                            // top-right roster dur
            `${p.name||'Player'}${id===myId?' (you)':''}</div>`;
   }).join('');
 }
+let tasksHudSig = '';
+function updateTasksHud(){                                // top-right checklist for a Chores Mode run
+  const hud = el.tasksHud;
+  if(!S.tasksEnabled || !S.tasks.length){ hud.classList.add('hidden'); return; }
+  hud.classList.remove('hidden');
+  const sig = S.tasks.map(t=>`${t.key}:${t.done}`).join('|');
+  if(sig===tasksHudSig) return;
+  tasksHudSig = sig;
+  const doneCount = S.tasks.filter(t=>t.done).length;
+  hud.innerHTML = `<h4>📋 Chores ${doneCount}/${S.tasks.length}</h4>` + S.tasks.map(t=>
+    `<div class="taskRow${t.done?' done':''}">${t.done?'✅':t.icon}<span>${t.label}</span></div>`).join('');
+}
 function updateHUD(){
   const P = me();
   updateMpPlayerHud();
+  updateTasksHud();
   babies.forEach((b,i)=>{
     const bars = el.babyBars[i]; if(!bars) return;
     if(bars.label && b.name && bars.label.textContent!==b.name) bars.label.textContent = b.name;
@@ -3393,10 +3500,14 @@ function updateHUD(){
     else if(k==='shop') msg = 'Open the <kbd>U</kbd>pgrade workbench — <kbd>E</kbd>';
     else if(k==='cartoon') msg = (S.cartoonsOn?'Cartoons playing':'Turn on cartoons')+' — <kbd>E</kbd>';
     else if(k==='computer') msg = S.notification ? '💻 Reply to the work message — <kbd>E</kbd>' : '';
-    else if(k==='toilet') msg = P.bathroomUrge>0 ? '🚽 Go now — <kbd>E</kbd>' : '';
+    else if(k==='toilet') msg = P.bathroomUrge>0 ? '🚽 Go now — <kbd>E</kbd>' : (hasTask('toilet') ? '🧽 Clean the toilet — <kbd>E</kbd>' : '');
     else if(k==='closet') msg = 'Hide in the closet (ends your shift) — <kbd>E</kbd>';
     else if(k==='frontdoor') msg = 'Walk out the front door (ends your shift) — <kbd>E</kbd>';
+    else if(k==='bed') msg = hasTask('bed') ? '🛏️ Tidy the bed — <kbd>E</kbd>' : '';
+    else if(k==='oven') msg = hasTask('oven') ? '🍱 Grab lunch from the oven — <kbd>E</kbd>' : '';
+    else if(k==='sink') msg = hasTask('sink') ? '🚿 Clean the sink — <kbd>E</kbd>' : '';
     else if(k) msg = `Grab ${NEED_ICON[k]} ${NEED_LABEL[k]||k} — <kbd>E</kbd>`;
+    else if(hasTask('toys') && nearestToyDist()<1.8) msg = '🧸 Put away the toys — <kbd>E</kbd>';
     else if(mess) msg = '🤢 Ew, a mess — go grab the 🧹 mop';
     else if(P.armsTiredTimer>0) msg = '😩 Your arms gave out — the baby slipped down!';
     else if(S.penEscapedTimer>0) msg = '👶 A baby escaped the playpen!';
