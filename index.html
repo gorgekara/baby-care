@@ -2223,11 +2223,13 @@ function endGame(reason){                              // 'win' | 'lose' | 'hide
   S.mode = reason==='win' ? 'win' : 'over';
   closeShopFn();
   const P = me();
-  const mins = Math.floor(S.elapsed/60), secs = Math.round(S.elapsed%60);
-  const diffLabel = DIFFICULTIES[S.diff].label;
+  retryAction = roomCode ? 'lobby' : 'solo';              // MP round ended with the room still alive → offer
+  const mins = Math.floor(S.elapsed/60), secs = Math.round(S.elapsed%60); // to rejoin its lobby instead of
+  const diffLabel = DIFFICULTIES[S.diff].label;           // an outright restart
   if(reason==='win'){
     document.getElementById('winStats').textContent =
       `${diffLabel} · Diapers changed: ${P.changes} · Poo banked: 💩${P.poo}`;
+    document.getElementById('winBtn').textContent = roomCode ? 'Back to Lobby ↻' : 'Play Again ↻';
     document.getElementById('win').classList.remove('hidden');
   } else {
     const f = GAMEOVER_FLAVOR[reason];
@@ -2244,6 +2246,7 @@ function endGame(reason){                              // 'win' | 'lose' | 'hide
     }
     document.getElementById('goStats').textContent =
       `${diffLabel} · You lasted ${mins}m ${secs}s · ${P.changes} diaper change${P.changes===1?'':'s'}${missedNote}${scoreNote}.`;
+    document.getElementById('retryBtn').textContent = roomCode ? 'Back to Lobby ↻' : 'Try Again ↻';
     document.getElementById('gameover').classList.remove('hidden');
   }
   if(roomCode && isHost) Net.setGameOver(reason);         // let every guest's client know the round is over
@@ -2291,8 +2294,24 @@ function leaveToMainMenu(){                             // shared "abandon the c
   document.getElementById('intro').classList.remove('hidden');
   showMenuScreen('mainMenu');
 }
-function handleRetry(){                                 // "Try Again"/"Play Again" — leave any MP room first
-  if(roomCode){ leaveToMainMenu(); return; }
+let retryAction = 'solo';                               // what the gameover/win primary button does next:
+                                                         // 'solo' restarts immediately, 'lobby' rejoins the
+                                                         // still-open room's lobby, 'menu' leaves entirely
+                                                         // (the room's already gone, e.g. host disconnected)
+function returnToLobby(){                               // "Try Again"/"Play Again" in multiplayer — stays in
+  if(isHost) Net.reopenLobby();                         // the same room so everyone can see each other, change
+  S.paused = false;                                     // difficulty/color, and start a fresh round together
+  document.getElementById('pauseMenu').classList.add('hidden');
+  S.mode = 'menu';
+  closeShopFn();
+  document.getElementById('gameover').classList.add('hidden');
+  document.getElementById('win').classList.add('hidden');
+  document.getElementById('intro').classList.remove('hidden');
+  showMenuScreen('mpLobbyScreen');
+}
+function handleRetry(){
+  if(retryAction==='lobby'){ returnToLobby(); return; }
+  if(retryAction==='menu'){ leaveToMainMenu(); return; }
   startGame(false);
 }
 document.getElementById('retryBtn').addEventListener('click', handleRetry);
@@ -2307,11 +2326,17 @@ document.getElementById('pauseQuitBtn').addEventListener('click', leaveToMainMen
    never simulate the shared world themselves. See resilient-spinning-liskov.md for the full design. */
 const Net = (function(){
   let roomRef=null, actionsRef=null, playersRef=null, babiesRef=null, worldRef=null, metaRef=null;
+  let actionsListening=false, worldListening=false, playersListening=false; // a room can now host several
+                                                            // rounds in a row (Back to Lobby, play again) —
+                                                            // these guards keep listen*() idempotent so a
+                                                            // second round doesn't stack duplicate Firebase
+                                                            // listeners and double-process every action
   function code5(){ const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<5;i++) s+=A[(Math.random()*A.length)|0]; return s; }
   function attach(c){
     roomCode = c; roomRef = fbDb.ref('rooms/'+c);
     actionsRef=roomRef.child('actions'); playersRef=roomRef.child('players');
     babiesRef=roomRef.child('babies'); worldRef=roomRef.child('world'); metaRef=roomRef.child('meta');
+    actionsListening=worldListening=playersListening=false;
   }
   return {
     available(){ return !!fbDb; },
@@ -2351,7 +2376,8 @@ const Net = (function(){
         x:dad.position.x, z:dad.position.z, rotY:dad.rotation.y, ts:Date.now()});
     },
     listenActions(){                                    // host-only: replay a guest's queued action through the
-      actionsRef.on('child_added', snap=>{               // exact same functions the host's own input calls
+      if(actionsListening) return; actionsListening=true; // exact same functions the host's own input calls
+      actionsRef.on('child_added', snap=>{
         const a = snap.val(); snap.ref.remove();
         if(!a || a.playerId===myId) return;
         const p = players[a.playerId]; if(!p) return;
@@ -2363,16 +2389,22 @@ const Net = (function(){
           else if(a.type==='drop') discardCarrying();
           else if(a.type==='buy') buyUpgrade(a.arg);
         } finally { actingPlayerId = myId; }              // always hand control back, even if a handler throws —
-      });                                                  // otherwise every future action (incl. the host's own
-                                                            // input) would misfire as this guest until it recovers
+        Net.pushWorldSnapshot();                            // otherwise every future action (incl. the host's
+      });                                                    // own input) would misfire as this guest until it
+                                                              // recovers. Push right away too, instead of waiting
+                                                              // for the next throttled tick, so a guest's carry
+                                                              // icon / holding-baby pose reaches everyone else
+                                                              // with minimal delay instead of up to ~120ms late
     },
     listenWorldAsGuest(){                                // non-host: mirror the host's authoritative snapshot
+      if(worldListening) return; worldListening=true;
       babiesRef.on('value', snap=>applyRemoteBabies(snap.val()));
       worldRef.on('value', snap=>applyRemoteWorld(snap.val()));
     },
     listenPlayers(){                                     // host and guest alike: spawn/update/remove avatars,
-      playersRef.on('child_added', snap=>applyPlayerSnapshot(snap.key, snap.val())); // and (guest-only) my own
-      playersRef.on('child_changed', snap=>applyPlayerSnapshot(snap.key, snap.val())); // host-owned outcome fields
+      if(playersListening) return; playersListening=true; // and (guest-only) my own host-owned outcome fields
+      playersRef.on('child_added', snap=>applyPlayerSnapshot(snap.key, snap.val()));
+      playersRef.on('child_changed', snap=>applyPlayerSnapshot(snap.key, snap.val()));
       playersRef.on('child_removed', snap=>{ if(snap.key!==myId) removeRemotePlayer(snap.key); });
     },
     pushMyTransform(){                                    // every client owns writing its own position/heading
@@ -2397,6 +2429,10 @@ const Net = (function(){
           poo:players[id].poo, lvl:players[id].lvl}); }
     },
     setGameOver(reason){ if(isHost && metaRef) metaRef.update({state:'ended', reason}); },
+    reopenLobby(){ if(isHost && metaRef) metaRef.update({state:'lobby'}); }, // host's "Back to Lobby" — keeps
+                                                            // everyone in the same room; flips the shared state
+                                                            // so guests' difficulty/baby-count pickers live-sync
+                                                            // again instead of staying frozen on 'ended'
     leaveRoom(){
       if(playersRef){ playersRef.child(myId).remove(); playersRef.off(); }
       if(metaRef){ metaRef.onDisconnect().cancel(); metaRef.off(); }
@@ -2526,10 +2562,26 @@ function updateLobbyHostInfo(meta){
 function beginMultiplayerRound(meta){
   difficulty = meta.difficulty || 'veteran';
   const myColorIdx = players[myId] ? players[myId].colorIdx : 0;
+  // a room can now host several rounds in a row (Back to Lobby, play again) without ever leaving/rejoining,
+  // and listenPlayers() is idempotent — so child_added won't fire again for players already known from an
+  // earlier round here. Capture their avatars before resetState() wipes `players`, then reattach them,
+  // otherwise every remote player's avatar mesh would be orphaned (leaked into the scene) and never rebuilt.
+  const preservedRemote = {};
+  for(const id in players){ if(id!==myId) preservedRemote[id] = players[id]; }
   resetState();
   S.babyCount = meta.babyCount || 1;
   players[myId].name = myName;
   players[myId].colorIdx = myColorIdx;
+  for(const id in preservedRemote){
+    const old = preservedRemote[id];
+    const p = players[id] = freshPlayer(old.name, old.colorIdx);
+    p.avatar = old.avatar; p.connected = old.connected;
+    if(p.avatar.carrySprite){                             // clear any stale carry icon left from the last round
+      p.avatar.group.remove(p.avatar.carrySprite);
+      p.avatar.carrySprite.material.map.dispose(); p.avatar.carrySprite.material.dispose();
+      p.avatar.carrySprite=null; p.avatar.lastCarrying=null;
+    }
+  }
   buildHouse(meta.seed);
   spawnBabies();
   enterHouseCommon();
@@ -2544,10 +2596,12 @@ function handleRemoteGameOver(meta){
     Net.leaveRoom();
     if(wasPlaying){
       S.mode='over'; closeShopFn();
+      retryAction = 'menu';                               // the room is gone — no lobby left to rejoin
       document.getElementById('goIcon').textContent='📡💔';
       document.getElementById('goTitle').textContent='Host Disconnected';
       document.getElementById('goBody').textContent="The host's connection dropped, so the game had to end. No harm done — try hosting your own room!";
       document.getElementById('goStats').textContent='';
+      document.getElementById('retryBtn').textContent = 'Back to Menu ↻';
       document.getElementById('gameover').classList.remove('hidden');
     } else {
       leaveToMainMenu();                                  // also hides any gameover/win overlay still stuck
