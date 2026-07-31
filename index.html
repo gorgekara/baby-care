@@ -465,7 +465,10 @@
     <p id="goBody">The crying got to be too much and you had to phone Mom for backup.
        She's not thrilled she had to leave her shopping…</p>
     <p id="goStats" style="font-size:13px;opacity:.8"></p>
-    <button class="btn cta" id="retryBtn">Try Again ↻</button>
+    <div class="stepnav">
+      <button class="btn" id="goQuitBtn">🚪 Quit to Menu</button>
+      <button class="btn cta" id="retryBtn">Try Again ↻</button>
+    </div>
   </div>
 </div>
 
@@ -521,7 +524,10 @@
       <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · <kbd>E</kbd> interact · <kbd>Q</kbd> drop item ·
       <kbd>Space</kbd> pick up baby · <kbd>U</kbd> shop · <kbd>M</kbd> mute · <kbd>Esc</kbd> pause · scroll to zoom
     </div>
-    <button class="btn cta" id="resumeBtn" style="margin-top:14px">▶ Resume</button>
+    <div class="stepnav" style="margin-top:14px">
+      <button class="btn" id="pauseQuitBtn">🚪 Quit to Menu</button>
+      <button class="btn cta" id="resumeBtn">▶ Resume</button>
+    </div>
   </div>
 </div>
 
@@ -2255,19 +2261,29 @@ document.getElementById('helpBackBtn').addEventListener('click', ()=>showMenuScr
 document.getElementById('settingsBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('diffBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('startBtn').addEventListener('click', ()=>startGame(false));
-function handleRetry(){                                 // "Try Again"/"Play Again" — leave any MP room first
+function leaveToMainMenu(){                             // shared "abandon the current run" used by Quit
+  S.paused = false;                                       // (pause menu, gameover/win screens) and by
+  document.getElementById('pauseMenu').classList.add('hidden'); // leaving a lobby/room — routes through
+  if(S.tutorial){ endTutorial(false); return; }           // the proper tutorial/MP teardown either way
   if(roomCode){
+    if(isHost) Net.setGameOver('hostleft');
     Net.leaveRoom();
-    document.getElementById('gameover').classList.add('hidden');
-    document.getElementById('win').classList.add('hidden');
-    document.getElementById('intro').classList.remove('hidden');
-    showMenuScreen('mainMenu');
-    return;
   }
+  S.mode = 'menu';
+  closeShopFn();
+  document.getElementById('gameover').classList.add('hidden');
+  document.getElementById('win').classList.add('hidden');
+  document.getElementById('intro').classList.remove('hidden');
+  showMenuScreen('mainMenu');
+}
+function handleRetry(){                                 // "Try Again"/"Play Again" — leave any MP room first
+  if(roomCode){ leaveToMainMenu(); return; }
   startGame(false);
 }
 document.getElementById('retryBtn').addEventListener('click', handleRetry);
 document.getElementById('winBtn').addEventListener('click', handleRetry);
+document.getElementById('goQuitBtn').addEventListener('click', leaveToMainMenu);
+document.getElementById('pauseQuitBtn').addEventListener('click', leaveToMainMenu);
 
 /* ---------- Multiplayer: Firebase-backed lobby (host/join, difficulty + baby count, player list) ----------
    Host-authoritative, no dedicated server: the host's own tab runs the exact same simulation solo play
@@ -2384,7 +2400,10 @@ function mpNameValue(){ return (document.getElementById('mpNameInput').value||''
 document.getElementById('menuMultiplayerBtn').addEventListener('click', ()=>showMenuScreen('mpChoiceScreen'));
 document.getElementById('mpChoiceBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('mpJoinBackBtn').addEventListener('click', ()=>showMenuScreen('mpChoiceScreen'));
-document.getElementById('mpLeaveBtn').addEventListener('click', ()=>{ Net.leaveRoom(); showMenuScreen('mainMenu'); });
+document.getElementById('mpLeaveBtn').addEventListener('click', ()=>{
+  if(isHost) Net.setGameOver('hostleft');
+  Net.leaveRoom(); showMenuScreen('mainMenu');
+});
 document.getElementById('mpHostBtn').addEventListener('click', async ()=>{
   if(!Net.available()){ alert("Multiplayer is unavailable right now — couldn't reach the server."); return; }
   myName = mpNameValue();
