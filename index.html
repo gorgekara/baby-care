@@ -1019,7 +1019,7 @@ function wallPos(room, side, t, out){                // t: 0..1 along the wall, 
   if(side==='W') return {x:minX+out, z:lerp(minZ+1,maxZ-1,t), rot};
   return {x:maxX-out, z:lerp(minZ+1,maxZ-1,t), rot};
 }
-function edgeT(){ return Math.random()<0.5 ? rand(0.08,0.22) : rand(0.78,0.92); } // near a corner, clear of any doorway
+function edgeT(){ return random0to1()<0.5 ? rand(0.08,0.22) : rand(0.78,0.92); } // near a corner, clear of any doorway
 // a wall-mounted decor spot: dead-center on an unused outer wall (always door-free), else a
 // safe corner of an unused inner wall, else any wall's corner as a last resort. Returns .side too
 // so callers can exclude it from a following call and avoid stacking two items in one spot.
@@ -1062,7 +1062,7 @@ function windowSlotsFor(room){
 function scatterPaintings(room){
   const frameColors=['#6a4f32','#8a7052','#3a2f24','#5a4630','#7a5aa0'];
   const artColors=['#e8c68a','#9fc7e0','#d98a9a','#f5d0e0','#c9a0dc','#7ed957','#ffd58a'];
-  const n = Math.random()<0.5 ? 1 : 2;
+  const n = random0to1()<0.5 ? 1 : 2;
   const used = room.primarySide ? [room.primarySide] : [];
   for(let i=0;i<n;i++){
     const spot = centeredWallDecorSpot(room, used, 0.08);
@@ -1648,6 +1648,11 @@ function spawnBabies(){                                  // (re)builds the babie
     b.mesh = buildBaby(); b.mesh.position.copy(pos); scene.add(b.mesh);
     b.moodSprite = makeSprite('🙂',{bg:null,font:80}); b.moodSprite.position.set(0,2.3,0);
     b.moodSprite.scale.set(1.5,1.5,1.5); b.moodSprite.renderOrder=10; b.mesh.add(b.moodSprite);
+    if(count>1){                                          // only worth labeling when there's more than one
+      b.nameSprite = makeSprite(b.name, {font:32});         // to tell apart — sits well above the mood emoji
+      b.nameSprite.position.set(0,3.35,0); b.nameSprite.scale.multiplyScalar(0.55); b.nameSprite.renderOrder=10;
+      b.mesh.add(b.nameSprite); b.nameLast = b.name;
+    }
     babies.push(b);
   }
   buildBabyNeedsHUD();
@@ -2048,8 +2053,16 @@ const el = {
 function buildBabyNeedsHUD(){                          // one compact 4-bar cluster per baby (labeled once >1)
   const container = document.getElementById('babyNeeds');
   container.innerHTML = '';
-  container.classList.toggle('side', babies.length>4);  // many babies: vertical list, top-left, instead of
-  el.babyBars = [];                                       // crowding the centered topbar
+  const side = babies.length>4;                          // many babies: vertical list, top-left, instead of
+  container.classList.toggle('side', side);              // crowding the centered topbar
+  // .babyNeeds.side uses position:fixed to anchor to the real top-left of the SCREEN, but #topbar (its
+  // normal home) sets a CSS transform for its own centering — and a transform ancestor turns position:fixed
+  // right back into position:absolute relative to itself. So while in "side" mode, physically move the
+  // element out to #hud (untransformed) instead of just toggling the class; move it back for the normal case
+  const topbar = document.getElementById('topbar'), hud = document.getElementById('hud');
+  if(side && container.parentElement!==hud) hud.appendChild(container);
+  else if(!side && container.parentElement!==topbar) topbar.insertBefore(container, topbar.firstChild);
+  el.babyBars = [];
   const multi = babies.length>1;
   babies.forEach((b,i)=>{
     const cluster = document.createElement('div'); cluster.className = 'babyCluster'+(multi?' multi':'');
@@ -3200,6 +3213,13 @@ function updateHUD(){
   babies.forEach((b,i)=>{
     const bars = el.babyBars[i]; if(!bars) return;
     if(bars.label && b.name && bars.label.textContent!==b.name) bars.label.textContent = b.name;
+    if(b.nameSprite && b.name && b.name!==b.nameLast){        // a guest's own initial name guess gets
+      b.mesh.remove(b.nameSprite);                             // replaced by the host's authoritative one
+      b.nameSprite.material.map.dispose(); b.nameSprite.material.dispose(); // once the first snapshot lands —
+      b.nameSprite = makeSprite(b.name, {font:32});              // rebuild the sprite texture to match
+      b.nameSprite.position.set(0,3.35,0); b.nameSprite.scale.multiplyScalar(0.55); b.nameSprite.renderOrder=10;
+      b.mesh.add(b.nameSprite); b.nameLast = b.name;
+    }
     NEEDS.forEach(k=>{
       const v = b.need[k];
       bars[k].fill.style.width = v+'%';
