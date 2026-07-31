@@ -1435,17 +1435,22 @@ function buildDad(bodyColor, legColor){
   const g = new THREE.Group();
   const legL = box(0.42,0.9,0.42,legColor); legL.position.set(-0.26,0.45,0); g.add(legL);
   const legR = box(0.42,0.9,0.42,legColor); legR.position.set(0.26,0.45,0); g.add(legR);
-  const body = box(1.15,1.15,0.75,bodyColor); body.position.y=1.5; g.add(body);
-  const armL = box(0.3,1,0.3,bodyColor); armL.position.set(-0.72,1.55,0); g.add(armL);
-  const armR = box(0.3,1,0.3,bodyColor); armR.position.set(0.72,1.55,0); g.add(armR);
-  const head = sph(0.55,'#f3c39a'); head.position.y=2.55; g.add(head);
-  const hair = box(0.95,0.28,0.95,'#4a3320'); hair.position.y=2.95; g.add(hair);
+  // torso/arms/head sit in their own pivot group at hip height, so a back-pain episode can bend
+  // the upper body forward (rotation.x) around the hips instead of the whole figure tilting from the feet
+  const HIP_Y = 0.9;
+  const upper = new THREE.Group(); upper.position.y = HIP_Y; g.add(upper);
+  const body = box(1.15,1.15,0.75,bodyColor); body.position.y=1.5-HIP_Y; upper.add(body);
+  const armL = box(0.3,1,0.3,bodyColor); armL.position.set(-0.72,1.55-HIP_Y,0); upper.add(armL);
+  const armR = box(0.3,1,0.3,bodyColor); armR.position.set(0.72,1.55-HIP_Y,0); upper.add(armR);
+  const head = sph(0.55,'#f3c39a'); head.position.y=2.55-HIP_Y; upper.add(head);
+  const hair = box(0.95,0.28,0.95,'#4a3320'); hair.position.y=2.95-HIP_Y; upper.add(hair);
   // simple face
   const eyeMat = mat('#222');
   [-0.2,0.2].forEach(x=>{ const e=new THREE.Mesh(new THREE.SphereGeometry(0.07,8,8),eyeMat);
-    e.position.set(x,2.6,0.5); g.add(e); });
+    e.position.set(x,2.6-HIP_Y,0.5); upper.add(e); });
   g.userData.legL = legL; g.userData.legR = legR;
   g.userData.arms = [armL, armR];
+  g.userData.upper = upper;
   return g;
 }
 function buildBaby(){                                  // blocky/low-poly to match Dad's isometric style
@@ -2773,6 +2778,9 @@ function tick(){
     dad.position.y = Math.abs(Math.sin(walkPhase))*0.06*(moving?1:0);
     if(P.holdingBaby>=0){ dad.userData.arms[0].rotation.x = -1.15; dad.userData.arms[1].rotation.x = -1.15; }
     else { dad.userData.arms[0].rotation.x = -sw; dad.userData.arms[1].rotation.x = sw; }
+    // hunched-over pose while the back is seized up, easing in/out of the bend rather than snapping
+    const bendTarget = crippled ? 0.45 : 0;
+    dad.userData.upper.rotation.x += (bendTarget - dad.userData.upper.rotation.x) * Math.min(1, dt*7);
 
     // ---- babies: full AI/hazard simulation runs on the host only; guests just render synced state ----
     if(isHost){
@@ -2815,6 +2823,9 @@ function tick(){
           P.backPainTimer = Math.max(0.5, Dbp.backPainCrippleBase * Math.pow(0.75, P.lvl.backpain));
           P.nextBackPain = rand(Dbp.backPainMin, Dbp.backPainMax);
           Audio.error();
+          if(P.holdingBaby>=0){                     // can't keep hold of the baby through a back spasm
+            if(isHost){ actingPlayerId=myId; putBabyDown(P); } else { Net.sendAction('hold'); }
+          }
         }
       }
     }
