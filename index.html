@@ -36,6 +36,21 @@
   .bar.low>i{animation:flash .5s steps(2) infinite}
   @keyframes flash{50%{opacity:.35}}
 
+  /* per-baby need clusters — one repeats per baby in multiplayer, so keep each compact */
+  .babyNeeds{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .babyCluster{display:flex;gap:5px;align-items:center;padding:3px 6px;border-radius:10px}
+  .babyCluster.multi{background:rgba(255,255,255,.05);border:1px solid var(--panelborder)}
+  .babyClusterLabel{font-size:11px;opacity:.7;margin-right:2px}
+  .needMini{display:flex;flex-direction:column;align-items:center;width:34px}
+  .needMini .lblMini{font-size:11px;line-height:1;margin-bottom:2px}
+  .barMini{width:32px;height:9px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden}
+  .barMini>i{display:block;height:100%;width:100%;transition:width .12s linear;border-radius:6px}
+  .needMini[data-k=food] .barMini>i{background:var(--food)}
+  .needMini[data-k=milk] .barMini>i{background:var(--milk)}
+  .needMini[data-k=diaper] .barMini>i{background:var(--diaper)}
+  .needMini[data-k=cartoon] .barMini>i{background:var(--cartoon)}
+  .barMini.low>i{animation:flash .5s steps(2) infinite}
+
   .stat{display:flex;flex-direction:column;align-items:center;min-width:66px;padding:0 4px}
   .stat b{font-size:18px;line-height:1}
   .stat span{font-size:11px;opacity:.8}
@@ -178,10 +193,7 @@
 <!-- HUD -->
 <div id="hud">
   <div class="topbar" id="topbar">
-    <div class="need" data-k="food"><div class="lbl">🍎 Food</div><div class="bar"><i></i></div></div>
-    <div class="need" data-k="milk"><div class="lbl">🍼 Milk</div><div class="bar"><i></i></div></div>
-    <div class="need" data-k="diaper"><div class="lbl">👶 Diaper</div><div class="bar"><i></i></div></div>
-    <div class="need" data-k="cartoon"><div class="lbl">📺 Cartoons</div><div class="bar"><i></i></div></div>
+    <div class="babyNeeds" id="babyNeeds"></div>
     <div class="stat"><b id="hapVal">😊</b><span>Happiness</span></div>
     <div class="stat"><b id="pooVal">💩 0</b><span>Poo</span></div>
     <div class="stat"><b id="timeVal">3:00</b><span id="timeLabel">Mom back in</span></div>
@@ -222,6 +234,7 @@
   <div class="menuCard" id="mainMenu">
     <div class="menuLeft">
       <button class="menuBtnBig" id="menuPlayBtn">▶️ Play</button>
+      <button class="menuBtnBig" id="menuMultiplayerBtn">🌐 Multiplayer</button>
       <button class="menuBtnBig" id="menuTutorialBtn">🎓 Tutorial</button>
       <button class="menuBtnBig" id="menuSettingsBtn">⚙️ Settings</button>
       <button class="menuBtnBig" id="menuHelpBtn">❓ Help</button>
@@ -293,6 +306,75 @@
     <div class="stepnav">
       <button class="btn cta" id="settingsBackBtn">◀ Back to Menu</button>
     </div>
+  </div>
+
+  <div class="card hidden" id="mpChoiceScreen">
+    <div class="big">🌐</div>
+    <h2>Multiplayer</h2>
+    <p style="font-size:13px;opacity:.8">Play online with friends on other devices — everyone gets their
+       own Dad (with a name tag over their head), their own 💩 poo and upgrades, and the host picks the
+       difficulty and how many babies are in the house.</p>
+    <p style="font-size:13px;opacity:.75;margin-top:14px">Your name</p>
+    <input type="text" id="mpNameInput" maxlength="16" placeholder="Dad"
+      style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--panelborder);
+      background:rgba(255,255,255,.06);color:var(--text);font-size:15px;font-family:inherit;
+      text-align:center;box-sizing:border-box">
+    <div class="stepnav">
+      <button class="btn cta" id="mpHostBtn">🏠 Host a Game</button>
+      <button class="btn cta" id="mpJoinBtn">🔑 Join a Game</button>
+    </div>
+    <div class="stepnav">
+      <button class="btn" id="mpChoiceBackBtn">◀ Back to Menu</button>
+    </div>
+  </div>
+
+  <div class="card hidden" id="mpJoinScreen">
+    <div class="big">🔑</div>
+    <h2>Join a Game</h2>
+    <p style="font-size:13px;opacity:.75;margin-top:6px">Room code</p>
+    <input type="text" id="mpCodeInput" maxlength="5" placeholder="ABCDE"
+      style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--panelborder);
+      background:rgba(255,255,255,.06);color:var(--text);font-size:22px;letter-spacing:.2em;
+      font-family:inherit;text-align:center;text-transform:uppercase;box-sizing:border-box">
+    <p id="mpJoinError" style="font-size:13px;color:var(--cry);min-height:1.4em"></p>
+    <div class="stepnav">
+      <button class="btn" id="mpJoinBackBtn">◀ Back</button>
+      <button class="btn cta" id="mpJoinConfirmBtn">Join ▶</button>
+    </div>
+  </div>
+
+  <div class="card hidden" id="mpLobbyScreen">
+    <div class="big">👥</div>
+    <h2>Lobby</h2>
+    <p style="font-size:13px;opacity:.75">Room code — share this with friends</p>
+    <div style="font-size:32px;font-weight:800;letter-spacing:.2em;margin:2px 0 14px" id="mpRoomCodeLabel">-----</div>
+
+    <div id="mpHostControls">
+      <p style="font-size:13px;opacity:.75;margin:0 0 4px">Difficulty</p>
+      <div class="diffPicker" id="mpDiffPicker">
+        <div class="diffOpt" data-diff="first"><div class="diffTitle">🍼 First Born</div><div class="diffSub">Easiest — needs drain slowly</div></div>
+        <div class="diffOpt selected" data-diff="veteran"><div class="diffTitle">😅 Been There, Done That</div><div class="diffSub">Medium — the standard challenge</div></div>
+        <div class="diffOpt" data-diff="king"><div class="diffTitle">👑 King</div><div class="diffSub">Hardest — expect chaos</div></div>
+      </div>
+      <p style="font-size:13px;opacity:.75;margin:14px 0 4px">Babies in the house</p>
+      <div class="diffPicker" id="mpBabyCountPicker" style="flex-direction:row;gap:8px">
+        <div class="diffOpt selected" data-babies="1"><div class="diffTitle">1</div></div>
+        <div class="diffOpt" data-babies="2"><div class="diffTitle">2</div></div>
+        <div class="diffOpt" data-babies="3"><div class="diffTitle">3</div></div>
+        <div class="diffOpt" data-babies="4"><div class="diffTitle">4</div></div>
+      </div>
+    </div>
+    <p id="mpNonHostNote" class="hidden" style="font-size:13px;opacity:.75;margin-top:10px">
+      The host picks the difficulty and how many babies are in the house.</p>
+
+    <p style="font-size:13px;opacity:.75;margin:16px 0 4px">Players</p>
+    <div id="mpPlayerList" style="text-align:left;font-size:14px;line-height:1.9;min-height:2em"></div>
+
+    <div class="stepnav">
+      <button class="btn" id="mpLeaveBtn">◀ Leave</button>
+      <button class="btn cta hidden" id="mpStartBtn">Start Game ▶</button>
+    </div>
+    <p id="mpWaitNote" class="hidden" style="font-size:13px;opacity:.7;margin-top:10px">Waiting for the host to start…</p>
   </div>
 
   <div class="card hidden" id="diffScreen">
@@ -396,6 +478,8 @@
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script>
 /* ============================================================
    Baby Care — isometric 3D babysitting game (single file)
@@ -408,6 +492,21 @@ if(!window.THREE){
     'Check your internet connection, or run a local server: <code>npx serve .</code></p></div>';
   return;
 }
+
+/* ---------- Firebase (online multiplayer backend — Realtime Database) ---------- */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCObo4xDpcIxNBCU2BRAHyM3s0jq3kGdiE",
+  authDomain: "baby-care-66bea.firebaseapp.com",
+  databaseURL: "https://baby-care-66bea-default-rtdb.firebaseio.com",
+  projectId: "baby-care-66bea",
+  storageBucket: "baby-care-66bea.firebasestorage.app",
+  messagingSenderId: "1014032188493",
+  appId: "1:1014032188493:web:048b3ac88f051312a1c804",
+};
+let fbApp = null, fbDb = null;
+try{
+  if(window.firebase){ fbApp = firebase.initializeApp(FIREBASE_CONFIG); fbDb = firebase.database(); }
+}catch(e){ console.warn('Firebase init failed — multiplayer will be unavailable', e); }
 
 /* ---------- Renderer / scene / iso camera ---------- */
 const app = document.getElementById('app');
@@ -503,9 +602,22 @@ function roundRect(ctx,x,y,w,h,r){ ctx.beginPath();
 
 /* ---------- Home construction: shared state & helpers ---------- */
 const WALL_H = 3.35, WT = 0.4, WALL_COLOR = '#efe4d2';
-const rand = (a,b)=>a+Math.random()*(b-a);
-const pick = a=>a[(Math.random()*a.length)|0];
-function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+// seeded PRNG (mulberry32) — used only while buildHouse() is running, so every client in a multiplayer
+// room generates byte-for-byte the same rooms/furniture/layout from one shared seed. Outside of
+// buildHouse() (falsy houseRng), rand/pick/shuffle fall back to Math.random as before.
+let houseRng = null;
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function random0to1(){ return houseRng ? houseRng() : Math.random(); }
+const rand = (a,b)=>a+random0to1()*(b-a);
+const pick = a=>a[(random0to1()*a.length)|0];
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=(random0to1()*(i+1))|0; const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 
 // build state — rebuilt fresh each run by buildHouse()
 const blockAABBs = [];     // everything that stops movement (walls + furniture)
@@ -1238,7 +1350,10 @@ function layoutT(){
 // exactly one door (so bedroom/bathroom/etc. are single-door private rooms, not a maze of
 // doors to every neighbor), and the hallway ends at a front door out of the house.
 const HOUSE_LAYOUTS = {rect:layoutRect, L:layoutL, T:layoutT};
-function buildHouse(){
+function buildHouse(seed){
+  // in multiplayer every client calls buildHouse(seed) with the same host-picked seed, so everyone
+  // gets byte-for-byte identical rooms/furniture/collision — houseRng is only live for this call
+  houseRng = (seed!==undefined && seed!==null) ? mulberry32(seed) : null;
   if(houseGroup){ scene.remove(houseGroup); disposeGroup(houseGroup); }
   houseGroup = new THREE.Group(); scene.add(houseGroup);
   blockAABBs.length=0; wallMeshes.length=0; toys.length=0; solids.length=0;
@@ -1307,16 +1422,18 @@ function buildHouse(){
     rooms: cells.map(c=>({minX:c.minX, maxX:c.maxX, minZ:c.minZ, maxZ:c.maxZ, type:c.type})),
     halls: halls.map(h=>({minX:h.minX, maxX:h.maxX, minZ:h.minZ, maxZ:h.maxZ})),
   };
+  houseRng = null;   // done — runtime gameplay randomness (hazard timing etc.) goes back to Math.random
 }
 
 /* ---------- Character builders ---------- */
-function buildDad(){
+function buildDad(bodyColor, legColor){
+  bodyColor = bodyColor || '#4f7ad6'; legColor = legColor || '#3a4a8a';
   const g = new THREE.Group();
-  const legL = box(0.42,0.9,0.42,'#3a4a8a'); legL.position.set(-0.26,0.45,0); g.add(legL);
-  const legR = box(0.42,0.9,0.42,'#3a4a8a'); legR.position.set(0.26,0.45,0); g.add(legR);
-  const body = box(1.15,1.15,0.75,'#4f7ad6'); body.position.y=1.5; g.add(body);
-  const armL = box(0.3,1,0.3,'#4f7ad6'); armL.position.set(-0.72,1.55,0); g.add(armL);
-  const armR = box(0.3,1,0.3,'#4f7ad6'); armR.position.set(0.72,1.55,0); g.add(armR);
+  const legL = box(0.42,0.9,0.42,legColor); legL.position.set(-0.26,0.45,0); g.add(legL);
+  const legR = box(0.42,0.9,0.42,legColor); legR.position.set(0.26,0.45,0); g.add(legR);
+  const body = box(1.15,1.15,0.75,bodyColor); body.position.y=1.5; g.add(body);
+  const armL = box(0.3,1,0.3,bodyColor); armL.position.set(-0.72,1.55,0); g.add(armL);
+  const armR = box(0.3,1,0.3,bodyColor); armR.position.set(0.72,1.55,0); g.add(armR);
   const head = sph(0.55,'#f3c39a'); head.position.y=2.55; g.add(head);
   const hair = box(0.95,0.28,0.95,'#4a3320'); hair.position.y=2.95; g.add(hair);
   // simple face
@@ -1384,9 +1501,13 @@ function poseBabySit(b){                                  // playing, or fallen 
 }
 
 /* ---------- Actors ---------- */
+const PLAYER_COLORS = [                             // must exist before buildDad() is first called, below
+  {body:'#4f7ad6', leg:'#3a4a8a'}, {body:'#d65a5a', leg:'#8a3a3a'},
+  {body:'#4fb86a', leg:'#2f6a3a'}, {body:'#d6a24f', leg:'#8a6a2a'},
+  {body:'#a25ad6', leg:'#5a2f8a'}, {body:'#4fcfd6', leg:'#2a7a8a'},
+];
 buildHouse();
-const dad = buildDad(); dad.position.copy(spawnDad); scene.add(dad);
-const baby = buildBaby(); baby.position.copy(spawnBaby); scene.add(baby);
+const dad = buildDad(PLAYER_COLORS[0].body, PLAYER_COLORS[0].leg); dad.position.copy(spawnDad); scene.add(dad);
 
 // carry icon above dad's head
 let carrySprite = null;
@@ -1398,15 +1519,17 @@ function setCarrySprite(txt){
 // tossed-away items: a quick arc + fade, purely cosmetic
 const thrownItems = [];
 function discardCarrying(){
-  if(S.mode!=='play' || !S.carrying) return;
-  const spr = makeSprite(CARRY_ICON[S.carrying], {bg:null, font:60});
+  const P = actingPlayer();
+  if(S.mode!=='play' || !P.carrying) return;
+  const pos = actingPos();
+  const spr = makeSprite(CARRY_ICON[P.carrying], {bg:null, font:60});
   spr.scale.set(1.1,1.1,1.1); spr.renderOrder=10;
-  spr.position.set(dad.position.x, dad.position.y+3.3, dad.position.z);
+  spr.position.set(pos.x, 3.3, pos.z);
   scene.add(spr);
-  const ang = dad.rotation.y + (Math.random()-0.5)*0.6;
+  const ang = pos.rotY + (Math.random()-0.5)*0.6;
   thrownItems.push({mesh:spr, vx:Math.sin(ang)*3.2, vz:Math.cos(ang)*3.2, vy:4.2, life:0.9});
   Audio.error();
-  S.carrying = null; setCarrySprite(null);
+  P.carrying = null; if(actingPlayerId===myId) setCarrySprite(null);
 }
 function updateThrownItems(dt){
   for(let i=thrownItems.length-1; i>=0; i--){
@@ -1421,14 +1544,26 @@ function updateThrownItems(dt){
     }
   }
 }
-// baby mood sprite
-let moodSprite = makeSprite('🙂',{bg:null,font:80}); moodSprite.position.set(0,2.3,0);
-moodSprite.scale.set(1.5,1.5,1.5); moodSprite.renderOrder=10; baby.add(moodSprite);
-let lastMood = '🙂';
-function setMood(m){ if(m===lastMood) return; lastMood=m;
-  const old = moodSprite; baby.remove(old); old.material.map.dispose(); old.material.dispose();
-  moodSprite = makeSprite(m,{bg:null,font:80}); moodSprite.position.set(0,2.3,0);
-  moodSprite.scale.set(1.5,1.5,1.5); moodSprite.renderOrder=10; baby.add(moodSprite);
+// baby mood sprites — one per baby, swapped in place whenever that baby's mood changes
+function setMood(b, m){ if(m===b.moodLast) return; b.moodLast=m;
+  const old = b.moodSprite; b.mesh.remove(old); old.material.map.dispose(); old.material.dispose();
+  b.moodSprite = makeSprite(m,{bg:null,font:80}); b.moodSprite.position.set(0,2.3,0);
+  b.moodSprite.scale.set(1.5,1.5,1.5); b.moodSprite.renderOrder=10; b.mesh.add(b.moodSprite);
+}
+function spawnBabies(){                                  // (re)builds the babies[] array for a fresh run
+  babies.forEach(b=>{ if(b.mesh){ scene.remove(b.mesh); disposeGroup(b.mesh); } });
+  babies = [];
+  const count = Math.max(1, S.babyCount||1);
+  for(let i=0;i<count;i++){
+    const ang = (i/count)*Math.PI*2, off = count>1 ? 1.6 : 0;
+    const pos = new THREE.Vector3(spawnBaby.x+Math.cos(ang)*off, 0, spawnBaby.z+Math.sin(ang)*off);
+    const b = freshBaby(pos);
+    b.mesh = buildBaby(); b.mesh.position.copy(pos); scene.add(b.mesh);
+    b.moodSprite = makeSprite('🙂',{bg:null,font:80}); b.moodSprite.position.set(0,2.3,0);
+    b.moodSprite.scale.set(1.5,1.5,1.5); b.moodSprite.renderOrder=10; b.mesh.add(b.moodSprite);
+    babies.push(b);
+  }
+  buildBabyNeedsHUD();
 }
 
 /* ---------- Audio (procedural, Web Audio) ---------- */
@@ -1546,6 +1681,51 @@ function getHighScore(){ try{ return +(localStorage.getItem(highScoreKey())||0);
 function setHighScore(v){ try{ localStorage.setItem(highScoreKey(), String(v)); }catch(e){} }
 function updateBestScoreLabel(){ const el2=document.getElementById('bestScoreLabel'); if(el2) el2.textContent = getHighScore(); }
 
+/* ---------- Multiplayer core: players (per-player poo/upgrades/carry state) & babies (shared) ----------
+   Solo play is just the degenerate case of this model: one entry in `players` (me), `isHost` always
+   true, one baby in `babies`, and no Firebase traffic — so nothing about single-player behavior changes. */
+const myId = 'p_' + Math.random().toString(36).slice(2, 10);
+let myName = 'Dad';
+let roomCode = null;              // null = solo/local play, no networking
+let isHost = true;                // true solo and while hosting; false for a joined non-host client
+let players = {};                 // playerId -> {name,colorIdx,poo,lvl,carrying,holdingBaby,...}
+let babies = [];                  // array of baby records (mesh + need + AI state)
+let actingPlayerId = myId;        // whose perspective the core interaction functions run as right now
+function freshPlayer(name, colorIdx){
+  return {
+    name, colorIdx: colorIdx||0,
+    poo:0, lvl:{food:0,milk:0,diaper:0,cartoon:0,speed:0,arms:0,backpain:0},
+    carrying:null,                   // 'food'|'milk'|'diaper'|'mop'|null
+    holdingBaby:-1,                  // index into babies[], or -1
+    holdStamina:0, armsTiredTimer:0, backPainTimer:0, nextBackPain:0, slowTimer:0,
+    changes:0, cuddles:0,
+    x:0, z:0, rotY:0,                // synced transform — read directly from `dad` for me, else from Firebase
+    avatar:null,                     // remote-only: {group, nameSprite} rendered in the scene
+    connected:true,
+  };
+}
+function me(){ return players[myId]; }
+function actingPlayer(){ return players[actingPlayerId]; }
+function actingPos(){                                    // position/heading of whoever's acting right now
+  if(actingPlayerId===myId) return {x:dad.position.x, z:dad.position.z, rotY:dad.rotation.y};
+  const p = players[actingPlayerId];
+  return {x:p.x, z:p.z, rotY:p.rotY};
+}
+function maxLvl(k){ let m=0; for(const id in players) m=Math.max(m, (players[id].lvl[k]||0)); return m; }
+function freshBaby(pos){
+  return {
+    mesh:null,
+    need:{food:100,milk:100,diaper:100,cartoon:100},
+    heldBy:null,                     // playerId currently holding this baby, or null
+    fallen:false, burned:false,
+    choking:false, chokeDeadline:0, chokeTimer:0,
+    penned:false, penTimer:0,
+    target:new THREE.Vector3().copy(pos), retime:0, play:0, playingToy:null, targetIsOven:false,
+    mode:'crawl', poseT:0, fallTimer:0,
+    moodLast:'🙂', moodSprite:null, cryTimer:0,
+  };
+}
+
 let S;
 function resetState(){
   const D = curDiff();
@@ -1553,56 +1733,51 @@ function resetState(){
     mode:'menu',                       // menu|play|over|win
     tutorial:false,                    // true during the guided, no-pressure tutorial run
     diff: D.key,
-    need:{...D.needStart},
+    babyCount: (S && S.babyCount) || 1,
     cry:0,
     joy:0,                             // topped up by play/cuddles; eases crying
-    poo:0,
-    carrying:null,                     // 'food'|'milk'|'diaper'|'mop'|null
-    holdingBaby:false,
     cartoonsOn:false, tvTimer:0,
-    lvl:{food:0,milk:0,diaper:0,cartoon:0,speed:0,arms:0,backpain:0},
     endless: endlessMode,               // no win-timer — plays until a lose/fired/hide/leave condition
     gameLen: endlessMode ? Infinity : D.gameLen,
     timeLeft: endlessMode ? Infinity : D.gameLen,
     elapsed:0,                          // seconds survived — endless mode's clock and score basis
     score:0,
-    changes:0, cuddles:0,
     messes:[],                         // active vomit puddles {x,z,mesh,playerInside}
     vomitTimer: rand(D.vomitMin*0.5, D.vomitMax*0.5), // first throw-up comes sooner than the steady interval
-    slowTimer:0,                       // >0 while Dad's slipping around after stepping in a mess
-    babyFallen:false,                  // baby took a tumble while walking — crying until Dad picks it up
-    babyBurned:false,                  // baby touched the hot oven unsupervised — crying until Dad picks it up
-    holdStamina: holdMaxFor(D, 0),     // arms give out after this many seconds of continuous carrying
-    armsTiredTimer:0,                  // >0 briefly after a forced put-down, for the HUD message
-    babyPenned:false,                  // baby is safely locked in the playpen (won't fall or wander)
-    penTimer:0,                        // seconds left before the baby escapes the playpen
-    penEscapedTimer:0,                 // >0 briefly after an escape, for the HUD message
     notifyTimer: rand(D.notifyMin*0.6, D.notifyMax*0.6), // first work notification comes a bit sooner
     notification:false,                // an unanswered work notification is pending on the computer
     notifyDeadline:0,                  // seconds left to respond before a penalty
     missedNotifyTimer:0,               // >0 briefly after a missed notification, for the HUD message
     missedCount:0,                     // total missed work notifications this run — too many and you're fired
     paused:false,                      // Esc pause menu open — freezes gameplay updates, keeps rendering
-    backPainTimer:0,                   // >0 while Dad's back has seized up — movement is locked
-    nextBackPain: rand(D.backPainMin*0.6, D.backPainMax*0.6),
-    babyChoking:false,                 // baby swallowed something small and needs its airway cleared
-    chokeDeadline:0,                   // seconds left to act before it's too late
-    chokeTimer: rand(D.chokeMin*0.6, D.chokeMax*0.6), // seconds until the next choking risk while unattended
+    penEscapedTimer:0,                 // >0 briefly after an escape, for the HUD message
+    armsTiredTimer:0,                  // (mirrors me().armsTiredTimer at reset time; kept for the HUD)
   };
+  players = {}; players[myId] = freshPlayer(myName, 0);
+  const P = players[myId];
+  P.holdStamina = holdMaxFor(D, 0);
+  P.nextBackPain = rand(D.backPainMin*0.6, D.backPainMax*0.6);
+  babies = [];                          // (re)populated once buildHouse() has placed a spawn point
 }
 resetState();
 
-function happiness(){ let s=0; NEEDS.forEach(k=>s+=S.need[k]); return s/NEEDS.length; }
+function happiness(){                                    // average across every baby's own 4-need average
+  if(!babies.length) return 100;
+  let s=0; babies.forEach(b=>{ let bs=0; NEEDS.forEach(k=>bs+=b.need[k]); s+=bs/NEEDS.length; });
+  return s/babies.length;
+}
 function decayRate(k){
-  let r = BASE_DECAY[k] * curDiff().decayMul * Math.pow(0.8, S.lvl[k]);   // difficulty scales it, upgrades slow it back down
-  return r;
+  // passive drain is shared per baby, so it's slowed by whoever in the house has the best upgrade —
+  // buying Tasty Food/Bigger Bottle/etc. helps every baby, not just the buyer's own actions
+  return BASE_DECAY[k] * curDiff().decayMul * Math.pow(0.8, maxLvl(k));
 }
 function holdMaxFor(D, armsLvl){ return D.holdBase + armsLvl*ARM_UPGRADE_SECONDS; }
-function holdMax(){ return holdMaxFor(curDiff(), S.lvl.arms); }
-function upgradeCost(k){ return UPGRADES[k].base * (S.lvl[k]+1); }
+function holdMax(player){ player = player || me(); return holdMaxFor(curDiff(), player.lvl.arms); }
+function upgradeCost(k, player){ player = player || me(); return UPGRADES[k].base * (player.lvl[k]+1); }
 function moveSpeed(){
-  let s = MOVE_SPEED * (1 + 0.15*S.lvl.speed);
-  if(S.slowTimer>0) s *= 0.45;                 // slipped in a mess — walking it off
+  const p = me();
+  let s = MOVE_SPEED * (1 + 0.15*p.lvl.speed);
+  if(p.slowTimer>0) s *= 0.45;                 // slipped in a mess — walking it off
   return s;
 }
 
@@ -1614,9 +1789,9 @@ window.addEventListener('keydown', e=>{
   if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
   keys[k]=true;
   if(S.mode!=='play' || S.paused) return;
-  if(k==='e'){ interact(); }
-  if(k===' '){ toggleHoldBaby(); }
-  if(k==='q'){ discardCarrying(); }
+  if(k==='e'){ requestInteract(); }
+  if(k===' '){ requestToggleHold(); }
+  if(k==='q'){ requestDrop(); }
   if(k==='u'){ toggleShop(); }
   if(k==='m'){ toggleMute(); }
 });
@@ -1626,18 +1801,30 @@ window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; });
 const FWD = new THREE.Vector3(-1,0,-1).normalize();
 const RIGHT = new THREE.Vector3(1,0,-1).normalize();
 
-/* ---------- Interaction ---------- */
-function babyDist(){ return Math.hypot(dad.position.x-baby.position.x, dad.position.z-baby.position.z); }
-function nearestStation(){
+/* ---------- Interaction ----------
+   Every function below runs "as" actingPlayer()/actingPos() — for the local player that's always
+   myId/dad; when the host is replaying a remote player's queued action, actingPlayerId is switched
+   to that player just for the duration of the call. This is what lets solo play, hosting, and being
+   a guest all share the exact same gameplay logic. */
+function nearestBabyAt(x,z){
+  let best=null, bd=Infinity, bi=-1;
+  babies.forEach((b,i)=>{ const d=Math.hypot(x-b.mesh.position.x, z-b.mesh.position.z);
+    if(d<bd){ bd=d; best=b; bi=i; } });
+  return {baby:best, dist:bd, index:bi};
+}
+function nearestBaby(){ const p=actingPos(); return nearestBabyAt(p.x,p.z); }
+function nearestStationAt(x,z){
   let best=null, bd=Infinity;
   for(const k in stations){ const s = stations[k];
-    const d = Math.hypot(dad.position.x-s.x, dad.position.z-s.z);
+    const d = Math.hypot(x-s.x, z-s.z);
     if(d < 2.6 && d < bd){ bd=d; best=k; } }
   return best;
 }
+function nearestStation(){ const p=actingPos(); return nearestStationAt(p.x,p.z); }
 function nearestMess(){
+  const p = actingPos();
   let best=null, bd=Infinity;
-  S.messes.forEach(m=>{ const d=Math.hypot(dad.position.x-m.x, dad.position.z-m.z);
+  S.messes.forEach(m=>{ const d=Math.hypot(p.x-m.x, p.z-m.z);
     if(d < 2.2 && d < bd){ bd=d; best=m; } });
   return best;
 }
@@ -1648,8 +1835,8 @@ function cleanMess(m){
   if(S.tutorial) tutorialProgress.mopped = true;
 }
 function doStation(k){
-  if(k==='shop'){ openShop(); return; }
-  if(k==='cartoon'){ S.cartoonsOn=true; S.tvTimer=10+S.lvl.cartoon*3; Audio.chime();
+  const P = actingPlayer();
+  if(k==='cartoon'){ S.cartoonsOn=true; S.tvTimer=10+P.lvl.cartoon*3; Audio.chime();
     if(S.tutorial) tutorialProgress.cartoon = true;
     return; }
   if(k==='computer'){
@@ -1665,72 +1852,97 @@ function doStation(k){
     endGame('leave'); return;
   }
   if(k==='playpen'){
-    if(!S.holdingBaby){ Audio.error(); return; }
-    S.holdingBaby=false; baby.scale.set(1,1,1); baby.userData.mat.visible=true;
-    baby.position.set(stations.playpen.x, 0, stations.playpen.z); baby.rotation.y=0;
-    S.babyPenned=true; S.penTimer=curDiff().penSeconds; S.babyFallen=false; S.babyBurned=false;
+    if(P.holdingBaby<0){ Audio.error(); return; }
+    const b = babies[P.holdingBaby];
+    P.holdingBaby=-1; b.heldBy=null;
+    b.mesh.scale.set(1,1,1); b.mesh.userData.mat.visible=true;
+    b.mesh.position.set(stations.playpen.x, 0, stations.playpen.z); b.mesh.rotation.y=0;
+    b.penned=true; b.penTimer=curDiff().penSeconds; b.fallen=false; b.burned=false;
     if(S.tutorial) tutorialProgress.penned = true;
     Audio.chime(); return;
   }
-  if(S.holdingBaby){ Audio.error(); return; }        // hands full holding baby
-  S.carrying=k; setCarrySprite(CARRY_ICON[k]); Audio.chime(); flashCarry();
+  if(P.holdingBaby>=0){ Audio.error(); return; }        // hands full holding baby
+  P.carrying=k; if(actingPlayerId===myId) setCarrySprite(CARRY_ICON[k]); Audio.chime(); flashCarry();
 }
-function deliverToBaby(){
-  if(S.carrying==='food'){ S.need.food=100; Audio.chime(); if(S.tutorial) tutorialProgress.fed=true; }
-  else if(S.carrying==='milk'){ S.need.milk=100; Audio.chime(); if(S.tutorial) tutorialProgress.milk=true; }
-  else if(S.carrying==='diaper'){
-    if(S.need.diaper > DIAPER_CHANGE_MAX){ Audio.error(); return; }   // not dirty enough yet — keep the diaper
-    const dirtiness = 1 - S.need.diaper/DIAPER_CHANGE_MAX;             // 0 right at the threshold, 1 when fully empty
-    const gained = Math.max(1, Math.round((1 + dirtiness*3) * (1 + 0.6*S.lvl.diaper)));
-    S.need.diaper=100;
-    S.poo += gained; S.changes++; popPoo(gained); Audio.poo();
+function deliverToBaby(b){
+  const P = actingPlayer();
+  if(P.carrying==='food'){ b.need.food=100; Audio.chime(); if(S.tutorial) tutorialProgress.fed=true; }
+  else if(P.carrying==='milk'){ b.need.milk=100; Audio.chime(); if(S.tutorial) tutorialProgress.milk=true; }
+  else if(P.carrying==='diaper'){
+    if(b.need.diaper > DIAPER_CHANGE_MAX){ Audio.error(); return; }   // not dirty enough yet — keep the diaper
+    const dirtiness = 1 - b.need.diaper/DIAPER_CHANGE_MAX;             // 0 right at the threshold, 1 when fully empty
+    const gained = Math.max(1, Math.round((1 + dirtiness*3) * (1 + 0.6*P.lvl.diaper)));
+    b.need.diaper=100;
+    P.poo += gained; P.changes++; popPoo(gained); Audio.poo();
     if(S.tutorial) tutorialProgress.diaper=true;
   }
-  S.carrying=null; setCarrySprite(null);
+  P.carrying=null; if(actingPlayerId===myId) setCarrySprite(null);
 }
-function interact(){                                   // the E key
-  if(S.babyChoking){                                   // top priority: clear the baby's airway
-    if(babyDist() < 2.6){ S.babyChoking=false; S.chokeDeadline=0; S.joy=Math.min(1,S.joy+0.3); Audio.chime();
+function interact(){                                   // core logic for the E key — see actingPlayer() note above
+  const P = actingPlayer();
+  const {baby:nb, dist:nd} = nearestBaby();
+  if(nb && nb.choking){                                 // top priority: clear the airway
+    if(nd < 2.6){ nb.choking=false; nb.chokeDeadline=0; S.joy=Math.min(1,S.joy+0.3); Audio.chime();
       if(S.tutorial) tutorialProgress.choke=true; }
     else Audio.error();
     return;
   }
   const k = nearestStation();
   const mess = nearestMess();
-  if(S.carrying==='mop' && mess){ cleanMess(mess); return; }
-  const near = !S.holdingBaby && babyDist() < 2.6;
-  if(S.carrying){
-    if(S.carrying!=='mop' && near){ deliverToBaby(); return; }
-    if(k){ doStation(k); return; }                     // re-grab / toggle / shop
+  if(P.carrying==='mop' && mess){ cleanMess(mess); return; }
+  const near = P.holdingBaby<0 && nb && nd < 2.6;
+  if(P.carrying){
+    if(P.carrying!=='mop' && near){ deliverToBaby(nb); return; }
+    if(k){ doStation(k); return; }                     // re-grab / toggle
     Audio.error(); return;
   }
   if(k){ doStation(k); return; }
   Audio.error();
 }
-function putBabyDown(){                                 // shared by voluntary put-down and forced (arms-tired) drop
-  S.holdingBaby=false; baby.scale.set(1,1,1);
-  baby.position.set(dad.position.x - Math.sin(dad.rotation.y)*1.1, 0,
-                    dad.position.z - Math.cos(dad.rotation.y)*1.1);
-  baby.userData.mat.visible = true;
-  pickBabyTarget(); babyMode='crawl';                    // safe grace period right after being set back down
+function putBabyDown(player){                          // shared by voluntary put-down and forced (arms-tired) drop
+  player = player || me();
+  const b = babies[player.holdingBaby];
+  if(!b) return;
+  const local = player===me();
+  const px = local?dad.position.x:player.x, pz = local?dad.position.z:player.z, pr = local?dad.rotation.y:player.rotY;
+  player.holdingBaby=-1; b.heldBy=null;
+  b.mesh.scale.set(1,1,1);
+  b.mesh.position.set(px - Math.sin(pr)*1.1, 0, pz - Math.cos(pr)*1.1);
+  b.mesh.userData.mat.visible = true;
+  pickBabyTarget(b); b.mode='crawl';                    // safe grace period right after being set back down
 }
-function toggleHoldBaby(){                              // the Space key
+function toggleHoldBaby(){                              // core logic for the Space key
+  const P = actingPlayer();
   if(S.mode!=='play') return;
-  if(S.holdingBaby){
-    putBabyDown(); Audio.buy();
+  if(P.holdingBaby>=0){
+    putBabyDown(P); Audio.buy();
   } else {
-    if(S.carrying){ Audio.error(); return; }           // can't hold baby with hands full
-    if(S.holdStamina < holdMax()*ARM_RECOVER_MIN_FRAC){ Audio.error(); return; } // arms still too tired
-    if(babyDist() < 2.9){ S.holdingBaby=true; S.cuddles++; S.babyFallen=false; S.babyBurned=false; S.babyPenned=false;
-      baby.scale.set(0.9,0.9,0.9); baby.userData.mat.visible = false; Audio.chime();
-      if(S.tutorial) tutorialProgress.held=true; }
-    else Audio.error();
+    if(P.carrying){ Audio.error(); return; }           // can't hold baby with hands full
+    if(P.holdStamina < holdMax(P)*ARM_RECOVER_MIN_FRAC){ Audio.error(); return; } // arms still too tired
+    const {baby:nb, dist:nd, index:ni} = nearestBaby();
+    if(nb && !nb.heldBy && nd < 2.9){
+      P.holdingBaby=ni; nb.heldBy=actingPlayerId; P.cuddles++; nb.fallen=false; nb.burned=false; nb.penned=false;
+      nb.mesh.scale.set(0.9,0.9,0.9); nb.mesh.userData.mat.visible = false; Audio.chime();
+      if(S.tutorial) tutorialProgress.held=true;
+    } else Audio.error();
   }
 }
+/* ---------- Local dispatch: decides "run this myself" vs "ask the host to run it for me" ----------
+   Solo play and hosting always run these directly (isHost is true in both cases), so their behavior
+   is byte-for-byte what it always was. Only a joined non-host client takes the network branch. */
+function requestInteract(){
+  // opening my own upgrade shop is a purely local UI panel — never needs the host or the network
+  if(nearestStationAt(dad.position.x, dad.position.z)==='shop'){ openShop(); return; }
+  if(isHost){ actingPlayerId=myId; interact(); }
+  else Net.sendAction('interact');
+}
+function requestToggleHold(){ if(isHost){ actingPlayerId=myId; toggleHoldBaby(); } else Net.sendAction('hold'); }
+function requestDrop(){ if(isHost){ actingPlayerId=myId; discardCarrying(); } else Net.sendAction('drop'); }
+function requestBuy(k){ if(isHost){ actingPlayerId=myId; buyUpgrade(k); } else Net.sendAction('buy', k); }
 
 /* ---------- HUD refs ---------- */
 const el = {
-  bars:{}, cryFill:document.getElementById('cryFill'), cryPct:document.getElementById('cryPct'),
+  babyBars:[], cryFill:document.getElementById('cryFill'), cryPct:document.getElementById('cryPct'),
   cryWrap:document.querySelector('.crywrap'),
   hap:document.getElementById('hapVal'), poo:document.getElementById('pooVal'),
   time:document.getElementById('timeVal'), prompt:document.getElementById('prompt'),
@@ -1738,7 +1950,27 @@ const el = {
   workAlert:document.getElementById('workAlert'), chokeAlert:document.getElementById('chokeAlert'),
   timeLabel:document.getElementById('timeLabel'), scoreStat:document.getElementById('scoreStat'), scoreVal:document.getElementById('scoreVal'),
 };
-document.querySelectorAll('.need').forEach(n=>{ el.bars[n.dataset.k] = {wrap:n, fill:n.querySelector('.bar>i'), bar:n.querySelector('.bar')}; });
+function buildBabyNeedsHUD(){                          // one compact 4-bar cluster per baby (labeled once >1)
+  const container = document.getElementById('babyNeeds');
+  container.innerHTML = '';
+  el.babyBars = [];
+  const multi = babies.length>1;
+  babies.forEach((b,i)=>{
+    const cluster = document.createElement('div'); cluster.className = 'babyCluster'+(multi?' multi':'');
+    let html = multi ? `<div class="babyClusterLabel">👶${i+1}</div>` : '';
+    NEEDS.forEach(k=>{
+      html += `<div class="needMini" data-k="${k}"><div class="lblMini">${NEED_ICON[k]}</div><div class="barMini"><i></i></div></div>`;
+    });
+    cluster.innerHTML = html;
+    container.appendChild(cluster);
+    const bars = {};
+    NEEDS.forEach(k=>{
+      const n = cluster.querySelector(`[data-k="${k}"]`);
+      bars[k] = {fill:n.querySelector('.barMini>i'), bar:n.querySelector('.barMini')};
+    });
+    el.babyBars.push(bars);
+  });
+}
 
 function flashCarry(){ el.carry.classList.remove('flash'); void el.carry.offsetWidth; el.carry.classList.add('flash'); }
 function popPoo(n){ el.poo.classList.remove('flash'); void el.poo.offsetWidth; el.poo.classList.add('flash');
@@ -1761,24 +1993,26 @@ function buildShopRows(){
     upsEl.appendChild(row);
   });
   upsEl.querySelectorAll('[data-buy]').forEach(btn=>{
-    btn.addEventListener('click', ()=>buyUpgrade(btn.getAttribute('data-buy')));
+    btn.addEventListener('click', ()=>requestBuy(btn.getAttribute('data-buy')));
   });
 }
 function refreshShop(){
-  document.getElementById('shopPoo').textContent = '💩 '+S.poo;
+  const P = me();
+  document.getElementById('shopPoo').textContent = '💩 '+P.poo;
   Object.keys(UPGRADES).forEach(k=>{
-    const cost = upgradeCost(k);
-    upsEl.querySelector(`[data-lv="${k}"]`).textContent = `Level ${S.lvl[k]}`;
+    const cost = upgradeCost(k, P);
+    upsEl.querySelector(`[data-lv="${k}"]`).textContent = `Level ${P.lvl[k]}`;
     const b = upsEl.querySelector(`[data-buy="${k}"]`);
     b.textContent = `💩 ${cost}`;
-    b.disabled = S.poo < cost;
+    b.disabled = P.poo < cost;
   });
 }
-function buyUpgrade(k){
-  const cost = upgradeCost(k);
-  if(S.poo < cost){ Audio.error(); return; }
-  S.poo -= cost; S.lvl[k]++;
-  Audio.buy(); refreshShop();
+function buyUpgrade(k){                                 // core logic — poo/levels are always the acting player's own
+  const P = actingPlayer();
+  const cost = upgradeCost(k, P);
+  if(P.poo < cost){ Audio.error(); return; }
+  P.poo -= cost; P.lvl[k]++;
+  Audio.buy(); if(actingPlayerId===myId) refreshShop();
   if(S.tutorial) tutorialProgress.bought = true;
 }
 function openShop(){ if(S.mode!=='play') return; buildShopRows(); refreshShop(); shopEl.classList.remove('hidden'); }
@@ -1844,25 +2078,23 @@ function drawMinimap(){
     ctx.font='12px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(ROOM_MAP_LABEL[r.type]||'', x+w/2, z+h/2);
   });
-  ctx.beginPath(); ctx.fillStyle='#ff9ec7'; ctx.arc(mapX(baby.position.x), mapZ(baby.position.z), 5, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
-  ctx.beginPath(); ctx.fillStyle='#4f7ad6'; ctx.arc(mapX(dad.position.x), mapZ(dad.position.z), 6, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#fff'; ctx.stroke();
+  babies.forEach(b=>{
+    ctx.beginPath(); ctx.fillStyle='#ff9ec7'; ctx.arc(mapX(b.mesh.position.x), mapZ(b.mesh.position.z), 5, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+  });
+  for(const id in players){
+    const p = players[id]; if(!p.connected) continue;
+    const px = id===myId ? dad.position.x : p.x, pz = id===myId ? dad.position.z : p.z;
+    ctx.beginPath(); ctx.fillStyle=PLAYER_COLORS[p.colorIdx%PLAYER_COLORS.length].body;
+    ctx.arc(mapX(px), mapZ(pz), 6, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+  }
 }
 
 /* ---------- Flow ---------- */
-function startGame(isTutorial){
-  if(isTutorial){ preTutorialDifficulty = difficulty; difficulty = 'tutorial'; }
-  buildHouse();                                    // fresh randomized-but-sensible room layout each run
-  resetState();
-  S.mode='play';
-  S.tutorial = !!isTutorial;
-  if(isTutorial) S.endless = false;                // ignore any earlier Endless Mode toggle during the tutorial
+function enterHouseCommon(){                            // shared teardown/setup used by every game-start path
   dad.position.copy(spawnDad); dad.rotation.y=0;
   dad.userData.arms[0].rotation.x=0; dad.userData.arms[1].rotation.x=0;
-  baby.position.copy(spawnBaby); baby.rotation.y=0; baby.scale.set(1,1,1);
-  babyTarget.copy(spawnBaby); babyRetime=0; babyPlay=0; babyPlayingToy=null; babyTargetIsOven=false;
-  babyMode='crawl'; babyPoseT=0; fallTimer=0;
   setCarrySprite(null);
   thrownItems.forEach(it=>{ scene.remove(it.mesh); it.mesh.material.map.dispose(); it.mesh.material.dispose(); });
   thrownItems.length = 0;
@@ -1873,8 +2105,19 @@ function startGame(isTutorial){
   document.getElementById('win').classList.add('hidden');
   closeShopFn();
   Audio.start(); Music.start();
+}
+function startGame(isTutorial){
+  if(isTutorial){ preTutorialDifficulty = difficulty; difficulty = 'tutorial'; }
+  roomCode = null; isHost = true;                       // solo & tutorial are always local-only
+  resetState();
+  S.tutorial = !!isTutorial;
+  if(isTutorial) S.endless = false;                // ignore any earlier Endless Mode toggle during the tutorial
+  buildHouse();                                    // fresh randomized-but-sensible room layout each run
+  spawnBabies();
+  enterHouseCommon();
   document.getElementById('tutorialPanel').classList.toggle('hidden', !isTutorial);
   if(isTutorial) tutorialStepEnter(0);
+  S.mode='play';
 }
 const GAMEOVER_FLAVOR = {
   lose: {icon:'📞😱', title:'You called Mommy!',
@@ -1891,11 +2134,12 @@ const GAMEOVER_FLAVOR = {
 function endGame(reason){                              // 'win' | 'lose' | 'hide'
   S.mode = reason==='win' ? 'win' : 'over';
   closeShopFn();
+  const P = me();
   const mins = Math.floor(S.elapsed/60), secs = Math.round(S.elapsed%60);
   const diffLabel = DIFFICULTIES[S.diff].label;
   if(reason==='win'){
     document.getElementById('winStats').textContent =
-      `${diffLabel} · Diapers changed: ${S.changes} · Poo banked: 💩${S.poo}`;
+      `${diffLabel} · Diapers changed: ${P.changes} · Poo banked: 💩${P.poo}`;
     document.getElementById('win').classList.remove('hidden');
   } else {
     const f = GAMEOVER_FLAVOR[reason];
@@ -1911,9 +2155,10 @@ function endGame(reason){                              // 'win' | 'lose' | 'hide
       scoreNote = isNew ? ` · Score: ${S.score} — New High Score! 🏆` : ` · Score: ${S.score} · Best: ${hs}`;
     }
     document.getElementById('goStats').textContent =
-      `${diffLabel} · You lasted ${mins}m ${secs}s · ${S.changes} diaper change${S.changes===1?'':'s'}${missedNote}${scoreNote}.`;
+      `${diffLabel} · You lasted ${mins}m ${secs}s · ${P.changes} diaper change${P.changes===1?'':'s'}${missedNote}${scoreNote}.`;
     document.getElementById('gameover').classList.remove('hidden');
   }
+  if(roomCode && isHost) Net.setGameOver(reason);         // let every guest's client know the round is over
 }
 document.querySelectorAll('#diffPicker .diffOpt').forEach(opt=>{
   opt.addEventListener('click', ()=>{
@@ -1931,7 +2176,7 @@ document.querySelectorAll('#endlessToggle .diffOpt').forEach(opt=>{
   });
 });
 function showMenuScreen(id){
-  ['mainMenu','helpScreen','settingsScreen','diffScreen'].forEach(mid=>{
+  ['mainMenu','helpScreen','settingsScreen','diffScreen','mpChoiceScreen','mpJoinScreen','mpLobbyScreen'].forEach(mid=>{
     document.getElementById(mid).classList.toggle('hidden', mid!==id);
   });
 }
@@ -1943,8 +2188,298 @@ document.getElementById('helpBackBtn').addEventListener('click', ()=>showMenuScr
 document.getElementById('settingsBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('diffBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('startBtn').addEventListener('click', ()=>startGame(false));
-document.getElementById('retryBtn').addEventListener('click', ()=>startGame(false));
-document.getElementById('winBtn').addEventListener('click', ()=>startGame(false));
+function handleRetry(){                                 // "Try Again"/"Play Again" — leave any MP room first
+  if(roomCode){
+    Net.leaveRoom();
+    document.getElementById('gameover').classList.add('hidden');
+    document.getElementById('win').classList.add('hidden');
+    document.getElementById('intro').classList.remove('hidden');
+    showMenuScreen('mainMenu');
+    return;
+  }
+  startGame(false);
+}
+document.getElementById('retryBtn').addEventListener('click', handleRetry);
+document.getElementById('winBtn').addEventListener('click', handleRetry);
+
+/* ---------- Multiplayer: Firebase-backed lobby (host/join, difficulty + baby count, player list) ----------
+   Host-authoritative, no dedicated server: the host's own tab runs the exact same simulation solo play
+   always has (need decay, baby AI, hazards, cry-o-meter, timer), just generalized over N babies, and
+   streams a throttled snapshot to Firebase. Every other client only ever reads that snapshot — they
+   never simulate the shared world themselves. See resilient-spinning-liskov.md for the full design. */
+const Net = (function(){
+  let roomRef=null, actionsRef=null, playersRef=null, babiesRef=null, worldRef=null, metaRef=null;
+  function code5(){ const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<5;i++) s+=A[(Math.random()*A.length)|0]; return s; }
+  function attach(c){
+    roomCode = c; roomRef = fbDb.ref('rooms/'+c);
+    actionsRef=roomRef.child('actions'); playersRef=roomRef.child('players');
+    babiesRef=roomRef.child('babies'); worldRef=roomRef.child('world'); metaRef=roomRef.child('meta');
+  }
+  return {
+    available(){ return !!fbDb; },
+    async hostCreate(name){
+      attach(code5());
+      isHost = true; myName = name;
+      await metaRef.set({hostId:myId, state:'lobby', difficulty:'veteran', babyCount:1, createdAt:Date.now()});
+      metaRef.onDisconnect().update({state:'ended', reason:'hostleft'});
+      await playersRef.child(myId).set({name, colorIdx:0, poo:0, x:0, z:0, rotY:0, carrying:null, holdingBaby:-1});
+      playersRef.child(myId).onDisconnect().remove();
+      playersRef.on('value', snap=>renderLobbyPlayers(snap.val()||{}));
+      metaRef.on('value', snap=>{ const m=snap.val(); if(m) onMetaChange(m); });
+      return roomCode;
+    },
+    async join(code, name){
+      attach(code.toUpperCase());
+      const snap = await metaRef.get();
+      if(!snap.exists()) { roomCode=null; throw new Error('no-room'); }
+      isHost = false; myName = name;
+      const existing = await playersRef.get();
+      const n = existing.exists() ? Object.keys(existing.val()).length : 0;
+      await playersRef.child(myId).set({name, colorIdx:n%PLAYER_COLORS.length, poo:0, x:0, z:0, rotY:0, carrying:null, holdingBaby:-1});
+      playersRef.child(myId).onDisconnect().remove();
+      playersRef.on('value', s=>renderLobbyPlayers(s.val()||{}));
+      metaRef.on('value', s=>{ const m=s.val(); if(m) onMetaChange(m); });
+      return true;
+    },
+    setDifficulty(d){ if(isHost && metaRef) metaRef.update({difficulty:d}); },
+    setBabyCount(n){ if(isHost && metaRef) metaRef.update({babyCount:n}); },
+    startGameFromHost(){ if(isHost && metaRef) metaRef.update({state:'playing', seed:Math.floor(Math.random()*1e9)}); },
+    sendAction(type, arg){
+      if(!actionsRef) return;
+      actionsRef.push({playerId:myId, type, arg: arg!==undefined?arg:null,
+        x:dad.position.x, z:dad.position.z, rotY:dad.rotation.y, ts:Date.now()});
+    },
+    listenActions(){                                    // host-only: replay a guest's queued action through the
+      actionsRef.on('child_added', snap=>{               // exact same functions the host's own input calls
+        const a = snap.val(); snap.ref.remove();
+        if(!a || a.playerId===myId) return;
+        const p = players[a.playerId]; if(!p) return;
+        p.x=a.x; p.z=a.z; p.rotY=a.rotY;
+        actingPlayerId = a.playerId;
+        if(a.type==='interact') interact();
+        else if(a.type==='hold') toggleHoldBaby();
+        else if(a.type==='drop') discardCarrying();
+        else if(a.type==='buy') buyUpgrade(a.arg);
+        actingPlayerId = myId;
+      });
+    },
+    listenWorldAsGuest(){                                // non-host: mirror the host's authoritative snapshot
+      babiesRef.on('value', snap=>applyRemoteBabies(snap.val()));
+      worldRef.on('value', snap=>applyRemoteWorld(snap.val()));
+    },
+    listenPlayers(){                                     // host and guest alike: spawn/update/remove avatars,
+      playersRef.on('child_added', snap=>applyPlayerSnapshot(snap.key, snap.val())); // and (guest-only) my own
+      playersRef.on('child_changed', snap=>applyPlayerSnapshot(snap.key, snap.val())); // host-owned outcome fields
+      playersRef.on('child_removed', snap=>{ if(snap.key!==myId) removeRemotePlayer(snap.key); });
+    },
+    pushMyTransform(){                                    // every client owns writing its own position/heading
+      if(!playersRef) return;
+      const P = me();
+      const payload = {x:dad.position.x, z:dad.position.z, rotY:dad.rotation.y, name:myName, colorIdx:P.colorIdx};
+      if(isHost) Object.assign(payload, {carrying:P.carrying, holdingBaby:P.holdingBaby, poo:P.poo, lvl:P.lvl});
+      playersRef.child(myId).update(payload);
+    },
+    pushWorldSnapshot(){                                  // host-only: the shared world, plus every player's
+      if(!isHost || !babiesRef) return;                   // "outcome" fields (carrying/holdingBaby/poo/lvl)
+      const bSnap = {};
+      babies.forEach((b,i)=>{ bSnap[i] = {x:b.mesh.position.x, z:b.mesh.position.z,
+        need:b.need, mood:b.moodLast, fallen:b.fallen, burned:b.burned, choking:b.choking, penned:b.penned, heldBy:b.heldBy}; });
+      babiesRef.set(bSnap);
+      worldRef.set({cry:S.cry, cartoonsOn:S.cartoonsOn, notification:S.notification,
+        elapsed:S.elapsed, timeLeft: isFinite(S.timeLeft)?S.timeLeft:-1, score:S.score,
+        messes:S.messes.map(m=>({x:m.x,z:m.z}))});
+      for(const id in players){ if(id===myId) continue;
+        playersRef.child(id).update({carrying:players[id].carrying, holdingBaby:players[id].holdingBaby,
+          poo:players[id].poo, lvl:players[id].lvl}); }
+    },
+    setGameOver(reason){ if(isHost && metaRef) metaRef.update({state:'ended', reason}); },
+    leaveRoom(){
+      if(playersRef){ playersRef.child(myId).remove(); playersRef.off(); }
+      if(metaRef){ metaRef.onDisconnect().cancel(); metaRef.off(); }
+      if(babiesRef) babiesRef.off();
+      if(worldRef) worldRef.off();
+      if(actionsRef) actionsRef.off();
+      for(const id in players){ if(id!==myId) removeRemotePlayer(id); }
+      roomRef=actionsRef=playersRef=babiesRef=worldRef=metaRef=null;
+      roomCode=null; isHost=true;
+    },
+  };
+})();
+function onMetaChange(m){
+  if(m.state==='playing' && S.mode!=='play') beginMultiplayerRound(m);
+  else if(m.state==='ended') handleRemoteGameOver(m);
+  else if(m.state==='lobby') updateLobbyHostInfo(m);
+}
+function mpNameValue(){ return (document.getElementById('mpNameInput').value||'').trim().slice(0,16) || 'Dad'; }
+document.getElementById('menuMultiplayerBtn').addEventListener('click', ()=>showMenuScreen('mpChoiceScreen'));
+document.getElementById('mpChoiceBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
+document.getElementById('mpJoinBackBtn').addEventListener('click', ()=>showMenuScreen('mpChoiceScreen'));
+document.getElementById('mpLeaveBtn').addEventListener('click', ()=>{ Net.leaveRoom(); showMenuScreen('mainMenu'); });
+document.getElementById('mpHostBtn').addEventListener('click', async ()=>{
+  if(!Net.available()){ alert("Multiplayer is unavailable right now — couldn't reach the server."); return; }
+  myName = mpNameValue();
+  try{ const code = await Net.hostCreate(myName); enterLobbyUI(true, code); }
+  catch(e){ alert('Could not create a room. Please try again.'); console.error(e); }
+});
+document.getElementById('mpJoinBtn').addEventListener('click', ()=>showMenuScreen('mpJoinScreen'));
+document.getElementById('mpJoinConfirmBtn').addEventListener('click', async ()=>{
+  const errEl = document.getElementById('mpJoinError'); errEl.textContent='';
+  if(!Net.available()){ errEl.textContent='Multiplayer is unavailable right now.'; return; }
+  const code = (document.getElementById('mpCodeInput').value||'').trim().toUpperCase();
+  if(code.length<4){ errEl.textContent='Enter a valid room code.'; return; }
+  myName = mpNameValue();
+  try{ await Net.join(code, myName); enterLobbyUI(false, code); }
+  catch(e){ errEl.textContent="Couldn't find that room."; }
+});
+function enterLobbyUI(hosting, code){
+  document.getElementById('mpRoomCodeLabel').textContent = code;
+  document.getElementById('mpHostControls').classList.toggle('hidden', !hosting);
+  document.getElementById('mpNonHostNote').classList.toggle('hidden', hosting);
+  document.getElementById('mpStartBtn').classList.toggle('hidden', !hosting);
+  document.getElementById('mpWaitNote').classList.toggle('hidden', hosting);
+  showMenuScreen('mpLobbyScreen');
+}
+document.querySelectorAll('#mpDiffPicker .diffOpt').forEach(opt=>{
+  opt.addEventListener('click', ()=>{
+    if(!isHost) return;
+    document.querySelectorAll('#mpDiffPicker .diffOpt').forEach(o=>o.classList.toggle('selected', o===opt));
+    Net.setDifficulty(opt.dataset.diff); Audio.buy();
+  });
+});
+document.querySelectorAll('#mpBabyCountPicker .diffOpt').forEach(opt=>{
+  opt.addEventListener('click', ()=>{
+    if(!isHost) return;
+    document.querySelectorAll('#mpBabyCountPicker .diffOpt').forEach(o=>o.classList.toggle('selected', o===opt));
+    Net.setBabyCount(+opt.dataset.babies); Audio.buy();
+  });
+});
+document.getElementById('mpStartBtn').addEventListener('click', ()=>Net.startGameFromHost());
+function renderLobbyPlayers(snap){
+  const ids = Object.keys(snap);
+  document.getElementById('mpPlayerList').innerHTML = ids.map(id=>{
+    const p = snap[id], colors = PLAYER_COLORS[(p.colorIdx||0)%PLAYER_COLORS.length];
+    return `<div><span style="display:inline-block;width:10px;height:10px;border-radius:50%;`+
+           `background:${colors.body};margin-right:8px"></span>${p.name||'Player'}${id===myId?' (you)':''}</div>`;
+  }).join('') || '<div style="opacity:.6">Waiting for players…</div>';
+}
+function updateLobbyHostInfo(meta){
+  if(isHost || S.mode==='play') return;                 // host's own clicks already reflect locally
+  if(meta.difficulty) document.querySelectorAll('#mpDiffPicker .diffOpt').forEach(o=>o.classList.toggle('selected', o.dataset.diff===meta.difficulty));
+  if(meta.babyCount) document.querySelectorAll('#mpBabyCountPicker .diffOpt').forEach(o=>o.classList.toggle('selected', +o.dataset.babies===meta.babyCount));
+}
+function beginMultiplayerRound(meta){
+  difficulty = meta.difficulty || 'veteran';
+  resetState();
+  S.babyCount = meta.babyCount || 1;
+  players[myId].name = myName;
+  buildHouse(meta.seed);
+  spawnBabies();
+  enterHouseCommon();
+  document.getElementById('tutorialPanel').classList.add('hidden');
+  if(isHost) Net.listenActions(); else Net.listenWorldAsGuest();
+  Net.listenPlayers();
+  S.mode='play';
+}
+function handleRemoteGameOver(meta){
+  if(meta.reason==='hostleft'){
+    const wasPlaying = S.mode==='play';
+    Net.leaveRoom();
+    if(wasPlaying){
+      S.mode='over'; closeShopFn();
+      document.getElementById('goIcon').textContent='📡💔';
+      document.getElementById('goTitle').textContent='Host Disconnected';
+      document.getElementById('goBody').textContent="The host's connection dropped, so the game had to end. No harm done — try hosting your own room!";
+      document.getElementById('goStats').textContent='';
+      document.getElementById('gameover').classList.remove('hidden');
+    } else {
+      document.getElementById('intro').classList.remove('hidden');
+      showMenuScreen('mainMenu');
+    }
+    return;
+  }
+  if(S.mode!=='play') return;
+  endGame(meta.reason||'lose');
+}
+/* ---------- Players: remote avatars (spawned/removed as players join/leave, lerped toward synced
+   transforms) plus — for a guest only — mirroring my own host-owned outcome fields back down to me ---------- */
+function applyPlayerSnapshot(id, data){
+  if(!data) return;
+  if(id===myId){
+    if(isHost) return;                                  // host's own record is already authoritative locally
+    const P = me();
+    const prevCarrying = P.carrying;
+    if(data.carrying!==undefined) P.carrying = data.carrying;
+    if(data.holdingBaby!==undefined) P.holdingBaby = data.holdingBaby;
+    if(data.poo!==undefined) P.poo = data.poo;
+    if(data.lvl) P.lvl = data.lvl;
+    if(P.carrying !== prevCarrying) setCarrySprite(P.carrying ? CARRY_ICON[P.carrying] : null);
+    if(!shopEl.classList.contains('hidden')) refreshShop();
+    return;
+  }
+  let p = players[id];
+  if(!p){
+    p = players[id] = freshPlayer(data.name, data.colorIdx||0);
+    const c = PLAYER_COLORS[(data.colorIdx||0)%PLAYER_COLORS.length];
+    const group = buildDad(c.body, c.leg);
+    const nameSprite = makeSprite(data.name||'Player', {font:36});
+    nameSprite.position.set(0,3.9,0); nameSprite.scale.multiplyScalar(0.8); nameSprite.renderOrder=10;
+    group.add(nameSprite);
+    scene.add(group);
+    p.avatar = {group, nameSprite, carrySprite:null, lastCarrying:null};
+  }
+  p.name=data.name||p.name; p.colorIdx=(data.colorIdx!==undefined?data.colorIdx:p.colorIdx);
+  if(data.x!==undefined) p.x=data.x; if(data.z!==undefined) p.z=data.z; if(data.rotY!==undefined) p.rotY=data.rotY;
+  if(data.carrying!==undefined) p.carrying=data.carrying;
+  if(data.holdingBaby!==undefined) p.holdingBaby=data.holdingBaby;
+  if(data.poo!==undefined) p.poo=data.poo; if(data.lvl) p.lvl=data.lvl;
+  p.connected=true;
+  if(p.avatar.lastCarrying !== p.carrying){
+    if(p.avatar.carrySprite){ p.avatar.group.remove(p.avatar.carrySprite); p.avatar.carrySprite.material.map.dispose(); p.avatar.carrySprite.material.dispose(); p.avatar.carrySprite=null; }
+    if(p.carrying){ const spr=makeSprite(CARRY_ICON[p.carrying],{bg:null,font:64}); spr.position.set(0,3.5,0);
+      spr.scale.set(1.3,1.3,1.3); spr.renderOrder=10; p.avatar.group.add(spr); p.avatar.carrySprite=spr; }
+    p.avatar.lastCarrying = p.carrying;
+  }
+}
+function removeRemotePlayer(id){
+  const p = players[id]; if(!p) return;
+  if(p.avatar){ scene.remove(p.avatar.group); disposeGroup(p.avatar.group); }
+  delete players[id];
+}
+function updateRemoteAvatars(dt){
+  for(const id in players){
+    if(id===myId) continue;
+    const p = players[id]; if(!p.avatar) continue;
+    const g = p.avatar.group, k = Math.min(1, dt*8);
+    g.position.x += (p.x-g.position.x)*k; g.position.z += (p.z-g.position.z)*k;
+    let dRot = Math.atan2(Math.sin(p.rotY-g.rotation.y), Math.cos(p.rotY-g.rotation.y));
+    g.rotation.y += dRot*k;
+    const armAngle = p.holdingBaby>=0 ? -1.15 : 0;
+    g.userData.arms[0].rotation.x += (armAngle-g.userData.arms[0].rotation.x)*k;
+    g.userData.arms[1].rotation.x += (armAngle-g.userData.arms[1].rotation.x)*k;
+  }
+}
+/* ---------- Guest-side mirroring: apply the host's authoritative babies/world snapshot ---------- */
+function applyRemoteBabies(snap){
+  if(!snap) return;
+  Object.keys(snap).forEach(i=>{
+    const d = snap[i], b = babies[i]; if(!b) return;
+    b.mesh.position.x += (d.x-b.mesh.position.x)*0.35; b.mesh.position.z += (d.z-b.mesh.position.z)*0.35;
+    b.need = d.need || b.need; b.fallen=!!d.fallen; b.burned=!!d.burned; b.choking=!!d.choking; b.penned=!!d.penned; b.heldBy=d.heldBy||null;
+    setMood(b, d.mood||'🙂');
+    if(b.heldBy){ b.mesh.scale.set(0.9,0.9,0.9); b.mesh.userData.mat.visible=false; }
+    else { b.mesh.scale.set(1,1,1); b.mesh.userData.mat.visible=true; }
+    poseBabySit(b.mesh.userData);                        // simplified pose for remote-observed babies (v1)
+  });
+}
+function applyRemoteWorld(w){
+  if(!w) return;
+  S.cry=w.cry||0; S.cartoonsOn=!!w.cartoonsOn; S.notification=!!w.notification;
+  S.elapsed=w.elapsed||0; S.timeLeft = w.timeLeft<0 ? Infinity : w.timeLeft; S.score=w.score||0;
+  const list = w.messes||[];
+  while(S.messes.length>list.length){ const m=S.messes.pop(); if(m.mesh){ houseGroup.remove(m.mesh); disposeGroup(m.mesh); } }
+  while(S.messes.length<list.length){ const mesh=messBlob(); houseGroup.add(mesh); S.messes.push({x:0,z:0,mesh,playerInside:false}); }
+  list.forEach((pt,i)=>{ S.messes[i].x=pt.x; S.messes[i].z=pt.z; S.messes[i].mesh.position.set(pt.x,0.01,pt.z); });
+}
 
 /* ---------- Tutorial: a guided, no-pressure walkthrough of every mechanic, at the player's own pace ---------- */
 let tutorialStepIdx = 0;
@@ -1967,7 +2502,7 @@ const TUTORIAL_STEPS = [
     auto:()=>tutorialProgress.milk },
   { text:"👶 <b>Diapers:</b> I've made the diaper nice and dirty for practice. Grab a diaper at the "+
          "changing table and bring it to the baby to change them — this is how you earn 💩 poo.",
-    onEnter:()=>{ S.need.diaper = 20; },
+    onEnter:()=>{ babies[0].need.diaper = 20; },
     auto:()=>tutorialProgress.diaper },
   { text:"📺 <b>Cartoons:</b> Walk up to the TV and press <kbd>E</kbd> to turn it on — it keeps the baby entertained.",
     auto:()=>tutorialProgress.cartoon },
@@ -1990,7 +2525,7 @@ const TUTORIAL_STEPS = [
   { text:"🚨 <b>Choking:</b> An unattended baby on the floor can occasionally swallow something small. I've "+
          "triggered that now too — walk over and press <kbd>E</kbd> to clear the airway. No rush here, but "+
          "in a real run you'd need to hurry!",
-    onEnter:()=>{ if(S.holdingBaby) putBabyDown(); S.babyChoking=true; },
+    onEnter:()=>{ if(me().holdingBaby>=0) putBabyDown(); babies[0].choking=true; babies[0].chokeDeadline=9999; },
     auto:()=>tutorialProgress.choke },
   { text:"🤕 <b>Back pain:</b> Randomly, Dad's back can seize up and freeze him in place for a few seconds. "+
          "Buy 💊 Pain Medication at the workbench to shorten it. (Not triggering it right now — just "+
@@ -2000,13 +2535,22 @@ const TUTORIAL_STEPS = [
          "a real game!" },
   { text:"💩 <b>Upgrades:</b> Diaper changes bank 💩 poo. I've topped up your balance — press <kbd>U</kbd> "+
          "or visit the 🛠️ workbench and buy an upgrade.",
-    onEnter:()=>{ S.poo = Math.max(S.poo, 20); },
+    onEnter:()=>{ me().poo = Math.max(me().poo, 20); },
     auto:()=>tutorialProgress.bought },
-  { text:"😭 <b>Winning & losing:</b> In a real run, if any need hits 0 the baby cries and the 😭 cry-o-meter "+
-         "climbs — filling it means game over. Survive until the timer runs out (or forever in Endless Mode) "+
-         "to win. That's everything — you're ready to babysit for real!" },
+  { text:"🏆 <b>Winning & losing:</b> Unlike here, a real run keeps score. Let any need run out and the baby "+
+         "starts crying — the longer it cries, the higher the 😭 cry-o-meter climbs. If that meter ever "+
+         "fills up completely, Mom gets a panicked phone call and it's game over. Keep it under control until "+
+         "the clock runs out (or, in Endless Mode, for as long as you can) and you win instead.<br><br>"+
+         "That's the whole job! Press <b>Start Playing</b> below to pick a difficulty and begin your first "+
+         "real shift." },
 ];
 function tutorialStepEnter(i){
+  // clear out any demo-only state a skipped step left dangling (e.g. clicking Next past the work
+  // message or choking demo without actually resolving it) so leaving a step always leaves it clean
+  S.notification = false;
+  if(babies[0]){ babies[0].choking = false; babies[0].chokeDeadline = 0; }
+  if(S.messes.length) S.messes.slice().forEach(m=>{ houseGroup.remove(m.mesh); disposeGroup(m.mesh); });
+  S.messes.length = 0;
   tutorialStepIdx = i;
   for(const k in tutorialProgress) delete tutorialProgress[k];
   const step = TUTORIAL_STEPS[i];
@@ -2057,35 +2601,118 @@ function collide(px, pz, radius){
 const clock = new THREE.Clock();
 let walkPhase = 0;
 
-// baby crawling AI
-let babyTarget = new THREE.Vector3(-13,0,1);
-let babyRetime = 0, babyPlay = 0, babyPlayingToy = null, babyTargetIsOven = false;
-let babyMode = 'crawl', babyPoseT = 0, fallTimer = 0;       // 'crawl' (safe) or 'walk' (risks a fall)
-function pickBabyTarget(){
-  babyRetime = 3 + Math.random()*3;
-  babyPlay = 0; babyPlayingToy = null; babyTargetIsOven = false;
+// baby crawling AI — one independent copy of this state lives on each babies[] record (b.target/b.mode/...)
+function holderTransform(pid){                            // wherever the given player currently is (local or synced)
+  if(pid===myId) return {x:dad.position.x, z:dad.position.z, rotY:dad.rotation.y};
+  const p = players[pid]; return p ? {x:p.x, z:p.z, rotY:p.rotY} : {x:0,z:0,rotY:0};
+}
+function babyHappiness(b){ let s=0; NEEDS.forEach(k=>s+=b.need[k]); return s/NEEDS.length; }
+function pickBabyTarget(b){
+  b.retime = 3 + Math.random()*3;
+  b.play = 0; b.playingToy = null; b.targetIsOven = false;
   const D = curDiff();
-  babyMode = Math.random() < D.walkChance ? 'walk' : 'crawl'; // crawling is the safe default; walking is occasional and riskier
-  if(babyMode==='walk') fallTimer = rand(D.fallMin, D.fallMax);
+  b.mode = Math.random() < D.walkChance ? 'walk' : 'crawl'; // crawling is the safe default; walking is occasional and riskier
+  if(b.mode==='walk') b.fallTimer = rand(D.fallMin, D.fallMax);
   if(Math.random() < D.ovenChance){                         // rare: baby toddles straight for the hot oven — dangerous!
-    babyTarget.copy(ovenPos); babyTargetIsOven = true;
+    b.target.copy(ovenPos); b.targetIsOven = true;
   } else if(toys.length && Math.random() < 0.55){           // head to a toy and play
     const ty = toys[(Math.random()*toys.length)|0];
-    babyTarget.set(ty.x + (Math.random()-0.5)*0.8, 0, ty.z + (Math.random()-0.5)*0.8);
-    babyPlayingToy = ty;
+    b.target.set(ty.x + (Math.random()-0.5)*0.8, 0, ty.z + (Math.random()-0.5)*0.8);
+    b.playingToy = ty;
   } else {                                                  // wander nearby
-    babyTarget.set(baby.position.x + (Math.random()-0.5)*11, 0, baby.position.z + (Math.random()-0.5)*11);
+    b.target.set(b.mesh.position.x + (Math.random()-0.5)*11, 0, b.mesh.position.z + (Math.random()-0.5)*11);
   }
-  babyTarget.x = Math.max(houseBounds.X0+1.5, Math.min(houseBounds.X1-1.5, babyTarget.x));
-  babyTarget.z = Math.max(houseBounds.Z0+1.5, Math.min(houseBounds.Z1-1.5, babyTarget.z));
+  b.target.x = Math.max(houseBounds.X0+1.5, Math.min(houseBounds.X1-1.5, b.target.x));
+  b.target.z = Math.max(houseBounds.Z0+1.5, Math.min(houseBounds.Z1-1.5, b.target.z));
+}
+// host-authoritative: full sim for one baby (movement/hazards/mood); returns {crying,playing,empties} for
+// the shared cry-o-meter aggregation. Non-host clients never call this — they just render synced state.
+function updateBabyAI(b, dt, t){
+  let playing = false;
+  if(b.heldBy){
+    const h = holderTransform(b.heldBy);
+    const bob = Math.abs(Math.sin(walkPhase))*0.05;
+    b.mesh.position.set(h.x + Math.sin(h.rotY)*0.55, 1.15+bob, h.z + Math.cos(h.rotY)*0.55);
+    b.mesh.rotation.y = h.rotY;
+    poseBabySit(b.mesh.userData);
+  } else if(b.fallen || b.burned){                                          // hurt — frozen & crying till picked up
+    b.mesh.position.y *= 0.9; poseBabySit(b.mesh.userData);
+  } else if(b.penned){                                                      // safe in the playpen — counts down to an escape
+    b.mesh.position.y *= 0.9; poseBabySit(b.mesh.userData);
+    b.penTimer -= dt;
+    if(b.penTimer <= 0){ b.penned=false; S.penEscapedTimer=2.5; Audio.error(); pickBabyTarget(b); b.mode='crawl'; }
+  } else if(b.choking){                                                     // frozen, choking — needs its airway cleared
+    b.mesh.position.y *= 0.9; poseBabySit(b.mesh.userData);
+  } else {
+    const toT = new THREE.Vector3(b.target.x-b.mesh.position.x, 0, b.target.z-b.mesh.position.z);
+    const distT = toT.length();
+    b.retime -= dt;
+    if(b.play<=0 && (b.retime<=0 || distT<0.6)){
+      if(b.playingToy && distT<1.6){ b.play = 2 + Math.random()*2; }        // arrived at a toy
+      else pickBabyTarget(b);
+    }
+    if(b.play>0){
+      b.play -= dt; playing = true;
+      S.joy = Math.min(1, S.joy + 0.5*dt);
+      b.mesh.position.y = 0.15 + Math.abs(Math.sin(t*10))*0.12;             // happy bounce
+      b.mesh.rotation.y += dt*2.5;
+      poseBabySit(b.mesh.userData);
+      if(b.playingToy){                                                     // baby scoots the toy around while playing
+        const ty = b.playingToy;
+        if(ty.driftAngle===undefined) ty.driftAngle = Math.random()*Math.PI*2;
+        ty.driftAngle += (Math.random()-0.5)*1.4*dt;
+        ty.x = Math.max(houseBounds.X0+1, Math.min(houseBounds.X1-1, ty.x + Math.cos(ty.driftAngle)*0.55*dt));
+        ty.z = Math.max(houseBounds.Z0+1, Math.min(houseBounds.Z1-1, ty.z + Math.sin(ty.driftAngle)*0.55*dt));
+        ty.mesh.position.x = ty.x; ty.mesh.position.z = ty.z;
+      }
+      if(b.play<=0) pickBabyTarget(b);
+    } else if(distT>0.5){
+      toT.normalize();
+      const spd = b.mode==='walk' ? 2.2 : 1.6;
+      let bx = b.mesh.position.x + toT.x*spd*dt, bz = b.mesh.position.z + toT.z*spd*dt;
+      [bx,bz] = collide(bx,bz,0.5);
+      b.mesh.position.x = bx; b.mesh.position.z = bz;
+      b.mesh.rotation.y = Math.atan2(toT.x, toT.z);
+      if(b.targetIsOven && Math.hypot(bx-ovenPos.x, bz-ovenPos.z) < 1.6){    // got close enough to touch it — ouch
+        b.burned = true; b.targetIsOven = false; Audio.cry();
+      }
+      b.poseT += dt*(b.mode==='walk'?9:7);
+      if(b.mode==='walk'){
+        poseBabyStand(b.mesh.userData, b.poseT);
+        b.mesh.position.y = Math.abs(Math.sin(b.poseT))*0.06;
+        b.fallTimer -= dt;                                                  // walking is risky — it might trip
+        if(b.fallTimer<=0){ b.fallen=true; Audio.cry(); }
+      } else {
+        poseBabyCrawl(b.mesh.userData, b.poseT);
+        b.mesh.position.y = Math.abs(Math.sin(b.poseT))*0.04;               // crawl bob
+      }
+    } else { b.mesh.position.y *= 0.7; }
+  }
+  // mood + cry wobble + breathing — mirrors the original single-baby logic, per baby
+  const bHp = babyHappiness(b);
+  const bEmpties = NEEDS.filter(k=>b.need[k]<=0.5).length;
+  const bCrying = bEmpties>0 || b.fallen || b.burned;
+  setMood(b, b.choking ? '😵' : bCrying && !b.heldBy ? '😭' : b.heldBy ? '🥰' : playing ? '🥳'
+    : bHp>70 ? '😄' : bHp>40 ? '🙂' : '😟');
+  if(bCrying && !b.heldBy){
+    b.cryTimer -= dt; if(b.cryTimer<=0){ Audio.cry(); b.cryTimer=1.1; }
+    b.mesh.userData.body.position.x = Math.sin(t*30)*0.06; b.mesh.userData.head.position.x = Math.sin(t*30)*0.06;
+  } else {
+    b.cryTimer = 0; b.mesh.userData.body.position.x *= 0.8; b.mesh.userData.head.position.x *= 0.8;
+  }
+  b.mesh.userData.body.scale.y = 0.8 + Math.sin(t*2)*0.02;
+  return {crying:bCrying, playing, empties:bEmpties};
 }
 
-// fade walls that sit between the camera and the dad/baby so they never hide the action
+// fade walls that sit between the camera and any dad/baby so they never hide the action
 function updateWallFade(dt){
   const k = Math.min(1, dt*10);
+  const pts = [dad.position];
+  babies.forEach(b=>{ if(b.mesh) pts.push(b.mesh.position); });
+  for(const id in players){ if(id!==myId && players[id].avatar) pts.push(players[id].avatar.group.position); }
   for(const m of wallMeshes){
     let target = 1;
-    for(const p of [dad.position, baby.position]){
+    for(const p of pts){
       const front = (m.position.x - p.x) + (m.position.z - p.z);   // >0: wall is on the camera side of the character
       const horiz = Math.hypot(m.position.x - p.x, m.position.z - p.z);
       if(front > 0.5 && horiz < 6){ target = Math.min(target, 0.16 + 0.5*(horiz/6)); }
@@ -2093,19 +2720,21 @@ function updateWallFade(dt){
     m.material.opacity += (target - m.material.opacity) * k;
   }
 }
+let netSyncTimer = 0;
 function tick(){
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
 
   // camera gentle sway idle only? keep static. update actors.
   if(S.mode==='play' && !S.paused){
-    // ---- dad movement ----
+    const P = me();
+    // ---- dad movement (always local — every client only ever drives its own avatar) ----
     const dir = new THREE.Vector3();
     if(keys['w']||keys['arrowup']) dir.add(FWD);
     if(keys['s']||keys['arrowdown']) dir.sub(FWD);
     if(keys['d']||keys['arrowright']) dir.add(RIGHT);
     if(keys['a']||keys['arrowleft']) dir.sub(RIGHT);
-    const crippled = S.backPainTimer>0;
+    const crippled = P.backPainTimer>0;
     const moving = dir.lengthSq()>0 && !crippled;
     if(moving){
       dir.normalize();
@@ -2119,231 +2748,173 @@ function tick(){
     const sw = Math.sin(walkPhase)*0.5*(moving?1:0);
     dad.userData.legL.rotation.x = sw; dad.userData.legR.rotation.x = -sw;
     dad.position.y = Math.abs(Math.sin(walkPhase))*0.06*(moving?1:0);
-    if(S.holdingBaby){ dad.userData.arms[0].rotation.x = -1.15; dad.userData.arms[1].rotation.x = -1.15; }
+    if(P.holdingBaby>=0){ dad.userData.arms[0].rotation.x = -1.15; dad.userData.arms[1].rotation.x = -1.15; }
     else { dad.userData.arms[0].rotation.x = -sw; dad.userData.arms[1].rotation.x = sw; }
 
-    // ---- baby: carried, fallen, or crawling/walking & playing ----
-    let playing = false;
-    if(S.holdingBaby){
-      baby.position.x = dad.position.x + Math.sin(dad.rotation.y)*0.55;
-      baby.position.z = dad.position.z + Math.cos(dad.rotation.y)*0.55;
-      baby.position.y = 1.15 + Math.abs(Math.sin(walkPhase))*0.05;
-      baby.rotation.y = dad.rotation.y;
-      poseBabySit(baby.userData);
-    } else if(S.babyFallen || S.babyBurned){                               // hurt — frozen & crying till picked up
-      baby.position.y *= 0.9;
-      poseBabySit(baby.userData);
-    } else if(S.babyPenned){                                                // safe in the playpen — counts down to an escape
-      baby.position.y *= 0.9;
-      poseBabySit(baby.userData);
-      S.penTimer -= dt;
-      if(S.penTimer <= 0){ S.babyPenned=false; S.penEscapedTimer=2.5; Audio.error(); pickBabyTarget(); babyMode='crawl'; }
-    } else if(S.babyChoking){                                               // frozen, choking — needs its airway cleared
-      baby.position.y *= 0.9;
-      poseBabySit(baby.userData);
-    } else {
-      const toT = new THREE.Vector3(babyTarget.x-baby.position.x, 0, babyTarget.z-baby.position.z);
-      const distT = toT.length();
-      babyRetime -= dt;
-      if(babyPlay<=0 && (babyRetime<=0 || distT<0.6)){
-        if(babyPlayingToy && distT<1.6){ babyPlay = 2 + Math.random()*2; }   // arrived at a toy
-        else pickBabyTarget();
-      }
-      if(babyPlay>0){
-        babyPlay -= dt; playing = true;
-        S.joy = Math.min(1, S.joy + 0.5*dt);
-        baby.position.y = 0.15 + Math.abs(Math.sin(t*10))*0.12;              // happy bounce
-        baby.rotation.y += dt*2.5;
-        poseBabySit(baby.userData);
-        if(babyPlayingToy){                                                  // baby scoots the toy around while playing
-          const ty = babyPlayingToy;
-          if(ty.driftAngle===undefined) ty.driftAngle = Math.random()*Math.PI*2;
-          ty.driftAngle += (Math.random()-0.5)*1.4*dt;
-          ty.x = Math.max(houseBounds.X0+1, Math.min(houseBounds.X1-1, ty.x + Math.cos(ty.driftAngle)*0.55*dt));
-          ty.z = Math.max(houseBounds.Z0+1, Math.min(houseBounds.Z1-1, ty.z + Math.sin(ty.driftAngle)*0.55*dt));
-          ty.mesh.position.x = ty.x; ty.mesh.position.z = ty.z;
-        }
-        if(babyPlay<=0) pickBabyTarget();
-      } else if(distT>0.5){
-        toT.normalize();
-        const spd = babyMode==='walk' ? 2.2 : 1.6;
-        let bx = baby.position.x + toT.x*spd*dt, bz = baby.position.z + toT.z*spd*dt;
-        [bx,bz] = collide(bx,bz,0.5);
-        baby.position.x = bx; baby.position.z = bz;
-        baby.rotation.y = Math.atan2(toT.x, toT.z);
-        if(babyTargetIsOven && Math.hypot(bx-ovenPos.x, bz-ovenPos.z) < 1.6){   // got close enough to touch it — ouch
-          S.babyBurned = true; babyTargetIsOven = false; Audio.cry();
-        }
-        babyPoseT += dt*(babyMode==='walk'?9:7);
-        if(babyMode==='walk'){
-          poseBabyStand(baby.userData, babyPoseT);
-          baby.position.y = Math.abs(Math.sin(babyPoseT))*0.06;
-          fallTimer -= dt;                                                   // walking is risky — it might trip
-          if(fallTimer<=0){ S.babyFallen=true; Audio.cry(); }
-        } else {
-          poseBabyCrawl(baby.userData, babyPoseT);
-          baby.position.y = Math.abs(Math.sin(babyPoseT))*0.04;              // crawl bob
-        }
-      } else { baby.position.y *= 0.7; }
+    // ---- babies: full AI/hazard simulation runs on the host only; guests just render synced state ----
+    if(isHost){
+      let anyPlaying=false, anyCrying=false, empties=0;
+      babies.forEach(b=>{
+        const r = updateBabyAI(b, dt, t);
+        if(r.playing) anyPlaying=true;
+        if(r.crying) anyCrying=true;
+        empties += r.empties;
+      });
+      toys.forEach(ty=>{ const active = babies.find(b=>b.playingToy===ty && b.play>0);
+        ty.mesh.position.y = ty.baseY + (active ? Math.abs(Math.sin(t*10))*0.15 : 0); });
+      S.joy = Math.max(0, S.joy - 0.06*dt);
+      if(S.penEscapedTimer>0) S.penEscapedTimer = Math.max(0, S.penEscapedTimer-dt);
     }
-    toys.forEach(ty=>{ ty.mesh.position.y = ty.baseY + (playing && babyPlayingToy===ty ? Math.abs(Math.sin(t*10))*0.15 : 0); });
-    S.joy = Math.max(0, S.joy - 0.06*dt);
 
-    // ---- arm stamina: drains while holding the baby, recovers while not, forces a put-down at empty ----
-    if(S.holdingBaby){
-      S.holdStamina = Math.max(0, S.holdStamina - dt);
-      if(S.holdStamina<=0){ putBabyDown(); S.armsTiredTimer=2.5; Audio.error(); }
+    // ---- arm stamina: drains while holding a baby, recovers while not, forces a put-down at empty ----
+    // (simulated locally for every client's own player; the actual release always routes through the
+    // host, same as a voluntary put-down, so the shared "who's holding this baby" stays consistent)
+    if(P.holdingBaby>=0){
+      P.holdStamina = Math.max(0, P.holdStamina - dt);
+      if(P.holdStamina<=0){
+        P.armsTiredTimer=2.5; Audio.error();
+        if(isHost){ actingPlayerId=myId; putBabyDown(P); } else { Net.sendAction('hold'); P.holdStamina = holdMax(P)*0.05; }
+      }
     } else {
-      S.holdStamina = Math.min(holdMax(), S.holdStamina + dt*curDiff().holdRecoverMul);
+      P.holdStamina = Math.min(holdMax(P), P.holdStamina + dt*curDiff().holdRecoverMul);
     }
-    if(S.armsTiredTimer>0) S.armsTiredTimer = Math.max(0, S.armsTiredTimer-dt);
-    if(S.penEscapedTimer>0) S.penEscapedTimer = Math.max(0, S.penEscapedTimer-dt);
+    if(P.armsTiredTimer>0) P.armsTiredTimer = Math.max(0, P.armsTiredTimer-dt);
 
     // ---- back pain: random episodes freeze movement for a few seconds; Pain Medication shortens them ----
-    // (skipped entirely in the tutorial — back pain is explained as text, never forced on the player)
+    // (simulated locally per player — purely personal, doesn't touch any shared state; skipped in the tutorial)
     if(!S.tutorial){
-      if(S.backPainTimer>0){
-        S.backPainTimer = Math.max(0, S.backPainTimer-dt);
+      if(P.backPainTimer>0){
+        P.backPainTimer = Math.max(0, P.backPainTimer-dt);
       } else {
-        S.nextBackPain -= dt;
-        if(S.nextBackPain<=0){
+        P.nextBackPain -= dt;
+        if(P.nextBackPain<=0){
           const Dbp = curDiff();
-          S.backPainTimer = Math.max(0.5, Dbp.backPainCrippleBase * Math.pow(0.75, S.lvl.backpain));
-          S.nextBackPain = rand(Dbp.backPainMin, Dbp.backPainMax);
+          P.backPainTimer = Math.max(0.5, Dbp.backPainCrippleBase * Math.pow(0.75, P.lvl.backpain));
+          P.nextBackPain = rand(Dbp.backPainMin, Dbp.backPainMax);
           Audio.error();
         }
       }
     }
 
-    // ---- work notifications: the computer pings now and then; answer within the window or take a cry penalty ----
-    // (in the tutorial the script triggers one directly, with no countdown penalty)
-    if(!S.tutorial){
-      const dNotify = curDiff();
-      if(S.notification){
-        S.notifyDeadline -= dt;
-        if(S.notifyDeadline <= 0){
-          S.notification=false; S.missedNotifyTimer=2.5; S.missedCount++;
-          S.cry = Math.min(100, S.cry + dNotify.notifyPenalty); Audio.error();
-          S.notifyTimer = rand(dNotify.notifyMin, dNotify.notifyMax);
-          if(S.missedCount >= dNotify.fireLimit){ endGame('fired'); }
+    if(isHost){
+      // ---- work notifications: the computer pings now and then; answer within the window or take a cry penalty ----
+      // (in the tutorial the script triggers one directly, with no countdown penalty)
+      if(!S.tutorial){
+        const dNotify = curDiff();
+        if(S.notification){
+          S.notifyDeadline -= dt;
+          if(S.notifyDeadline <= 0){
+            S.notification=false; S.missedNotifyTimer=2.5; S.missedCount++;
+            S.cry = Math.min(100, S.cry + dNotify.notifyPenalty); Audio.error();
+            S.notifyTimer = rand(dNotify.notifyMin, dNotify.notifyMax);
+            if(S.missedCount >= dNotify.fireLimit){ endGame('fired'); }
+          }
+        } else {
+          S.notifyTimer -= dt;
+          if(S.notifyTimer <= 0){
+            S.notification=true; S.notifyDeadline=dNotify.notifyWindow;
+            S.notifyTimer = rand(dNotify.notifyMin, dNotify.notifyMax);   // primed for the one after this
+            Audio.chime();
+          }
         }
+        if(S.missedNotifyTimer>0) S.missedNotifyTimer = Math.max(0, S.missedNotifyTimer-dt);
+      }
+
+      // ---- occasional throw-up: leaves a mess only the mop can clean (any unheld baby might be the culprit) ----
+      if(!S.tutorial){
+        S.vomitTimer -= dt;
+        if(S.vomitTimer <= 0){
+          const candidates = babies.filter(b=>!b.heldBy);
+          if(S.messes.length < 3 && candidates.length){
+            const b = pick(candidates);
+            const mx = Math.max(houseBounds.X0+1, Math.min(houseBounds.X1-1, b.mesh.position.x + rand(-0.5,0.5)));
+            const mz = Math.max(houseBounds.Z0+1, Math.min(houseBounds.Z1-1, b.mesh.position.z + rand(-0.5,0.5)));
+            const mesh = messBlob(); mesh.position.set(mx, 0.01, mz); houseGroup.add(mesh);
+            S.messes.push({x:mx, z:mz, mesh, playerInside:false});
+            Audio.error();
+          }
+          S.vomitTimer = rand(curDiff().vomitMin, curDiff().vomitMax);
+        }
+      }
+
+      // ---- choking hazard: an unattended baby on the floor might swallow something small ----
+      if(!S.tutorial){
+        babies.forEach(b=>{
+          if(!b.heldBy && !b.penned && !b.fallen && !b.burned && !b.choking){
+            b.chokeTimer -= dt;
+            if(b.chokeTimer<=0){
+              const Dck = curDiff();
+              b.choking = true; b.chokeDeadline = Dck.chokeWindow; Audio.cry();
+              b.chokeTimer = rand(Dck.chokeMin, Dck.chokeMax);
+            }
+          }
+          if(b.choking){ b.chokeDeadline -= dt; if(b.chokeDeadline<=0){ endGame('choke'); } }
+        });
+      }
+
+      // ---- needs decay, per baby ----
+      babies.forEach(b=>{
+        NEEDS.forEach(k=>{
+          if(k==='cartoon' && S.cartoonsOn) b.need.cartoon = Math.min(100, b.need.cartoon + 22*dt);
+          else b.need[k] = Math.max(0, b.need[k] - decayRate(k)*dt);
+        });
+      });
+      if(S.cartoonsOn){ S.tvTimer -= dt; if(S.tvTimer<=0) S.cartoonsOn=false; }
+
+      // ---- crying / cry-o-meter (eased by play joy and by cuddling; scaled by difficulty) ----
+      const diffCry = curDiff();
+      const anyCryingUnsoothed = babies.some(b=>{
+        const empty = NEEDS.some(k=>b.need[k]<=0.5);
+        return (empty || b.fallen || b.burned) && !b.heldBy;
+      });
+      const totalEmpties = babies.reduce((s,b)=>s+NEEDS.filter(k=>b.need[k]<=0.5).length, 0);
+      const anyoneHolding = Object.values(players).some(p=>p.holdingBaby>=0);
+      if(totalEmpties>0 || babies.some(b=>b.fallen||b.burned)){
+        let fill = (3.5 + totalEmpties*3) * (1 - 0.4*S.joy) * diffCry.cryFillMul;
+        if(!anyCryingUnsoothed){ fill *= 0.5; S.cry = Math.max(0, S.cry - 3.5*diffCry.cryDrainMul*dt); }
+        S.cry = Math.min(100, S.cry + fill*dt);
       } else {
-        S.notifyTimer -= dt;
-        if(S.notifyTimer <= 0){
-          S.notification=true; S.notifyDeadline=dNotify.notifyWindow;
-          S.notifyTimer = rand(dNotify.notifyMin, dNotify.notifyMax);   // primed for the one after this
-          Audio.chime();
-        }
+        S.cry = Math.max(0, S.cry - (13 + S.joy*8 + (anyoneHolding?6:0))*diffCry.cryDrainMul*dt);
       }
-      if(S.missedNotifyTimer>0) S.missedNotifyTimer = Math.max(0, S.missedNotifyTimer-dt);
-    }
-    computerScreen.material.emissive.set(S.notification ? '#ff5c3d' : '#153a6b');
 
-    // ---- occasional throw-up: leaves a mess only the mop can clean ----
-    // (in the tutorial the script spawns exactly one mess to practice on — no random ones)
-    if(!S.tutorial){
-      S.vomitTimer -= dt;
-      if(S.vomitTimer <= 0){
-        if(S.messes.length < 3 && !S.holdingBaby){
-          const mx = Math.max(houseBounds.X0+1, Math.min(houseBounds.X1-1, baby.position.x + rand(-0.5,0.5)));
-          const mz = Math.max(houseBounds.Z0+1, Math.min(houseBounds.Z1-1, baby.position.z + rand(-0.5,0.5)));
-          const mesh = messBlob(); mesh.position.set(mx, 0.01, mz); houseGroup.add(mesh);
-          S.messes.push({x:mx, z:mz, mesh, playerInside:false});
-          Audio.error();
+      // ---- timer / win / lose ---- (none of this applies during the tutorial — it can't be won or lost)
+      if(!S.tutorial){
+        S.elapsed += dt;
+        if(S.endless){
+          S.score = Math.floor(S.elapsed) + me().poo*3;
+        } else {
+          S.timeLeft -= dt;
+          if(S.timeLeft<=0){ S.timeLeft=0; endGame('win'); }
         }
-        S.vomitTimer = rand(curDiff().vomitMin, curDiff().vomitMax);
+        if(S.cry>=100){ endGame('lose'); }
       }
     }
-    // stepping in a mess: drop whatever you're carrying and slip (walk slower for a few seconds)
+    tvScreen.material.emissive.set(S.cartoonsOn ? '#7fd0ff' : '#101318');           // visual, runs for everyone
+    computerScreen.material.emissive.set(S.notification ? '#ff5c3d' : '#153a6b');   // visual, runs for everyone
+
+    // ---- stepping in a mess: drop whatever you're carrying and slip (walk slower for a few seconds) ----
     S.messes.forEach(m=>{
       const inside = Math.hypot(dad.position.x-m.x, dad.position.z-m.z) < 0.55;
       if(inside && !m.playerInside){
-        if(S.carrying) discardCarrying();
-        S.slowTimer = 5;
-        Audio.error();
+        P.slowTimer = 5; Audio.error();
+        if(P.carrying){ if(isHost){ actingPlayerId=myId; discardCarrying(); } else { Net.sendAction('drop'); } }
       }
       m.playerInside = inside;
-      if(m.mesh.userData.marker) m.mesh.userData.marker.position.y = 0.85 + Math.sin(t*4)*0.08; // bob, catches the eye
+      if(m.mesh && m.mesh.userData.marker) m.mesh.userData.marker.position.y = 0.85 + Math.sin(t*4)*0.08; // bob, catches the eye
     });
-    if(S.slowTimer>0) S.slowTimer = Math.max(0, S.slowTimer-dt);
-
-    // ---- choking hazard: an unattended baby on the floor might swallow something small ----
-    // (in the tutorial the script triggers this directly and it never auto-expires)
-    if(!S.tutorial){
-      if(!S.holdingBaby && !S.babyPenned && !S.babyFallen && !S.babyBurned && !S.babyChoking){
-        S.chokeTimer -= dt;
-        if(S.chokeTimer<=0){
-          const Dck = curDiff();
-          S.babyChoking = true; S.chokeDeadline = Dck.chokeWindow; Audio.cry();
-          S.chokeTimer = rand(Dck.chokeMin, Dck.chokeMax);
-        }
-      }
-      if(S.babyChoking){
-        S.chokeDeadline -= dt;
-        if(S.chokeDeadline<=0){ endGame('choke'); }
-      }
-    }
-
-    // ---- needs decay ----
-    NEEDS.forEach(k=>{
-      if(k==='cartoon' && S.cartoonsOn){
-        S.need.cartoon = Math.min(100, S.need.cartoon + 22*dt);
-        S.tvTimer -= dt; if(S.tvTimer<=0) S.cartoonsOn=false;
-      } else {
-        S.need[k] = Math.max(0, S.need[k] - decayRate(k)*dt);
-      }
-    });
-    tvScreen.material.emissive.set(S.cartoonsOn ? '#7fd0ff' : '#101318');
-
-    // ---- crying / cry-o-meter (eased by play joy and by cuddling; scaled by difficulty) ----
-    const diffCry = curDiff();
-    let empties = 0; NEEDS.forEach(k=>{ if(S.need[k] <= 0.5) empties++; });
-    const crying = empties>0 || S.babyFallen || S.babyBurned;
-    if(crying){
-      let fill = (3.5 + empties*3) * (1 - 0.4*S.joy) * diffCry.cryFillMul;
-      if(S.holdingBaby){ fill *= 0.5; S.cry = Math.max(0, S.cry - 3.5*diffCry.cryDrainMul*dt); } // holding calms a fuss, but many unmet needs still creep up
-      S.cry = Math.min(100, S.cry + fill*dt);
-    } else {
-      S.cry = Math.max(0, S.cry - (13 + S.joy*8 + (S.holdingBaby?6:0))*diffCry.cryDrainMul*dt);
-    }
-
-    // baby cry sound + wobble (only when actually distressed, not while soothed)
-    if(crying && !S.holdingBaby){
-      babyCryTimer -= dt;
-      if(babyCryTimer<=0){ Audio.cry(); babyCryTimer = 1.1; }
-      baby.userData.body.position.x = Math.sin(t*30)*0.06;
-      baby.userData.head.position.x = Math.sin(t*30)*0.06;
-    } else {
-      babyCryTimer = 0;
-      baby.userData.body.position.x *= 0.8;
-      baby.userData.head.position.x *= 0.8;
-    }
-    baby.userData.body.scale.y = 0.8 + Math.sin(t*2)*0.02;
-
-    // ---- mood face ----
-    const hp = happiness();
-    setMood( S.babyChoking ? '😵'
-           : crying && !S.holdingBaby ? '😭'
-           : S.holdingBaby ? '🥰'
-           : playing ? '🥳'
-           : hp>70 ? '😄' : hp>40 ? '🙂' : '😟');
-
-    // ---- timer / win / lose ---- (none of this applies during the tutorial — it can't be won or lost)
-    if(!S.tutorial){
-      S.elapsed += dt;
-      if(S.endless){
-        S.score = Math.floor(S.elapsed) + S.poo*3;
-      } else {
-        S.timeLeft -= dt;
-        if(S.timeLeft<=0){ S.timeLeft=0; endGame('win'); }
-      }
-      if(S.cry>=100){ endGame('lose'); }
-    }
+    if(P.slowTimer>0) P.slowTimer = Math.max(0, P.slowTimer-dt);
 
     // ---- tutorial: auto-advance once the player actually performs the demonstrated action ----
     if(S.tutorial){
       const step = TUTORIAL_STEPS[tutorialStepIdx];
       if(step && step.auto && step.auto()) tutorialAdvance();
+    }
+
+    // ---- multiplayer networking: throttled sync of my own transform + (host-only) the shared world ----
+    if(roomCode){
+      netSyncTimer -= dt;
+      if(netSyncTimer<=0){ netSyncTimer=0.12; Net.pushMyTransform(); if(isHost) Net.pushWorldSnapshot(); }
+      updateRemoteAvatars(dt);
     }
 
     updateHUD();
@@ -2356,14 +2927,17 @@ function tick(){
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
 }
-let babyCryTimer = 0;
 
 /* ---------- HUD update ---------- */
 function updateHUD(){
-  NEEDS.forEach(k=>{
-    const v = S.need[k], b = el.bars[k];
-    b.fill.style.width = v+'%';
-    b.bar.classList.toggle('low', v<=20);
+  const P = me();
+  babies.forEach((b,i)=>{
+    const bars = el.babyBars[i]; if(!bars) return;
+    NEEDS.forEach(k=>{
+      const v = b.need[k];
+      bars[k].fill.style.width = v+'%';
+      bars[k].bar.classList.toggle('low', v<=20);
+    });
   });
   el.cryFill.style.width = S.cry+'%';
   el.cryPct.textContent = Math.round(S.cry)+'%';
@@ -2373,14 +2947,15 @@ function updateHUD(){
                                            : `💻 Work message! Reply within ${Math.ceil(S.notifyDeadline)}s`;
     el.workAlert.classList.add('show');
   } else el.workAlert.classList.remove('show');
-  if(S.babyChoking){
+  const chokingBaby = babies.find(b=>b.choking);
+  if(chokingBaby){
     el.chokeAlert.textContent = S.tutorial ? `🚨 Practice: clear the airway — walk to the baby and press E (no rush)`
-                                            : `🚨 Baby's choking! Clear the airway within ${Math.ceil(S.chokeDeadline)}s!`;
+                                            : `🚨 Baby's choking! Clear the airway within ${Math.ceil(chokingBaby.chokeDeadline)}s!`;
     el.chokeAlert.classList.add('show');
   } else el.chokeAlert.classList.remove('show');
   const hp = happiness();
   el.hap.textContent = hp>70?'😄':hp>40?'🙂':hp>15?'😟':'😢';
-  el.poo.textContent = '💩 '+S.poo;
+  el.poo.textContent = '💩 '+P.poo;
   if(S.tutorial){
     el.time.textContent = '∞';
     el.timeLabel.textContent = 'Practice run';
@@ -2398,45 +2973,46 @@ function updateHUD(){
     el.scoreStat.style.display = 'none';
   }
 
-  // interaction prompt
-  const k = nearestStation();
+  // interaction prompt — always evaluated against MY OWN position/state, targeting the nearest baby to me
+  const k = nearestStationAt(dad.position.x, dad.position.z);
   const mess = nearestMess();
-  const near = !S.holdingBaby && babyDist() < 2.6;
+  const {baby:nb, dist:nbd} = nearestBabyAt(dad.position.x, dad.position.z);
+  const near = P.holdingBaby<0 && nb && nbd < 2.6;
   let msg = '';
-  if(S.babyChoking){
+  if(nb && nb.choking){
     if(S.tutorial){
       msg = near ? `🚨 Practice: clear the airway — <kbd>E</kbd>` : `🚨 Head over to the baby to practice clearing its airway`;
     } else {
-      msg = near ? `🚨 Baby's choking! Clear the airway — <kbd>E</kbd> (${Math.ceil(S.chokeDeadline)}s)`
-                 : `🚨 The baby is choking on something! Get there now! (${Math.ceil(S.chokeDeadline)}s)`;
+      msg = near ? `🚨 Baby's choking! Clear the airway — <kbd>E</kbd> (${Math.ceil(nb.chokeDeadline)}s)`
+                 : `🚨 The baby is choking on something! Get there now! (${Math.ceil(nb.chokeDeadline)}s)`;
     }
-  } else if(S.backPainTimer>0){
-    msg = `🤕 Your back seized up! Can't move (${S.backPainTimer.toFixed(1)}s)`;
+  } else if(P.backPainTimer>0){
+    msg = `🤕 Your back seized up! Can't move (${P.backPainTimer.toFixed(1)}s)`;
   } else if(k==='closet'){
     msg = '🚪 Hide in the closet? Ends the game — <kbd>E</kbd>';
   } else if(k==='frontdoor'){
     msg = '🚪 Walk out the front door? Ends the game — <kbd>E</kbd>';
-  } else if((S.babyFallen || S.babyBurned) && !S.holdingBaby){
-    const hurtMsg = S.babyBurned ? '🔥 The baby got burned on the oven!' : '😢 The baby fell!';
-    const hurtMsgFar = S.babyBurned ? '🔥 The baby got burned and is crying — go comfort them!' : '😢 The baby fell and is crying — go pick them up!';
+  } else if(nb && (nb.fallen || nb.burned) && P.holdingBaby<0){
+    const hurtMsg = nb.burned ? '🔥 The baby got burned on the oven!' : '😢 The baby fell!';
+    const hurtMsgFar = nb.burned ? '🔥 The baby got burned and is crying — go comfort them!' : '😢 The baby fell and is crying — go pick them up!';
     msg = near ? `${hurtMsg} Pick them up — <kbd>Space</kbd>` : hurtMsgFar;
-  } else if(S.holdingBaby){
+  } else if(P.holdingBaby>=0){
     if(k==='cartoon') msg = (S.cartoonsOn?'Cartoons playing':'Turn on cartoons')+' — <kbd>E</kbd> · put baby down <kbd>Space</kbd>';
     else if(k==='shop') msg = 'Open upgrades <kbd>E</kbd> · put baby down <kbd>Space</kbd>';
     else if(k==='playpen') msg = '🔒 Put the baby in the playpen — <kbd>E</kbd> · put baby down <kbd>Space</kbd>';
     else if(k==='computer') msg = S.notification ? '💻 Reply to the work message — <kbd>E</kbd> · put baby down <kbd>Space</kbd>' : 'Hands full! Put the baby down first — <kbd>Space</kbd>';
     else if(k) msg = 'Hands full! Put the baby down first — <kbd>Space</kbd>';
     else msg = 'Cuddling the baby 🥰 — put down with <kbd>Space</kbd>';
-  } else if(S.carrying==='mop'){
+  } else if(P.carrying==='mop'){
     msg = (mess ? '🧹 Clean up the mess — <kbd>E</kbd>' : 'Carrying the mop — find a mess to clean') + ' · <kbd>Q</kbd> drop';
-  } else if(S.carrying){
+  } else if(P.carrying){
     if(near){
-      if(S.carrying==='diaper' && S.need.diaper > DIAPER_CHANGE_MAX) msg = `Diaper's not dirty enough yet (${Math.round(S.need.diaper)}%) · <kbd>Q</kbd> drop`;
-      else msg = (S.carrying==='diaper'?'Change the diaper':'Give the '+S.carrying)+' — <kbd>E</kbd> · <kbd>Q</kbd> drop';
+      if(P.carrying==='diaper' && nb.need.diaper > DIAPER_CHANGE_MAX) msg = `Diaper's not dirty enough yet (${Math.round(nb.need.diaper)}%) · <kbd>Q</kbd> drop`;
+      else msg = (P.carrying==='diaper'?'Change the diaper':'Give the '+P.carrying)+' — <kbd>E</kbd> · <kbd>Q</kbd> drop';
     }
-    else msg = `Bring the ${CARRY_ICON[S.carrying]} to the baby — <kbd>Q</kbd> to drop it`;
+    else msg = `Bring the ${CARRY_ICON[P.carrying]} to the baby — <kbd>Q</kbd> to drop it`;
   } else {
-    const armsTired = S.holdStamina < holdMax()*ARM_RECOVER_MIN_FRAC;
+    const armsTired = P.holdStamina < holdMax(P)*ARM_RECOVER_MIN_FRAC;
     if(near && armsTired) msg = '😩 Arms too tired to pick up the baby — give them a moment';
     else if(near) msg = 'Pick up the baby — <kbd>Space</kbd>';
     else if(k==='shop') msg = 'Open the <kbd>U</kbd>pgrade workbench — <kbd>E</kbd>';
@@ -2444,23 +3020,23 @@ function updateHUD(){
     else if(k==='computer') msg = S.notification ? '💻 Reply to the work message — <kbd>E</kbd>' : '';
     else if(k) msg = `Grab ${NEED_ICON[k]} ${NEED_LABEL[k]||k} — <kbd>E</kbd>`;
     else if(mess) msg = '🤢 Ew, a mess — go grab the 🧹 mop';
-    else if(S.armsTiredTimer>0) msg = '😩 Your arms gave out — the baby slipped down!';
-    else if(S.penEscapedTimer>0) msg = '👶 The baby escaped the playpen!';
+    else if(P.armsTiredTimer>0) msg = '😩 Your arms gave out — the baby slipped down!';
+    else if(S.penEscapedTimer>0) msg = '👶 A baby escaped the playpen!';
     else if(S.missedNotifyTimer>0) msg = '😤 You missed a work message — not great, boss noticed.';
   }
   el.prompt.innerHTML = msg;
   el.prompt.classList.toggle('show', !!msg);
 
   // carry / holding indicator
-  if(S.holdingBaby){
-    const pct = Math.max(0, Math.min(100, S.holdStamina/holdMax()*100));
+  if(P.holdingBaby>=0){
+    const pct = Math.max(0, Math.min(100, P.holdStamina/holdMax(P)*100));
     el.carry.innerHTML = `💪 Carrying: 👶 baby<div class="staminaBar${pct<25?' low':''}"><i style="width:${pct}%"></i></div>`;
     el.carry.classList.add('show');
   }
-  else if(S.carrying){ el.carry.innerHTML = 'Carrying: '+CARRY_ICON[S.carrying]+' '+S.carrying; el.carry.classList.add('show'); }
-  else if(S.backPainTimer>0){ el.carry.innerHTML = '🤕 Back spasm! Frozen in place...'; el.carry.classList.add('show'); }
-  else if(S.slowTimer>0){ el.carry.innerHTML = '🐌 Slipped! Walking slower...'; el.carry.classList.add('show'); }
-  else if(S.babyPenned){ el.carry.innerHTML = `🔒 Baby in playpen: ${Math.ceil(S.penTimer)}s`; el.carry.classList.add('show'); }
+  else if(P.carrying){ el.carry.innerHTML = 'Carrying: '+CARRY_ICON[P.carrying]+' '+P.carrying; el.carry.classList.add('show'); }
+  else if(P.backPainTimer>0){ el.carry.innerHTML = '🤕 Back spasm! Frozen in place...'; el.carry.classList.add('show'); }
+  else if(P.slowTimer>0){ el.carry.innerHTML = '🐌 Slipped! Walking slower...'; el.carry.classList.add('show'); }
+  else if(nb && nb.penned && nbd<2.6){ el.carry.innerHTML = `🔒 Baby in playpen: ${Math.ceil(nb.penTimer)}s`; el.carry.classList.add('show'); }
   else el.carry.classList.remove('show');
 
   if(!shopEl.classList.contains('hidden')) refreshShop();
