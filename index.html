@@ -1838,6 +1838,10 @@ function resetState(){
   const P = players[myId];
   P.holdStamina = holdMaxFor(D, 0);
   P.nextBackPain = rand(D.backPainMin*0.6, D.backPainMax*0.6);
+  // dispose the previous run's baby meshes here — they live directly in `scene` (not under houseGroup,
+  // which buildHouse() already tears down each run), so without this they'd leak as permanent "ghost"
+  // babies: spawnBabies()'s own cleanup loop runs after babies is already reset to [], too late to catch them
+  babies.forEach(b=>{ if(b.mesh){ scene.remove(b.mesh); disposeGroup(b.mesh); } });
   babies = [];                          // (re)populated once buildHouse() has placed a spawn point
 }
 resetState();
