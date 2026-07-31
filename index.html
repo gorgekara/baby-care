@@ -14,7 +14,9 @@
     --cry:#ff5c6b; --poo:#b07a4b; --good:#7ee787; --text:#f4eefc;
   }
   *{box-sizing:border-box}
-  .hidden{display:none}
+  .hidden{display:none !important}   /* must beat scoped rules like .stepnav .btn's display:inline-flex —
+                                         otherwise a higher-specificity selector keeps an element visible
+                                         even after its own hidden class is toggled on */
   html,body{margin:0;height:100%;overflow:hidden;background:linear-gradient(160deg,var(--bg1),var(--bg2));
     font-family:'Trebuchet MS','Segoe UI',system-ui,sans-serif;color:var(--text);user-select:none;-webkit-user-select:none}
   #app{position:fixed;inset:0}
@@ -2660,7 +2662,7 @@ function applyPlayerSnapshot(id, data){
   p.connected=true;
   if(p.avatar.lastCarrying !== p.carrying){
     if(p.avatar.carrySprite){ p.avatar.group.remove(p.avatar.carrySprite); p.avatar.carrySprite.material.map.dispose(); p.avatar.carrySprite.material.dispose(); p.avatar.carrySprite=null; }
-    if(p.carrying){ const spr=makeSprite(CARRY_ICON[p.carrying],{bg:null,font:64}); spr.position.set(0,3.5,0);
+    if(p.carrying && CARRY_ICON[p.carrying]){ const spr=makeSprite(CARRY_ICON[p.carrying],{bg:null,font:64}); spr.position.set(0,3.5,0);
       spr.scale.set(1.3,1.3,1.3); spr.renderOrder=10; p.avatar.group.add(spr); p.avatar.carrySprite=spr; }
     p.avatar.lastCarrying = p.carrying;
   }
@@ -2675,12 +2677,21 @@ function updateRemoteAvatars(dt){
     if(id===myId) continue;
     const p = players[id]; if(!p.avatar) continue;
     const g = p.avatar.group, k = Math.min(1, dt*8);
-    g.position.x += (p.x-g.position.x)*k; g.position.z += (p.z-g.position.z)*k;
+    const dx = p.x-g.position.x, dz = p.z-g.position.z;
+    g.position.x += dx*k; g.position.z += dz*k;
     let dRot = Math.atan2(Math.sin(p.rotY-g.rotation.y), Math.cos(p.rotY-g.rotation.y));
     g.rotation.y += dRot*k;
-    const armAngle = p.holdingBaby>=0 ? -1.15 : 0;
-    g.userData.arms[0].rotation.x += (armAngle-g.userData.arms[0].rotation.x)*k;
-    g.userData.arms[1].rotation.x += (armAngle-g.userData.arms[1].rotation.x)*k;
+    // walking leg/arm swing — we don't have this player's raw key input, only their synced position, so
+    // "are they moving" is derived from how much ground is still being closed toward that position each frame
+    const moving = Math.hypot(dx,dz) > 0.03;
+    if(moving) p.walkPhase = (p.walkPhase||0) + dt*12;
+    const sw = Math.sin(p.walkPhase||0)*0.5*(moving?1:0);
+    g.userData.legL.rotation.x = sw; g.userData.legR.rotation.x = -sw;
+    g.position.y = Math.abs(Math.sin(p.walkPhase||0))*0.06*(moving?1:0);
+    if(p.holdingBaby>=0){
+      g.userData.arms[0].rotation.x += (-1.15-g.userData.arms[0].rotation.x)*k;
+      g.userData.arms[1].rotation.x += (-1.15-g.userData.arms[1].rotation.x)*k;
+    } else { g.userData.arms[0].rotation.x = -sw; g.userData.arms[1].rotation.x = sw; }
   }
 }
 /* ---------- Guest-side mirroring: apply the host's authoritative babies/world snapshot ---------- */
@@ -2700,8 +2711,18 @@ function applyRemoteBabies(snap){
 }
 function updateRemoteBabies(dt){                          // guest-only: continuous per-frame lerp toward the
   const k = Math.min(1, dt*8);                             // host's last-known baby positions, so movement stays
-  babies.forEach(b=>{                                      // smooth between the ~8Hz Firebase snapshots instead
-    if(!b.netTarget) return;                                // of visibly stepping every time one arrives
+  const myHeld = me().holdingBaby;                          // smooth between the ~8Hz Firebase snapshots instead
+  babies.forEach((b,i)=>{                                   // of visibly stepping every time one arrives
+    if(i===myHeld){
+      // I'm the one holding this baby — position it straight from my own (zero-latency) transform, exactly
+      // like the host does for its own held baby. Otherwise it lags twice over: once for my movement to
+      // reach the host, again for the host's resulting baby position to sync back down to me.
+      const bob = Math.abs(Math.sin(walkPhase))*0.05;
+      b.mesh.position.set(dad.position.x + Math.sin(dad.rotation.y)*0.55, 1.15+bob, dad.position.z + Math.cos(dad.rotation.y)*0.55);
+      b.mesh.rotation.y = dad.rotation.y;
+      return;
+    }
+    if(!b.netTarget) return;
     b.mesh.position.x += (b.netTarget.x-b.mesh.position.x)*k;
     b.mesh.position.y += (b.netTarget.y-b.mesh.position.y)*k; // height matters most while held — without it the
     b.mesh.position.z += (b.netTarget.z-b.mesh.position.z)*k; // baby looked dragged along the ground instead of
