@@ -899,13 +899,21 @@ function cribGroup(){ const g=new THREE.Group();
   [[-1.2,-0.7],[1.2,-0.7],[-1.2,0.7],[1.2,0.7]].forEach(([x,z])=>{
     const p=box(0.14,1.2,0.14,'#e6c79a'); p.position.set(x,1.0,z); g.add(p); });
   return g; }
-function playpenGroup(){ const g=new THREE.Group();               // circular mesh-walled pen — a temporary safe spot for the baby
-  const floor=cyl(1.25,1.25,0.06,'#f7e6c4'); floor.position.y=0.03; g.add(floor);
-  const railColor='#e8b23a';
+function playpenGroup(){ const g=new THREE.Group();               // pack-n-play style pen: a padded fabric bumper
+  const R = 1.15;                                                  // under a low, barely-there mesh wall — reads as
+  const mat0=cyl(R,R,0.06,'#fdf3e0'); mat0.position.y=0.03; g.add(mat0); // a baby product, not a solid drum
+  const bumperH=0.4, bumperY=0.06+bumperH/2;
+  const bumper=cyl(R+0.05,R+0.05,bumperH,'#ff9fb3'); bumper.position.y=bumperY; g.add(bumper); // padded fabric side
+  for(let i=0;i<6;i++){ const ang=i/6*Math.PI*2;                   // alternating cream panels read as stitched
+    const panel=box(0.55,bumperH*0.72,0.05,'#fff1e6');              // fabric segments rather than a plain barrel
+    panel.position.set(Math.cos(ang)*(R+0.08), bumperY, Math.sin(ang)*(R+0.08));
+    panel.rotation.y = -ang; g.add(panel);
+  }
+  const railColor='#e8b23a', postY0=0.06+bumperH;
   for(let i=0;i<8;i++){ const ang=i/8*Math.PI*2;
-    const post=cyl(0.05,0.05,0.75,railColor); post.position.set(Math.cos(ang)*1.22,0.42,Math.sin(ang)*1.22); g.add(post); }
-  const railTop=cyl(1.25,1.25,0.08,railColor); railTop.position.y=0.78; g.add(railTop);
-  const net=cyl(1.28,1.28,0.68,'#fff6de'); net.material.transparent=true; net.material.opacity=0.28; net.position.y=0.4; g.add(net);
+    const post=cyl(0.04,0.04,0.34,railColor); post.position.set(Math.cos(ang)*(R+0.02),postY0+0.17,Math.sin(ang)*(R+0.02)); g.add(post); }
+  const railTop=cyl(R+0.04,R+0.04,0.06,railColor); railTop.position.y=postY0+0.37; g.add(railTop);
+  const net=cyl(R+0.02,R+0.02,0.3,'#ffffff'); net.material.transparent=true; net.material.opacity=0.16; net.position.y=postY0+0.17; g.add(net);
   return g; }
 function computerDeskGroup(){ const g=new THREE.Group();          // the office job Dad's supposed to be doing while babysitting
   const desk=box(1.8,0.9,0.9,'#8a6a45'); desk.position.y=0.45; g.add(desk);
@@ -2307,8 +2315,8 @@ function returnToLobby(){                               // "Try Again"/"Play Aga
   document.getElementById('gameover').classList.add('hidden');
   document.getElementById('win').classList.add('hidden');
   document.getElementById('intro').classList.remove('hidden');
-  showMenuScreen('mpLobbyScreen');
-}
+  enterLobbyUI(isHost, roomCode);                       // re-assert host-only controls (Start Game etc.) —
+}                                                        // don't rely on the background listener to catch it
 function handleRetry(){
   if(retryAction==='lobby'){ returnToLobby(); return; }
   if(retryAction==='menu'){ leaveToMainMenu(); return; }
@@ -2412,20 +2420,21 @@ const Net = (function(){
       const P = me();                                       // tick() and the host needs a fresh copy to correctly
       const payload = {x:dad.position.x, z:dad.position.z, rotY:dad.rotation.y, name:myName,   // gate a guest's
         colorIdx:P.colorIdx, holdStamina:P.holdStamina};                                       // own pickup attempts
-      if(isHost) Object.assign(payload, {carrying:P.carrying, holdingBaby:P.holdingBaby, poo:P.poo, lvl:P.lvl});
+      if(isHost) Object.assign(payload, {carrying:P.carrying||'', holdingBaby:P.holdingBaby, poo:P.poo, lvl:P.lvl});
       playersRef.child(myId).update(payload);
     },
     pushWorldSnapshot(){                                  // host-only: the shared world, plus every player's
       if(!isHost || !babiesRef) return;                   // "outcome" fields (carrying/holdingBaby/poo/lvl)
       const bSnap = {};
-      babies.forEach((b,i)=>{ bSnap[i] = {x:b.mesh.position.x, z:b.mesh.position.z, name:b.name,
-        need:b.need, mood:b.moodLast, fallen:b.fallen, burned:b.burned, choking:b.choking, penned:b.penned, heldBy:b.heldBy}; });
-      babiesRef.set(bSnap);
-      worldRef.set({cry:S.cry, cartoonsOn:S.cartoonsOn, notification:S.notification,
-        elapsed:S.elapsed, timeLeft: isFinite(S.timeLeft)?S.timeLeft:-1, score:S.score,
+      babies.forEach((b,i)=>{ bSnap[i] = {x:b.mesh.position.x, y:b.mesh.position.y, z:b.mesh.position.z,
+        rotY:b.mesh.rotation.y, name:b.name,               // y/rotY matter most while held — without them a
+        need:b.need, mood:b.moodLast, fallen:b.fallen, burned:b.burned, choking:b.choking, penned:b.penned, heldBy:b.heldBy}; }); // guest
+      babiesRef.set(bSnap);                                 // saw the baby dragging along the ground at the
+      worldRef.set({cry:S.cry, cartoonsOn:S.cartoonsOn, notification:S.notification,   // holder's feet instead
+        elapsed:S.elapsed, timeLeft: isFinite(S.timeLeft)?S.timeLeft:-1, score:S.score, // of lifted into their arms
         messes:S.messes.map(m=>({x:m.x,z:m.z}))});
       for(const id in players){ if(id===myId) continue;
-        playersRef.child(id).update({carrying:players[id].carrying, holdingBaby:players[id].holdingBaby,
+        playersRef.child(id).update({carrying:players[id].carrying||'', holdingBaby:players[id].holdingBaby,
           poo:players[id].poo, lvl:players[id].lvl}); }
     },
     setGameOver(reason){ if(isHost && metaRef) metaRef.update({state:'ended', reason}); },
@@ -2620,7 +2629,10 @@ function applyPlayerSnapshot(id, data){
     if(isHost) return;                                  // host's own record is already authoritative locally
     const P = me();
     const prevCarrying = P.carrying;
-    if(data.carrying!==undefined) P.carrying = data.carrying;
+    // carrying is written as '' (not null) on the wire — Firebase deletes any key written as null, so a
+    // cleared "not carrying anything" would otherwise arrive as an absent key (undefined) and never overwrite
+    // the last real value, leaving a stale carry icon stuck on-screen forever. || null restores the sentinel.
+    if(data.carrying!==undefined) P.carrying = data.carrying || null;
     if(data.holdingBaby!==undefined) P.holdingBaby = data.holdingBaby;
     if(data.poo!==undefined) P.poo = data.poo;
     if(data.lvl) P.lvl = data.lvl;
@@ -2641,7 +2653,7 @@ function applyPlayerSnapshot(id, data){
   }
   p.name=data.name||p.name; p.colorIdx=(data.colorIdx!==undefined?data.colorIdx:p.colorIdx);
   if(data.x!==undefined) p.x=data.x; if(data.z!==undefined) p.z=data.z; if(data.rotY!==undefined) p.rotY=data.rotY;
-  if(data.carrying!==undefined) p.carrying=data.carrying;
+  if(data.carrying!==undefined) p.carrying=data.carrying || null;   // see note above re: '' vs deleted null
   if(data.holdingBaby!==undefined) p.holdingBaby=data.holdingBaby;
   if(data.poo!==undefined) p.poo=data.poo; if(data.lvl) p.lvl=data.lvl;
   if(data.holdStamina!==undefined) p.holdStamina=data.holdStamina;
@@ -2676,8 +2688,9 @@ function applyRemoteBabies(snap){
   if(!snap) return;
   Object.keys(snap).forEach(i=>{
     const d = snap[i], b = babies[i]; if(!b) return;
-    b.netTarget = {x:d.x, z:d.z};                          // smoothed every frame in updateRemoteBabies(),
-    if(d.name) b.name = d.name;                            // not just when a snapshot arrives — otherwise
+    b.netTarget = {x:d.x, y:(d.y!==undefined?d.y:b.mesh.position.y), z:d.z, // smoothed every frame in
+      rotY:(d.rotY!==undefined?d.rotY:b.mesh.rotation.y)};  // updateRemoteBabies(), not just when a snapshot
+    if(d.name) b.name = d.name;                            // arrives — otherwise
     b.need = d.need || b.need; b.fallen=!!d.fallen; b.burned=!!d.burned; b.choking=!!d.choking; b.penned=!!d.penned; b.heldBy=d.heldBy||null;
     setMood(b, d.mood||'🙂');
     if(b.heldBy){ b.mesh.scale.set(0.9,0.9,0.9); b.mesh.userData.mat.visible=false; }
@@ -2690,7 +2703,10 @@ function updateRemoteBabies(dt){                          // guest-only: continu
   babies.forEach(b=>{                                      // smooth between the ~8Hz Firebase snapshots instead
     if(!b.netTarget) return;                                // of visibly stepping every time one arrives
     b.mesh.position.x += (b.netTarget.x-b.mesh.position.x)*k;
-    b.mesh.position.z += (b.netTarget.z-b.mesh.position.z)*k;
+    b.mesh.position.y += (b.netTarget.y-b.mesh.position.y)*k; // height matters most while held — without it the
+    b.mesh.position.z += (b.netTarget.z-b.mesh.position.z)*k; // baby looked dragged along the ground instead of
+    let dRot = Math.atan2(Math.sin(b.netTarget.rotY-b.mesh.rotation.y), Math.cos(b.netTarget.rotY-b.mesh.rotation.y));
+    b.mesh.rotation.y += dRot*k;                            // lifted into the holder's arms
   });
 }
 function applyRemoteWorld(w){
