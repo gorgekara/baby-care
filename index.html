@@ -2372,9 +2372,10 @@ const Net = (function(){
       playersRef.on('child_removed', snap=>{ if(snap.key!==myId) removeRemotePlayer(snap.key); });
     },
     pushMyTransform(){                                    // every client owns writing its own position/heading
-      if(!playersRef) return;
-      const P = me();
-      const payload = {x:dad.position.x, z:dad.position.z, rotY:dad.rotation.y, name:myName, colorIdx:P.colorIdx};
+      if(!playersRef) return;                              // (holdStamina too — it drains/recovers locally in
+      const P = me();                                       // tick() and the host needs a fresh copy to correctly
+      const payload = {x:dad.position.x, z:dad.position.z, rotY:dad.rotation.y, name:myName,   // gate a guest's
+        colorIdx:P.colorIdx, holdStamina:P.holdStamina};                                       // own pickup attempts
       if(isHost) Object.assign(payload, {carrying:P.carrying, holdingBaby:P.holdingBaby, poo:P.poo, lvl:P.lvl});
       playersRef.child(myId).update(payload);
     },
@@ -2585,6 +2586,7 @@ function applyPlayerSnapshot(id, data){
   if(data.carrying!==undefined) p.carrying=data.carrying;
   if(data.holdingBaby!==undefined) p.holdingBaby=data.holdingBaby;
   if(data.poo!==undefined) p.poo=data.poo; if(data.lvl) p.lvl=data.lvl;
+  if(data.holdStamina!==undefined) p.holdStamina=data.holdStamina;
   p.connected=true;
   if(p.avatar.lastCarrying !== p.carrying){
     if(p.avatar.carrySprite){ p.avatar.group.remove(p.avatar.carrySprite); p.avatar.carrySprite.material.map.dispose(); p.avatar.carrySprite.material.dispose(); p.avatar.carrySprite=null; }
