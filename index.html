@@ -39,9 +39,14 @@
 
   /* per-baby need clusters — one repeats per baby in multiplayer, so keep each compact */
   .babyNeeds{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+  /* more than 3 babies: detach from the topbar into a scrollable vertical list, top-left */
+  .babyNeeds.side{position:fixed;top:100px;left:12px;flex-direction:column;flex-wrap:nowrap;
+    align-items:flex-start;gap:6px;max-height:62vh;overflow-y:auto;z-index:6;
+    background:var(--panel);border:1px solid var(--panelborder);border-radius:14px;padding:8px 10px;
+    box-shadow:0 8px 30px rgba(0,0,0,.35)}
   .babyCluster{display:flex;gap:5px;align-items:center;padding:3px 6px;border-radius:10px}
   .babyCluster.multi{background:rgba(255,255,255,.05);border:1px solid var(--panelborder)}
-  .babyClusterLabel{font-size:11px;opacity:.7;margin-right:2px}
+  .babyClusterLabel{font-size:11px;opacity:.7;margin-right:2px;white-space:nowrap}
   .needMini{display:flex;flex-direction:column;align-items:center;width:34px}
   .needMini .lblMini{font-size:11px;line-height:1;margin-bottom:2px}
   .barMini{width:32px;height:9px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden}
@@ -135,6 +140,10 @@
   .legend b{opacity:.95}
   .helpDetail{margin-top:14px}
   .helpDetail.hidden{display:none}
+  .helpSection{text-align:left;margin:16px 0;padding-top:12px;border-top:1px solid var(--panelborder)}
+  .helpSection:first-of-type{border-top:none;padding-top:0}
+  .helpSection h3{font-size:15px;margin:0 0 5px;color:var(--good)}
+  .helpSection p{font-size:13px;opacity:.85;line-height:1.55;margin:0}
   .tag{display:inline-block;background:rgba(255,255,255,.1);border-radius:20px;padding:4px 14px;
     font-size:13px;margin:4px 3px}
 
@@ -264,25 +273,44 @@
       <div>👶 <b>Diaper</b> — change at the table</div>
       <div>📺 <b>Cartoons</b> — switch on the TV</div>
     </div>
-    <p style="font-size:13px;opacity:.8">Watch the four needs. If any runs out the baby cries, and the
-       <b style="color:var(--cry)">cry-o-meter</b> climbs. Let it fill up and you'll panic-call Mommy —
-       <b>game over</b>. The baby <b>crawls around</b> the house and plays with toys.
-       Scoop it up with <kbd>Space</kbd> to carry it anywhere and calm it down, or drop whatever you're
-       holding with <kbd>Q</kbd> — but 💪 your arms tire out the longer you hold the baby, so you can't
-       just carry it forever (upgrade <b>Strong Arms</b> at the workbench to hold longer). Need your hands
-       free? Pen the baby in the 🔒 <b>playpen</b> for a little while — it'll escape on its own after a bit,
-       so don't wander off for too long. And keep an eye out near the 🔥 <b>oven</b> in the kitchen — an
-       unsupervised baby that toddles over to it will get burned, and it can even <b>swallow something</b>
-       small while it's unattended — rush over and clear its airway before time runs out. Watch your own
-       back too — random <b>back pain</b> can freeze you in place for a few seconds; stock up on 💊
-       <b>Pain Medication</b> at the workbench to shorten it. Oh, and you're still supposed to be
-       working — the 💻 <b>computer</b> in the office will occasionally ping with a message; get to it
-       and reply within the time shown or it'll cost you — miss too many and you're <b>fired</b>,
-       game over. Changing diapers
-       collects 💩 <b>poo</b> — spend it at the 🛠️ workbench to upgrade everything. Survive until Mom
-       returns to win! (There's a 🚪 closet in the bedroom too —
-       but hiding in it ends the game. Don't be <i>that</i> dad.) Press <kbd>Esc</kbd> anytime in-game
-       for this same help, the music picker, and a map of the house.</p>
+
+    <div class="helpSection">
+      <h3>🤲 Holding &amp; the Playpen</h3>
+      <p>Scoop the baby up with <kbd>Space</kbd> to carry and calm them, or drop whatever you're holding
+         with <kbd>Q</kbd>. 💪 Your arms tire out the longer you hold a baby (upgrade <b>Strong Arms</b> to
+         hold longer). Need your hands free? Pen a baby in the 🔒 <b>playpen</b> for a while — they'll climb
+         out on their own eventually, so don't wander off for too long.</p>
+    </div>
+
+    <div class="helpSection">
+      <h3>⚠️ Hazards to Watch For</h3>
+      <p>An unsupervised baby near the 🔥 <b>oven</b> gets burned. They can also swallow something small —
+         rush over and clear their airway before time runs out. Messes appear on the floor sometimes — only
+         the 🧹 <b>mop</b> cleans them up. And watch your <i>own</i> back: random <b>back pain</b> freezes
+         you in place for a few seconds (upgrade 💊 <b>Pain Medication</b> to shorten it).</p>
+    </div>
+
+    <div class="helpSection">
+      <h3>💻 Still on the Clock</h3>
+      <p>The computer in the office pings with work messages now and then — reply within the time shown or
+         it costs you. Miss too many and you're <b>fired</b> — game over.</p>
+    </div>
+
+    <div class="helpSection">
+      <h3>💩 Poo &amp; Upgrades</h3>
+      <p>Changing diapers banks 💩 <b>poo</b> — spend it at the 🛠️ <b>workbench</b> to upgrade everything
+         above (faster needs, more poo per change, longer arm stamina, shorter back pain, and more).</p>
+    </div>
+
+    <div class="helpSection">
+      <h3>🏆 Winning &amp; Losing</h3>
+      <p>Let any need run out and the <b style="color:var(--cry)">cry-o-meter</b> climbs — fill it and
+         you'll panic-call Mommy, game over. Survive until she's back to win! (The 🚪 closet and 🚪 front
+         door both end the game instantly if used — don't be <i>that</i> dad.)</p>
+    </div>
+
+    <p style="font-size:12px;opacity:.65;margin-top:14px">Press <kbd>Esc</kbd> anytime in-game for this
+       same help, the music picker, and a map of the house.</p>
     <div class="stepnav">
       <button class="btn cta" id="helpBackBtn">◀ Back to Menu</button>
     </div>
@@ -361,12 +389,18 @@
         <div class="diffOpt" data-diff="king"><div class="diffTitle">👑 King</div><div class="diffSub">Hardest — expect chaos</div></div>
       </div>
       <p style="font-size:13px;opacity:.75;margin:14px 0 4px">Babies in the house</p>
-      <div class="diffPicker" id="mpBabyCountPicker" style="flex-direction:row;gap:8px">
+      <div class="diffPicker" id="mpBabyCountPicker" style="flex-direction:row;flex-wrap:wrap;gap:8px;justify-content:center">
         <div class="diffOpt selected" data-babies="1"><div class="diffTitle">1</div></div>
         <div class="diffOpt" data-babies="2"><div class="diffTitle">2</div></div>
         <div class="diffOpt" data-babies="3"><div class="diffTitle">3</div></div>
         <div class="diffOpt" data-babies="4"><div class="diffTitle">4</div></div>
+        <div class="diffOpt" data-babies="5"><div class="diffTitle">5</div></div>
+        <div class="diffOpt" data-babies="6"><div class="diffTitle">6</div></div>
+        <div class="diffOpt" data-babies="7"><div class="diffTitle">7</div></div>
+        <div class="diffOpt" data-babies="8"><div class="diffTitle">8</div></div>
       </div>
+      <p style="font-size:12px;opacity:.6;margin:6px 0 0">More than 3 babies moves the need bars to a
+         vertical list in the top-left corner, to keep things readable.</p>
     </div>
     <p id="mpNonHostNote" class="hidden" style="font-size:13px;opacity:.75;margin-top:10px">
       The host picks the difficulty and how many babies are in the house.</p>
@@ -1563,10 +1597,12 @@ function spawnBabies(){                                  // (re)builds the babie
   babies.forEach(b=>{ if(b.mesh){ scene.remove(b.mesh); disposeGroup(b.mesh); } });
   babies = [];
   const count = Math.max(1, S.babyCount||1);
+  const names = shuffle(BABY_NAMES.slice());              // unique random names, one per baby this run
   for(let i=0;i<count;i++){
     const ang = (i/count)*Math.PI*2, off = count>1 ? 1.6 : 0;
     const pos = new THREE.Vector3(spawnBaby.x+Math.cos(ang)*off, 0, spawnBaby.z+Math.sin(ang)*off);
     const b = freshBaby(pos);
+    b.name = names[i % names.length] + (i>=names.length ? ` ${Math.floor(i/names.length)+1}` : '');
     b.mesh = buildBaby(); b.mesh.position.copy(pos); scene.add(b.mesh);
     b.moodSprite = makeSprite('🙂',{bg:null,font:80}); b.moodSprite.position.set(0,2.3,0);
     b.moodSprite.scale.set(1.5,1.5,1.5); b.moodSprite.renderOrder=10; b.mesh.add(b.moodSprite);
@@ -1630,6 +1666,8 @@ const Music = (function(){
 /* ---------- Game state ---------- */
 const NEEDS = ['food','milk','diaper','cartoon'];
 const NEED_ICON = {food:'🍎',milk:'🍼',diaper:'👶',cartoon:'📺',mop:'🧹'};
+const BABY_NAMES = ['Milo','Ivy','Theo','Nora','Max','Luna','Leo','Zoe','Finn','Ruby','Eli','Mia',
+  'Jax','Ada','Remy','Wren','Kai','Nova','Otis','Pearl','Sam','Iris','Hugo','June'];
 const NEED_LABEL = {diaper:'a clean diaper', mop:'the mop'};
 const CARRY_ICON = {food:'🍲',milk:'🍼',diaper:'🧷',mop:'🧹'};
 const BASE_DECAY = {food:2.1, milk:2.3, diaper:1.7, cartoon:2.7};
@@ -1744,7 +1782,7 @@ function resetState(){
     mode:'menu',                       // menu|play|over|win
     tutorial:false,                    // true during the guided, no-pressure tutorial run
     diff: D.key,
-    babyCount: (S && S.babyCount) || 1,
+    babyCount: 1,                       // solo/tutorial is always 1; beginMultiplayerRound() overrides this
     cry:0,
     joy:0,                             // topped up by play/cuddles; eases crying
     cartoonsOn:false, tvTimer:0,
@@ -1964,17 +2002,18 @@ const el = {
 function buildBabyNeedsHUD(){                          // one compact 4-bar cluster per baby (labeled once >1)
   const container = document.getElementById('babyNeeds');
   container.innerHTML = '';
-  el.babyBars = [];
+  container.classList.toggle('side', babies.length>3);  // many babies: vertical list, top-left, instead of
+  el.babyBars = [];                                       // crowding the centered topbar
   const multi = babies.length>1;
   babies.forEach((b,i)=>{
     const cluster = document.createElement('div'); cluster.className = 'babyCluster'+(multi?' multi':'');
-    let html = multi ? `<div class="babyClusterLabel">👶${i+1}</div>` : '';
+    let html = multi ? `<div class="babyClusterLabel">${b.name||('👶'+(i+1))}</div>` : '';
     NEEDS.forEach(k=>{
       html += `<div class="needMini" data-k="${k}"><div class="lblMini">${NEED_ICON[k]}</div><div class="barMini"><i></i></div></div>`;
     });
     cluster.innerHTML = html;
     container.appendChild(cluster);
-    const bars = {};
+    const bars = {label: cluster.querySelector('.babyClusterLabel')};
     NEEDS.forEach(k=>{
       const n = cluster.querySelector(`[data-k="${k}"]`);
       bars[k] = {fill:n.querySelector('.barMini>i'), bar:n.querySelector('.barMini')};
@@ -2293,7 +2332,7 @@ const Net = (function(){
     pushWorldSnapshot(){                                  // host-only: the shared world, plus every player's
       if(!isHost || !babiesRef) return;                   // "outcome" fields (carrying/holdingBaby/poo/lvl)
       const bSnap = {};
-      babies.forEach((b,i)=>{ bSnap[i] = {x:b.mesh.position.x, z:b.mesh.position.z,
+      babies.forEach((b,i)=>{ bSnap[i] = {x:b.mesh.position.x, z:b.mesh.position.z, name:b.name,
         need:b.need, mood:b.moodLast, fallen:b.fallen, burned:b.burned, choking:b.choking, penned:b.penned, heldBy:b.heldBy}; });
       babiesRef.set(bSnap);
       worldRef.set({cry:S.cry, cartoonsOn:S.cartoonsOn, notification:S.notification,
@@ -2492,6 +2531,7 @@ function applyRemoteBabies(snap){
   Object.keys(snap).forEach(i=>{
     const d = snap[i], b = babies[i]; if(!b) return;
     b.mesh.position.x += (d.x-b.mesh.position.x)*0.35; b.mesh.position.z += (d.z-b.mesh.position.z)*0.35;
+    if(d.name) b.name = d.name;                            // host is authoritative — replaces my own local guess
     b.need = d.need || b.need; b.fallen=!!d.fallen; b.burned=!!d.burned; b.choking=!!d.choking; b.penned=!!d.penned; b.heldBy=d.heldBy||null;
     setMood(b, d.mood||'🙂');
     if(b.heldBy){ b.mesh.scale.set(0.9,0.9,0.9); b.mesh.userData.mat.visible=false; }
@@ -2967,6 +3007,7 @@ function updateHUD(){
   const P = me();
   babies.forEach((b,i)=>{
     const bars = el.babyBars[i]; if(!bars) return;
+    if(bars.label && b.name && bars.label.textContent!==b.name) bars.label.textContent = b.name;
     NEEDS.forEach(k=>{
       const v = b.need[k];
       bars[k].fill.style.width = v+'%';
@@ -2981,10 +3022,11 @@ function updateHUD(){
                                            : `💻 Work message! Reply within ${Math.ceil(S.notifyDeadline)}s`;
     el.workAlert.classList.add('show');
   } else el.workAlert.classList.remove('show');
+  const babyLabel = b => babies.length>1 ? b.name : 'Baby';
   const chokingBaby = babies.find(b=>b.choking);
   if(chokingBaby){
     el.chokeAlert.textContent = S.tutorial ? `🚨 Practice: clear the airway — walk to the baby and press E (no rush)`
-                                            : `🚨 Baby's choking! Clear the airway within ${Math.ceil(chokingBaby.chokeDeadline)}s!`;
+                                            : `🚨 ${babyLabel(chokingBaby)}'s choking! Clear the airway within ${Math.ceil(chokingBaby.chokeDeadline)}s!`;
     el.chokeAlert.classList.add('show');
   } else el.chokeAlert.classList.remove('show');
   const hp = happiness();
@@ -3017,8 +3059,8 @@ function updateHUD(){
     if(S.tutorial){
       msg = near ? `🚨 Practice: clear the airway — <kbd>E</kbd>` : `🚨 Head over to the baby to practice clearing its airway`;
     } else {
-      msg = near ? `🚨 Baby's choking! Clear the airway — <kbd>E</kbd> (${Math.ceil(nb.chokeDeadline)}s)`
-                 : `🚨 The baby is choking on something! Get there now! (${Math.ceil(nb.chokeDeadline)}s)`;
+      msg = near ? `🚨 ${babyLabel(nb)}'s choking! Clear the airway — <kbd>E</kbd> (${Math.ceil(nb.chokeDeadline)}s)`
+                 : `🚨 ${babyLabel(nb)} is choking on something! Get there now! (${Math.ceil(nb.chokeDeadline)}s)`;
     }
   } else if(P.backPainTimer>0){
     msg = `🤕 Your back seized up! Can't move (${P.backPainTimer.toFixed(1)}s)`;
@@ -3027,8 +3069,8 @@ function updateHUD(){
   } else if(k==='frontdoor'){
     msg = '🚪 Walk out the front door? Ends the game — <kbd>E</kbd>';
   } else if(nb && (nb.fallen || nb.burned) && P.holdingBaby<0){
-    const hurtMsg = nb.burned ? '🔥 The baby got burned on the oven!' : '😢 The baby fell!';
-    const hurtMsgFar = nb.burned ? '🔥 The baby got burned and is crying — go comfort them!' : '😢 The baby fell and is crying — go pick them up!';
+    const hurtMsg = nb.burned ? `🔥 ${babyLabel(nb)} got burned on the oven!` : `😢 ${babyLabel(nb)} fell!`;
+    const hurtMsgFar = nb.burned ? `🔥 ${babyLabel(nb)} got burned and is crying — go comfort them!` : `😢 ${babyLabel(nb)} fell and is crying — go pick them up!`;
     msg = near ? `${hurtMsg} Pick them up — <kbd>Space</kbd>` : hurtMsgFar;
   } else if(P.holdingBaby>=0){
     if(k==='cartoon') msg = (S.cartoonsOn?'Cartoons playing':'Turn on cartoons')+' — <kbd>E</kbd> · put baby down <kbd>Space</kbd>';
