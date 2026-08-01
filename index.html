@@ -96,30 +96,24 @@
   .crybar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ff8a5c,var(--cry));
     transition:width .12s linear;border-radius:9px}
 
-  /* solid, near-opaque backdrops (not a tinted-transparent fill) so text stays legible over any room */
-  .workAlert{position:absolute;top:150px;left:50%;transform:translateX(-50%);width:min(360px,80vw);
-    background:rgba(18,13,24,.94);border:1px solid #ff8a5c;border-radius:12px;padding:7px 14px;
-    font-size:13px;text-align:center;font-weight:bold;color:#ffd7c2;text-shadow:0 1px 3px rgba(0,0,0,.7);
-    box-shadow:0 6px 20px rgba(0,0,0,.4);opacity:0;transition:opacity .15s}
-  .workAlert.show{opacity:1;animation:flash .9s steps(2) infinite}
+  /* solid, near-opaque backdrops (not a tinted-transparent fill) so text stays legible over any room.
+     All alert boxes stack in one flow column (.alertsArea below) instead of each owning a fixed `top`,
+     so whichever ones are active pack together with no gaps — first triggered on top, rest below it. */
+  .alertsArea{position:absolute;top:150px;left:50%;transform:translateX(-50%);
+    display:flex;flex-direction:column;align-items:center;gap:8px;z-index:5;pointer-events:none}
+  .alertBox{display:none;width:min(380px,80vw);border-radius:12px;padding:7px 14px;
+    font-size:13px;text-align:center;font-weight:bold;text-shadow:0 1px 3px rgba(0,0,0,.7);
+    box-shadow:0 6px 20px rgba(0,0,0,.4)}
+  .alertBox.show{display:block;animation:flash .8s steps(2) infinite}
 
-  .chokeAlert{position:absolute;top:194px;left:50%;transform:translateX(-50%);width:min(380px,80vw);
-    background:rgba(24,10,10,.94);border:1px solid #ff5c5c;border-radius:12px;padding:7px 14px;
-    font-size:13px;text-align:center;font-weight:bold;color:#ffcaca;text-shadow:0 1px 3px rgba(0,0,0,.7);
-    box-shadow:0 6px 20px rgba(0,0,0,.4);opacity:0;transition:opacity .15s}
-  .chokeAlert.show{opacity:1;animation:flash .7s steps(2) infinite}
-
-  .backPainAlert{position:absolute;top:238px;left:50%;transform:translateX(-50%);width:min(360px,80vw);
-    background:rgba(24,16,10,.94);border:1px solid #ffb15c;border-radius:12px;padding:7px 14px;
-    font-size:13px;text-align:center;font-weight:bold;color:#ffe0c2;text-shadow:0 1px 3px rgba(0,0,0,.7);
-    box-shadow:0 6px 20px rgba(0,0,0,.4);opacity:0;transition:opacity .15s}
-  .backPainAlert.show{opacity:1;animation:flash .8s steps(2) infinite}
-
-  .bathroomAlert{position:absolute;top:282px;left:50%;transform:translateX(-50%);width:min(360px,80vw);
-    background:rgba(10,20,24,.94);border:1px solid #5cd0ff;border-radius:12px;padding:7px 14px;
-    font-size:13px;text-align:center;font-weight:bold;color:#cdeeff;text-shadow:0 1px 3px rgba(0,0,0,.7);
-    box-shadow:0 6px 20px rgba(0,0,0,.4);opacity:0;transition:opacity .15s}
-  .bathroomAlert.show{opacity:1;animation:flash .9s steps(2) infinite}
+  .workAlert{background:rgba(18,13,24,.94);border:1px solid #ff8a5c;color:#ffd7c2}
+  .workAlert.show{animation-duration:.9s}
+  .chokeAlert{background:rgba(24,10,10,.94);border:1px solid #ff5c5c;color:#ffcaca}
+  .chokeAlert.show{animation-duration:.7s}
+  .backPainAlert{background:rgba(24,16,10,.94);border:1px solid #ffb15c;color:#ffe0c2}
+  .backPainAlert.show{animation-duration:.8s}
+  .bathroomAlert{background:rgba(10,20,24,.94);border:1px solid #5cd0ff;color:#cdeeff}
+  .bathroomAlert.show{animation-duration:.9s}
 
   .topRightHud{position:absolute;top:10px;right:12px;display:flex;flex-direction:column;gap:8px;
     align-items:flex-end;z-index:6}
@@ -213,6 +207,19 @@
   .musicPicker .diffOpt{flex:1;text-align:center;padding:10px 8px}
   .musicPicker .diffTitle{font-size:14px}
 
+  .leaderboardList{display:flex;flex-direction:column;gap:6px;margin:14px 0;max-height:340px;overflow-y:auto;text-align:left}
+  .lbRow{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border:1px solid var(--panelborder);
+    border-radius:12px;padding:9px 14px}
+  .lbRow.me{border-color:var(--good);background:rgba(126,231,135,.12)}
+  .lbRank{font-weight:800;font-size:15px;width:28px;text-align:center;opacity:.85}
+  .lbRow:nth-child(1) .lbRank{color:#ffd166}
+  .lbRow:nth-child(2) .lbRank{color:#d9d9e0}
+  .lbRow:nth-child(3) .lbRank{color:#c9895a}
+  .lbName{flex:1;font-weight:bold;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lbDiff{font-size:18px}
+  .lbScore{font-weight:bold;font-size:15px;color:var(--good);min-width:44px;text-align:right}
+  .lbEmpty{font-size:13px;opacity:.7;text-align:center;padding:20px 0}
+
   .colorGrid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:4px 0 14px}
   .colorSwatch{width:30px;height:30px;border-radius:50%;cursor:pointer;pointer-events:auto;
     border:3px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25);transition:transform .1s,border-color .15s}
@@ -284,10 +291,12 @@
     <div class="crybar"><i id="cryFill"></i></div>
   </div>
 
-  <div class="workAlert" id="workAlert"></div>
-  <div class="chokeAlert" id="chokeAlert"></div>
-  <div class="backPainAlert" id="backPainAlert"></div>
-  <div class="bathroomAlert" id="bathroomAlert"></div>
+  <div class="alertsArea" id="alertsArea">
+    <div class="alertBox workAlert" id="workAlert"></div>
+    <div class="alertBox chokeAlert" id="chokeAlert"></div>
+    <div class="alertBox backPainAlert" id="backPainAlert"></div>
+    <div class="alertBox bathroomAlert" id="bathroomAlert"></div>
+  </div>
   <div class="prompt" id="prompt"></div>
   <div class="carry" id="carry"></div>
   <div class="topRightHud">
@@ -323,6 +332,7 @@
       <button class="menuBtnBig" id="menuTutorialBtn">🎓 Tutorial</button>
       <button class="menuBtnBig" id="menuSettingsBtn">⚙️ Settings</button>
       <button class="menuBtnBig" id="menuHelpBtn">❓ Help</button>
+      <button class="menuBtnBig" id="menuLeaderboardBtn">🏆 Leaderboard</button>
       <button class="menuBtnBig" id="menuAboutBtn">ℹ️ About</button>
     </div>
     <div class="menuRight">
@@ -420,6 +430,16 @@
     </div>
     <div class="stepnav">
       <button class="btn cta" id="settingsBackBtn">◀ Back to Menu</button>
+    </div>
+  </div>
+
+  <div class="card hidden" id="leaderboardScreen">
+    <div class="big">🏆</div>
+    <h2>Endless Mode Leaderboard</h2>
+    <p style="font-size:13px;opacity:.8">Top 12 survivors, across all difficulties.</p>
+    <div id="leaderboardList" class="leaderboardList"></div>
+    <div class="stepnav">
+      <button class="btn cta" id="leaderboardBackBtn">◀ Back to Menu</button>
     </div>
   </div>
 
@@ -524,6 +544,30 @@
     <p id="mpWaitNote" class="hidden" style="font-size:13px;opacity:.7;margin-top:10px">Waiting for the host to start…</p>
   </div>
 
+  <div class="card hidden" id="modeScreen">
+    <div class="big">🎮</div>
+    <h2>Choose Your Game Mode</h2>
+    <p style="font-size:13px;opacity:.8">Pick how tonight's shift plays out — you'll choose a difficulty next.</p>
+    <div class="diffPicker" id="modePicker">
+      <div class="diffOpt selected" data-mode="normal">
+        <div class="diffTitle">👶 Normal</div>
+        <div class="diffSub">A timed run — keep the baby happy until Mom's back from shopping</div>
+      </div>
+      <div class="diffOpt" data-mode="endless">
+        <div class="diffTitle">♾️ Endless Mode</div>
+        <div class="diffSub">No timer — survive as long as you can and rack up a high score</div>
+      </div>
+      <div class="diffOpt" data-mode="chores">
+        <div class="diffTitle">📋 Chores Mode</div>
+        <div class="diffSub">A timed run plus a random household checklist — tidy the bed, get lunch from the oven, and more</div>
+      </div>
+    </div>
+    <div class="stepnav">
+      <button class="btn cta" id="modeBackBtn">◀ Back</button>
+      <button class="btn cta" id="modeNextBtn">Next ▶</button>
+    </div>
+  </div>
+
   <div class="card hidden" id="diffScreen">
     <div class="big">🎚️</div>
     <h2>Choose Your Difficulty</h2>
@@ -532,29 +576,19 @@
     <div class="diffPicker" id="diffPicker">
       <div class="diffOpt" data-diff="first">
         <div class="diffTitle">🍼 First Born</div>
-        <div class="diffSub">Easiest — 3.5 min, needs drain slowly, fewer accidents</div>
+        <div class="diffSub">Easiest — 3.75 min, needs drain slowly, fewer accidents</div>
       </div>
       <div class="diffOpt selected" data-diff="veteran">
         <div class="diffTitle">😅 Been There, Done That</div>
-        <div class="diffSub">Medium — 4.5 min, the standard challenge</div>
+        <div class="diffSub">Medium — 4.75 min, the standard challenge</div>
       </div>
       <div class="diffOpt" data-diff="king">
         <div class="diffTitle">👑 King</div>
-        <div class="diffSub">Hardest — 5.5 min, needs drain fast, expect chaos</div>
+        <div class="diffSub">Hardest — 5.75 min, needs drain fast, expect chaos</div>
       </div>
     </div>
-    <div class="diffPicker" id="endlessToggle" style="margin-top:10px">
-      <div class="diffOpt" data-endless="1">
-        <div class="diffTitle">♾️ Endless Mode</div>
-        <div class="diffSub">No timer — survive as long as you can. Best: <span id="bestScoreLabel">0</span></div>
-      </div>
-    </div>
-    <div class="diffPicker" id="tasksToggle" style="margin-top:10px">
-      <div class="diffOpt" data-tasks="1">
-        <div class="diffTitle">📋 Chores Mode</div>
-        <div class="diffSub">A random checklist for the run — tidy the bed, get lunch from the oven, and more</div>
-      </div>
-    </div>
+    <p id="bestScoreNote" class="hidden" style="font-size:13px;opacity:.75;margin-top:12px">🏆 Your best
+       (Endless, this difficulty): <span id="bestScoreLabel">0</span></p>
     <div class="stepnav">
       <button class="btn cta" id="diffBackBtn">◀ Back</button>
       <button class="btn cta" id="startBtn">Start Babysitting ▶</button>
@@ -570,7 +604,19 @@
     <p id="goBody">The crying got to be too much and you had to phone Mom for backup.
        She's not thrilled she had to leave her shopping…</p>
     <p id="goStats" style="font-size:13px;opacity:.8"></p>
-    <div class="stepnav">
+    <div class="hidden" id="scoreSubmit">
+      <p style="font-size:13px;opacity:.85;margin:10px 0 6px">🏆 New personal best! Add your name to the leaderboard:</p>
+      <input type="text" id="scoreNameInput" maxlength="16" placeholder="Your name"
+        style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--panelborder);
+        background:rgba(255,255,255,.06);color:var(--text);font-size:15px;font-family:inherit;
+        text-align:center;box-sizing:border-box">
+      <p id="scoreSubmitError" style="font-size:12px;color:var(--cry);min-height:1.4em;margin:6px 0 0"></p>
+      <div class="stepnav">
+        <button class="btn" id="scoreSkipBtn">Skip</button>
+        <button class="btn cta" id="scoreSubmitBtn">Save Score 🏆</button>
+      </div>
+    </div>
+    <div class="stepnav" id="goStepnav">
       <button class="btn" id="goQuitBtn">🚪 Quit to Menu</button>
       <button class="btn cta" id="retryBtn">Try Again ↻</button>
     </div>
@@ -944,6 +990,13 @@ function toilet(){ const g=new THREE.Group();
 function sink(){ const g=new THREE.Group();
   const ped=cyl(0.28,0.32,1,'#ffffff'); ped.position.y=0.5; g.add(ped);
   const basin=box(1,0.4,0.8,'#ffffff'); basin.position.y=1.05; g.add(basin); return g; }
+function washingMachine(){ const g=new THREE.Group();      // front-loader — grab clean pants here to shed wetPants
+  const body=box(0.85,1.0,0.75,'#e8ecef'); body.position.y=0.5; g.add(body);
+  const doorRing=cyl(0.32,0.32,0.07,'#8a97a0'); doorRing.rotation.x=Math.PI/2; doorRing.position.set(0,0.48,0.39); g.add(doorRing);
+  const doorGlass=cyl(0.24,0.24,0.03,'#3a4650'); doorGlass.rotation.x=Math.PI/2; doorGlass.position.set(0,0.48,0.42); g.add(doorGlass);
+  const panel=box(0.85,0.14,0.06,'#d3dade'); panel.position.set(0,0.98,0.35); g.add(panel);
+  [-0.28,-0.14,0,0.14].forEach(x=>{ const btn=cyl(0.03,0.03,0.04,'#8a97a0'); btn.rotation.x=Math.PI/2; btn.position.set(x,0.98,0.39); g.add(btn); });
+  return g; }
 function lamp(){ const g=new THREE.Group();
   const pole=cyl(0.06,0.06,1.8,'#555'); pole.position.y=0.9; g.add(pole);
   const shade=cyl(0.45,0.3,0.5,'#ffe6a0'); shade.position.y=1.9; g.add(shade); return g; }
@@ -1049,6 +1102,18 @@ function cabinet(c){ const g=new THREE.Group();
   const body=box(1.5,1.0,0.55,c); body.position.y=0.5; g.add(body);
   const top=box(1.55,0.06,0.6,'#e9d8b8'); top.position.y=1.03; g.add(top);
   [-0.32,0.32].forEach(x=>{ const h=box(0.05,0.05,0.06,'#8a8a8a'); h.position.set(x,0.5,0.3); g.add(h); }); return g; }
+function wallCupboard(c){ const g=new THREE.Group();          // upper kitchen cabinet, mounted above the counter —
+  const body=box(1.3,0.8,0.42,c); g.add(body);                 // wall decor (no collision), so it floats at addWallDecor's y
+  const seam=box(0.03,0.8,0.02,'#3a2f24'); seam.position.z=0.21; g.add(seam); // door split down the middle
+  [-0.3,0.3].forEach(x=>{ const h=box(0.05,0.05,0.06,'#8a8a8a'); h.position.set(x,-0.28,0.23); g.add(h); });
+  return g; }
+function kitchenSink(){ const g=new THREE.Group();            // free-standing basin unit, purely decorative
+  const cab=box(1.1,0.85,0.6,'#e9e2d0'); cab.position.y=0.425; g.add(cab);
+  const counter=box(1.18,0.06,0.68,'#c9c2b0'); counter.position.y=0.88; g.add(counter);
+  const basin=box(0.8,0.16,0.42,'#b9c4c9'); basin.position.y=0.9; g.add(basin);
+  const tap=cyl(0.03,0.03,0.4,'#9aa6ab'); tap.position.set(0,1.1,-0.2); g.add(tap);
+  const spout=cyl(0.025,0.025,0.22,'#9aa6ab'); spout.rotation.x=Math.PI/2; spout.position.set(0,1.28,-0.11); g.add(spout);
+  return g; }
 function basket(c){ const g=new THREE.Group();
   const b=cyl(0.32,0.26,0.4,c); b.position.y=0.2; g.add(b); return g; }
 function coatRack(){ const g=new THREE.Group();
@@ -1226,12 +1291,27 @@ function buildLiving(room){
 function buildKitchen(room){
   const {outer, inner} = sidesFor(room);
   const wallSide = outer[0];
-  let p = wallPos(room, wallSide, rand(0.06,0.16), 0.7);
+  const foodT = rand(0.06,0.16);
+  let p = wallPos(room, wallSide, foodT, 0.7);
   addStation('food', p.x, p.z, buildFoodGroup(), '🍎 Kitchen', 2.7, p.rot);
-  p = wallPos(room, wallSide, rand(0.4,0.56), 0.65);
+  const sinkT = rand(0.22,0.32);
+  p = wallPos(room, wallSide, sinkT, 0.55);
+  const sinkMesh = kitchenSink();
+  addPropOriented(sinkMesh, p.x, p.z, 0.55, 0.34, p.rot);
+  sinkMesh.add(label('🍽️ Sink', 1.3));
+  stations.kitchensink = {group: sinkMesh, x: p.x, z: p.z, radius: 1.9};  // manual registration, see oven note above
+  const cabinetT = rand(0.4,0.56);
+  p = wallPos(room, wallSide, cabinetT, 0.65);
   addProp(cabinet(pick(['#c9a45a','#b98b52','#9a7a4a'])), p.x, p.z, 0.78, 0.3, p.rot);
   p = wallPos(room, wallSide, rand(0.84,0.94), 0.65);
   addStation('milk', p.x, p.z, buildFridgeGroup(), '🍼 Fridge', 3.5, p.rot);
+
+  // upper cupboards mounted above the food/cabinet counters — wall decor, no collision
+  const cupC = pick(['#f3ede0','#d8c9a8','#c9d8d0']);
+  p = wallPos(room, wallSide, foodT, 0.12);
+  addWallDecor(wallCupboard(cupC), p.x, p.z, 2.15, p.rot);
+  p = wallPos(room, wallSide, cabinetT, 0.12);
+  addWallDecor(wallCupboard(cupC), p.x, p.z, 2.15, p.rot);
 
   addProp(table(1.8,1.3,'#b98b52'), room.cx, room.cz, 0.9, 0.65);
   addProp(chair('#d0a56a'), room.cx, room.cz-1.1, 0.35, 0.35);
@@ -1368,6 +1448,11 @@ function buildBathroom(room){
   const mopT = sinkT<0.5 ? rand(0.72,0.88) : rand(0.12,0.28);
   p = wallPos(room, sinkSide, mopT, 0.4);
   addStation('mop', p.x, p.z, buildMopGroup(), '🧹 Mop', 2.2, p.rot);
+
+  // washing machine — sits in the gap between the sink and mop corners on the same wall; grab clean
+  // pants here to shed the wetPants slow-walk debuff from missing the toilet in time
+  p = wallPos(room, sinkSide, rand(0.42,0.58), 0.5);
+  addStation('washer', p.x, p.z, washingMachine(), '🧺 Washer', 1.5, p.rot);
 
   const towel = wallPos(room, wetSide, edgeT(), 0.05);
   addWallDecor(towelRack(), towel.x, towel.z, 1.3, towel.rot);
@@ -1853,30 +1938,30 @@ const ARM_RECOVER_MIN_FRAC = 0.2; // can't pick the baby back up until arms reco
 
 // ---- difficulty: picked on the intro screen, locked in for the run ----
 const DIFFICULTIES = {
-  first:   {key:'first', label:'First Born', gameLen:210,
-    decayMul:0.72, cryFillMul:0.65, cryDrainMul:1.3, vomitMin:34, vomitMax:60,
-    walkChance:0.2, fallMin:9, fallMax:18, needStart:{food:100,milk:100,diaper:100,cartoon:96},
-    holdBase:15, holdRecoverMul:1.4, ovenChance:0.02, penSeconds:32,
-    notifyMin:45, notifyMax:70, notifyWindow:24, notifyPenalty:12, fireLimit:5,
-    backPainMin:55, backPainMax:85, backPainCrippleBase:1.6,
-    chokeMin:70, chokeMax:110, chokeWindow:12,
-    bathroomMin:160, bathroomMax:230, bathroomWindow:35},
-  veteran: {key:'veteran', label:"Been There, Done That", gameLen:270,
-    decayMul:1, cryFillMul:1, cryDrainMul:1, vomitMin:28, vomitMax:52,
-    walkChance:0.32, fallMin:6, fallMax:13, needStart:{food:100,milk:95,diaper:100,cartoon:88},
-    holdBase:10, holdRecoverMul:1.3, ovenChance:0.045, penSeconds:24,
-    notifyMin:32, notifyMax:52, notifyWindow:17, notifyPenalty:16, fireLimit:4,
-    backPainMin:40, backPainMax:65, backPainCrippleBase:2.6,
-    chokeMin:55, chokeMax:90, chokeWindow:9,
-    bathroomMin:120, bathroomMax:180, bathroomWindow:28},
-  king:    {key:'king', label:'King', gameLen:330,
-    decayMul:1.4, cryFillMul:1.35, cryDrainMul:0.75, vomitMin:16, vomitMax:34,
-    walkChance:0.46, fallMin:4, fallMax:9, needStart:{food:85,milk:80,diaper:88,cartoon:70},
-    holdBase:6, holdRecoverMul:1.15, ovenChance:0.08, penSeconds:16,
-    notifyMin:20, notifyMax:36, notifyWindow:11, notifyPenalty:20, fireLimit:3,
-    backPainMin:26, backPainMax:45, backPainCrippleBase:3.8,
-    chokeMin:40, chokeMax:65, chokeWindow:7,
-    bathroomMin:90, bathroomMax:140, bathroomWindow:22},
+  first:   {key:'first', label:'First Born', gameLen:225,
+    decayMul:0.80, cryFillMul:0.75, cryDrainMul:1.15, vomitMin:28, vomitMax:50,
+    walkChance:0.26, fallMin:7, fallMax:15, needStart:{food:95,milk:92,diaper:95,cartoon:88},
+    holdBase:13, holdRecoverMul:1.3, ovenChance:0.03, penSeconds:27,
+    notifyMin:38, notifyMax:60, notifyWindow:20, notifyPenalty:14, fireLimit:4,
+    backPainMin:46, backPainMax:72, backPainCrippleBase:1.9,
+    chokeMin:58, chokeMax:92, chokeWindow:10,
+    bathroomMin:135, bathroomMax:195, bathroomWindow:30},
+  veteran: {key:'veteran', label:"Been There, Done That", gameLen:285,
+    decayMul:1.12, cryFillMul:1.12, cryDrainMul:0.9, vomitMin:22, vomitMax:42,
+    walkChance:0.4, fallMin:5, fallMax:10, needStart:{food:92,milk:85,diaper:90,cartoon:78},
+    holdBase:8.5, holdRecoverMul:1.18, ovenChance:0.06, penSeconds:19,
+    notifyMin:26, notifyMax:44, notifyWindow:14, notifyPenalty:19, fireLimit:3,
+    backPainMin:33, backPainMax:54, backPainCrippleBase:3.0,
+    chokeMin:45, chokeMax:74, chokeWindow:7.5,
+    bathroomMin:98, bathroomMax:150, bathroomWindow:24},
+  king:    {key:'king', label:'King', gameLen:345,
+    decayMul:1.55, cryFillMul:1.5, cryDrainMul:0.65, vomitMin:12, vomitMax:26,
+    walkChance:0.55, fallMin:3, fallMax:7, needStart:{food:78,milk:72,diaper:80,cartoon:62},
+    holdBase:5, holdRecoverMul:1.05, ovenChance:0.10, penSeconds:13,
+    notifyMin:16, notifyMax:30, notifyWindow:9, notifyPenalty:24, fireLimit:3,
+    backPainMin:21, backPainMax:38, backPainCrippleBase:4.3,
+    chokeMin:33, chokeMax:54, chokeWindow:6,
+    bathroomMin:74, bathroomMax:115, bathroomWindow:19},
   // practice mode: needs never decay and no random hazard can fire — every mechanic is either
   // explained as plain text or triggered deliberately by the tutorial script, at the player's own pace
   tutorial: {key:'tutorial', label:'Tutorial', gameLen:Infinity,
@@ -1896,6 +1981,7 @@ const TASK_POOL = [                                       // each ties to a real
   {key:'oven', icon:'🍱', label:'Get lunch out of the oven'},
   {key:'toilet', icon:'🚽', label:'Clean the toilet'},
   {key:'sink', icon:'🚿', label:'Clean the sink'},
+  {key:'kitchensink', icon:'🍽️', label:'Clean the kitchen sink'},
   {key:'toys', icon:'🧸', label:'Put away the toys'},      // the one exception — any toy will do, no station
 ];
 function curDiff(){ return DIFFICULTIES[difficulty]; }
@@ -1905,6 +1991,42 @@ function highScoreKey(){ return `babycare_hs_${difficulty}`; }
 function getHighScore(){ try{ return +(localStorage.getItem(highScoreKey())||0); }catch(e){ return 0; } }
 function setHighScore(v){ try{ localStorage.setItem(highScoreKey(), String(v)); }catch(e){} }
 function updateBestScoreLabel(){ const el2=document.getElementById('bestScoreLabel'); if(el2) el2.textContent = getHighScore(); }
+
+// ---- endless-mode global leaderboard (Firebase Realtime Database, top 12) ----
+const PROFANITY_LIST = ['fuck','shit','bitch','asshole','bastard','cunt','dick','pussy','piss',
+  'slut','whore','nigger','nigga','fag','faggot','retard','rape','cock','twat','wank','damn','hell'];
+function containsProfanity(s){
+  const norm = s.toLowerCase().replace(/[^a-z]/g,'');
+  return PROFANITY_LIST.some(w=>norm.includes(w));
+}
+const DIFF_ICON = {first:'🍼', veteran:'😅', king:'👑'};
+async function submitLeaderboardScore(name, score, diffKey){
+  if(!fbDb) throw new Error('offline');
+  await fbDb.ref('leaderboard').push({name, score, difficulty:diffKey, ts:Date.now()});
+}
+async function fetchLeaderboardTop(n){
+  if(!fbDb) return null;
+  const snap = await fbDb.ref('leaderboard').orderByChild('score').limitToLast(n).once('value');
+  const rows = [];
+  snap.forEach(child=>{ rows.push(child.val()); });
+  rows.sort((a,b)=>b.score-a.score);
+  return rows;
+}
+async function renderLeaderboard(){
+  const el = document.getElementById('leaderboardList');
+  el.innerHTML = '<div class="lbEmpty">Loading…</div>';
+  let rows;
+  try{ rows = await fetchLeaderboardTop(12); }catch(e){ rows = null; }
+  if(!rows){ el.innerHTML = '<div class="lbEmpty">Leaderboard unavailable right now — check your connection.</div>'; return; }
+  if(!rows.length){ el.innerHTML = '<div class="lbEmpty">No scores yet — be the first! 🏆</div>'; return; }
+  el.innerHTML = rows.map((r,i)=>`<div class="lbRow">
+      <div class="lbRank">${i+1}</div>
+      <div class="lbDiff" title="${(DIFFICULTIES[r.difficulty]||{label:''}).label}">${DIFF_ICON[r.difficulty]||'🍼'}</div>
+      <div class="lbName">${escapeHtml(r.name||'Dad')}</div>
+      <div class="lbScore">${r.score}</div>
+    </div>`).join('');
+}
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* ---------- Multiplayer core: players (per-player poo/upgrades/carry state) & babies (shared) ----------
    Solo play is just the degenerate case of this model: one entry in `players` (me), `isHost` always
@@ -1924,6 +2046,7 @@ function freshPlayer(name, colorIdx){
     holdingBaby:-1,                  // index into babies[], or -1
     holdStamina:0, armsTiredTimer:0, backPainTimer:0, nextBackPain:0, slowTimer:0,
     bathroomUrge:0, nextBathroom:0,   // >0 while an urge is active (counts down to "too late")
+    wetPants:false,                  // missed the toilet in time — walks slower until the washing machine fixes it
     changes:0, cuddles:0,
     x:0, z:0, rotY:0,                // synced transform — read directly from `dad` for me, else from Firebase
     avatar:null,                     // remote-only: {group, nameSprite} rendered in the scene
@@ -2011,6 +2134,7 @@ function moveSpeed(){
   const p = me();
   let s = MOVE_SPEED * (1 + 0.15*p.lvl.speed);
   if(p.slowTimer>0) s *= 0.45;                 // slipped in a mess — walking it off
+  if(p.wetPants) s *= 0.55;                    // missed the toilet — persists through the Quick Steps upgrade too
   return s;
 }
 
@@ -2110,6 +2234,11 @@ function doStation(k){
   if(k==='bed'){ const had=hasTask('bed'); completeTask('bed'); (had?Audio.chime():Audio.error()); return; }
   if(k==='oven'){ const had=hasTask('oven'); completeTask('oven'); (had?Audio.chime():Audio.error()); return; }
   if(k==='sink'){ const had=hasTask('sink'); completeTask('sink'); (had?Audio.chime():Audio.error()); return; }
+  if(k==='kitchensink'){ const had=hasTask('kitchensink'); completeTask('kitchensink'); (had?Audio.chime():Audio.error()); return; }
+  if(k==='washer'){                                     // grab a clean pair of pants — clears the wetPants debuff
+    if(P.wetPants){ P.wetPants=false; Audio.chime(); } else Audio.error();
+    return;
+  }
   if(k==='playpen'){
     if(P.holdingBaby<0){ Audio.error(); return; }
     const b = babies[P.holdingBaby];
@@ -2423,15 +2552,22 @@ function endGame(reason){                              // 'win' | 'lose' | 'hide
     document.getElementById('goBody').textContent = f.body;
     const missedNote = reason==='fired' ? ` · ${S.missedCount} missed message${S.missedCount===1?'':'s'}` : '';
     let scoreNote = '';
+    let offerScoreSubmit = false;
     if(S.endless){
       const hs = getHighScore();
       const isNew = S.score > hs;
       if(isNew) setHighScore(S.score);
       scoreNote = isNew ? ` · Score: ${S.score} — New High Score! 🏆` : ` · Score: ${S.score} · Best: ${hs}`;
+      offerScoreSubmit = isNew && S.score>0 && !roomCode;    // solo-only: MP rounds don't map to one player's score
     }
     document.getElementById('goStats').textContent =
       `${diffLabel} · You lasted ${mins}m ${secs}s · ${P.changes} diaper change${P.changes===1?'':'s'}${missedNote}${scoreNote}.`;
     document.getElementById('retryBtn').textContent = roomCode ? 'Back to Lobby ↻' : 'Try Again ↻';
+    pendingScore = offerScoreSubmit ? {score:S.score, difficulty:S.diff} : null;
+    document.getElementById('scoreSubmit').classList.toggle('hidden', !offerScoreSubmit);
+    document.getElementById('goStepnav').classList.toggle('hidden', offerScoreSubmit);
+    document.getElementById('scoreNameInput').value = '';
+    document.getElementById('scoreSubmitError').textContent = '';
     document.getElementById('gameover').classList.remove('hidden');
   }
   if(roomCode && isHost) Net.setGameOver(reason);         // let every guest's client know the round is over
@@ -2450,34 +2586,38 @@ document.querySelectorAll('#diffPicker .diffOpt').forEach(opt=>{
     Audio.buy();
   });
 });
-document.querySelectorAll('#endlessToggle .diffOpt').forEach(opt=>{
+let gameMode = 'normal';                                 // 'normal' | 'endless' | 'chores' — set on modeScreen,
+document.querySelectorAll('#modePicker .diffOpt').forEach(opt=>{ // translated into endlessMode/tasksMode below
   opt.addEventListener('click', ()=>{
-    endlessMode = !endlessMode;
-    opt.classList.toggle('selected', endlessMode);
-    Audio.buy();
-  });
-});
-document.querySelectorAll('#tasksToggle .diffOpt').forEach(opt=>{
-  opt.addEventListener('click', ()=>{
-    tasksMode = !tasksMode;
-    opt.classList.toggle('selected', tasksMode);
+    gameMode = opt.dataset.mode;
+    document.querySelectorAll('#modePicker .diffOpt').forEach(o=>o.classList.toggle('selected', o===opt));
+    endlessMode = gameMode==='endless';
+    tasksMode = gameMode==='chores';
     Audio.buy();
   });
 });
 function showMenuScreen(id){
-  ['mainMenu','helpScreen','settingsScreen','aboutScreen','diffScreen','mpChoiceScreen','mpJoinScreen','mpLobbyScreen'].forEach(mid=>{
+  ['mainMenu','helpScreen','settingsScreen','aboutScreen','leaderboardScreen','modeScreen','diffScreen','mpChoiceScreen','mpJoinScreen','mpLobbyScreen'].forEach(mid=>{
     document.getElementById(mid).classList.toggle('hidden', mid!==id);
   });
 }
-document.getElementById('menuPlayBtn').addEventListener('click', ()=>showMenuScreen('diffScreen'));
+document.getElementById('menuPlayBtn').addEventListener('click', ()=>showMenuScreen('modeScreen'));
 document.getElementById('menuSettingsBtn').addEventListener('click', ()=>{ syncMusicPickers(); showMenuScreen('settingsScreen'); });
 document.getElementById('menuHelpBtn').addEventListener('click', ()=>showMenuScreen('helpScreen'));
 document.getElementById('menuAboutBtn').addEventListener('click', ()=>showMenuScreen('aboutScreen'));
+document.getElementById('menuLeaderboardBtn').addEventListener('click', ()=>{ showMenuScreen('leaderboardScreen'); renderLeaderboard(); });
 document.getElementById('menuTutorialBtn').addEventListener('click', ()=>startGame(true));
 document.getElementById('helpBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('settingsBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('aboutBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
-document.getElementById('diffBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
+document.getElementById('leaderboardBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
+document.getElementById('modeBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
+document.getElementById('modeNextBtn').addEventListener('click', ()=>{
+  document.getElementById('bestScoreNote').classList.toggle('hidden', !endlessMode);
+  updateBestScoreLabel();
+  showMenuScreen('diffScreen');
+});
+document.getElementById('diffBackBtn').addEventListener('click', ()=>showMenuScreen('modeScreen'));
 document.getElementById('startBtn').addEventListener('click', ()=>startGame(false));
 function leaveToMainMenu(){                             // shared "abandon the current run" used by Quit
   S.paused = false;                                       // (pause menu, gameover/win screens) and by
@@ -2494,6 +2634,8 @@ function leaveToMainMenu(){                             // shared "abandon the c
   document.getElementById('intro').classList.remove('hidden');
   showMenuScreen('mainMenu');
 }
+let pendingScore = null;                                // {score,difficulty} awaiting a name to submit to the
+                                                         // global leaderboard, set by endGame() when it's a new PB
 let retryAction = 'solo';                               // what the gameover/win primary button does next:
                                                          // 'solo' restarts immediately, 'lobby' rejoins the
                                                          // still-open room's lobby, 'menu' leaves entirely
@@ -2517,6 +2659,28 @@ function handleRetry(){
 document.getElementById('retryBtn').addEventListener('click', handleRetry);
 document.getElementById('winBtn').addEventListener('click', handleRetry);
 document.getElementById('goQuitBtn').addEventListener('click', leaveToMainMenu);
+function dismissScoreSubmit(){
+  pendingScore = null;
+  document.getElementById('scoreSubmit').classList.add('hidden');
+  document.getElementById('goStepnav').classList.remove('hidden');
+}
+document.getElementById('scoreSkipBtn').addEventListener('click', dismissScoreSubmit);
+document.getElementById('scoreSubmitBtn').addEventListener('click', async ()=>{
+  const errEl = document.getElementById('scoreSubmitError');
+  const name = document.getElementById('scoreNameInput').value.trim();
+  if(!pendingScore) return;
+  if(!name){ errEl.textContent = 'Enter a name first.'; return; }
+  if(containsProfanity(name)){ errEl.textContent = 'Please choose a different name.'; return; }
+  const btn = document.getElementById('scoreSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    await submitLeaderboardScore(name, pendingScore.score, pendingScore.difficulty);
+    dismissScoreSubmit();
+  }catch(e){
+    errEl.textContent = "Couldn't save right now — check your connection and try again.";
+  }
+  btn.disabled = false; btn.textContent = 'Save Score 🏆';
+});
 document.getElementById('pauseQuitBtn').addEventListener('click', leaveToMainMenu);
 
 /* ---------- Multiplayer: Firebase-backed lobby (host/join, difficulty + baby count, player list) ----------
@@ -3276,7 +3440,8 @@ function tick(){
     if(!S.tutorial){
       if(P.bathroomUrge>0){
         P.bathroomUrge -= dt;
-        if(P.bathroomUrge<=0){ P.bathroomUrge=0; P.slowTimer=Math.max(P.slowTimer,6); Audio.error(); }
+        if(P.bathroomUrge<=0){ P.bathroomUrge=0; P.wetPants=true; Audio.error(); }  // walks slower until they
+                                                                                     // grab clean pants from the washer
       } else {
         P.nextBathroom -= dt;
         if(P.nextBathroom<=0){ P.bathroomUrge = curDiff().bathroomWindow; Audio.error(); }
@@ -3521,7 +3686,7 @@ function updateHUD(){
                  : `🚨 ${babyLabel(nb)} is choking on something! Get there now! (${Math.ceil(nb.chokeDeadline)}s)`;
     }
   } else if(P.backPainTimer>0){
-    msg = `🤕 Your back seized up! Can't move (${P.backPainTimer.toFixed(1)}s)`;
+    msg = '';                                    // the top alertsArea banner already covers this — no duplicate here
   } else if(k==='closet'){
     msg = '🚪 Hide in the closet? Ends the game — <kbd>E</kbd>';
   } else if(k==='frontdoor'){
@@ -3558,6 +3723,8 @@ function updateHUD(){
     else if(k==='bed') msg = hasTask('bed') ? '🛏️ Tidy the bed — <kbd>E</kbd>' : '';
     else if(k==='oven') msg = hasTask('oven') ? '🍱 Grab lunch from the oven — <kbd>E</kbd>' : '';
     else if(k==='sink') msg = hasTask('sink') ? '🚿 Clean the sink — <kbd>E</kbd>' : '';
+    else if(k==='kitchensink') msg = hasTask('kitchensink') ? '🍽️ Clean the kitchen sink — <kbd>E</kbd>' : '';
+    else if(k==='washer') msg = P.wetPants ? '🧺 Grab clean pants — <kbd>E</kbd>' : '';
     else if(k) msg = `Grab ${NEED_ICON[k]} ${NEED_LABEL[k]||k} — <kbd>E</kbd>`;
     else if(hasTask('toys') && nearestToyDist()<1.8) msg = '🧸 Put away the toys — <kbd>E</kbd>';
     else if(mess) msg = '🤢 Ew, a mess — go grab the 🧹 mop';
@@ -3575,7 +3742,7 @@ function updateHUD(){
     el.carry.classList.add('show');
   }
   else if(P.carrying){ el.carry.innerHTML = 'Carrying: '+CARRY_ICON[P.carrying]+' '+P.carrying; el.carry.classList.add('show'); }
-  else if(P.backPainTimer>0){ el.carry.innerHTML = '🤕 Back spasm! Frozen in place...'; el.carry.classList.add('show'); }
+  else if(P.wetPants){ el.carry.innerHTML = '💦 Wet pants! Walking slower — find the 🧺 washer'; el.carry.classList.add('show'); }
   else if(P.slowTimer>0){ el.carry.innerHTML = '🐌 Slipped! Walking slower...'; el.carry.classList.add('show'); }
   else if(nb && nb.penned && nbd<2.6){ el.carry.innerHTML = `🔒 Baby in playpen: ${Math.ceil(nb.penTimer)}s`; el.carry.classList.add('show'); }
   else el.carry.classList.remove('show');
