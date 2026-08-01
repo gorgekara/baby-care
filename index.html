@@ -129,7 +129,7 @@
   .taskRow{display:flex;align-items:center;gap:6px;white-space:nowrap;margin:3px 0;justify-content:flex-end}
   .taskRow.done{opacity:.45;text-decoration:line-through}
 
-  .tutorialPanel{position:absolute;bottom:216px;left:50%;transform:translateX(-50%);width:min(560px,92vw);
+  .tutorialPanel{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);width:min(560px,92vw);
     background:var(--panel);border:1px solid var(--panelborder);border-radius:14px;padding:14px 18px;
     box-shadow:0 10px 30px rgba(0,0,0,.4);pointer-events:auto}
   .tutorialPanel.hidden{display:none}
@@ -2518,6 +2518,9 @@ function startGame(isTutorial){
   spawnBabies();
   enterHouseCommon();
   document.getElementById('tutorialPanel').classList.toggle('hidden', !isTutorial);
+  // both would sit under the bottom-docked tutorial panel — <kbd>U</kbd> still opens the shop without the corner button
+  document.getElementById('minimapHud').classList.toggle('hidden', isTutorial);
+  document.querySelector('.corner').classList.toggle('hidden', isTutorial);
   if(isTutorial) tutorialStepEnter(0);
   S.mode='play';
 }
