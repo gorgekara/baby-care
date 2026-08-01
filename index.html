@@ -114,6 +114,8 @@
   .backPainAlert.show{animation-duration:.8s}
   .bathroomAlert{background:rgba(10,20,24,.94);border:1px solid #5cd0ff;color:#cdeeff}
   .bathroomAlert.show{animation-duration:.9s}
+  .packageAlert{background:rgba(24,18,8,.94);border:1px solid #ffcf5c;color:#ffedc2}
+  .packageAlert.show{animation-duration:.85s}
 
   .topRightHud{position:absolute;top:10px;right:12px;display:flex;flex-direction:column;gap:8px;
     align-items:flex-end;z-index:6}
@@ -257,6 +259,14 @@
     text-align:left;display:flex;align-items:center;gap:12px;transition:transform .1s,background .15s}
   .menuBtnBig:hover{background:rgba(255,255,255,.16);transform:translateX(4px)}
   .menuBtnBig:active{transform:scale(.97)}
+  /* Play is the primary call to action — bigger, filled, and glowing so it reads as the obvious first click */
+  .menuBtnPrimary{background:linear-gradient(135deg,#ffd166,#ffb347);color:#3a2410;border-color:#ffb347;
+    font-size:22px;padding:19px 24px;box-shadow:0 8px 24px rgba(255,177,71,.35)}
+  .menuBtnPrimary:hover{background:linear-gradient(135deg,#ffdb85,#ffbf5e);box-shadow:0 10px 28px rgba(255,177,71,.5)}
+  /* About is the least essential item — shrink it down and drop the border so it doesn't compete for attention */
+  .menuBtnMinor{border-color:transparent;background:transparent;color:var(--text);opacity:.6;
+    font-size:14px;font-weight:normal;padding:6px 22px;margin-top:2px}
+  .menuBtnMinor:hover{opacity:.9;background:rgba(255,255,255,.08);transform:none}
   .menuRight{flex:1;text-align:center;min-width:260px}
   .logoIcons{font-size:72px;margin-bottom:6px;filter:drop-shadow(0 6px 18px rgba(0,0,0,.45));
     animation:logoFloat 3.6s ease-in-out infinite}
@@ -296,6 +306,7 @@
     <div class="alertBox chokeAlert" id="chokeAlert"></div>
     <div class="alertBox backPainAlert" id="backPainAlert"></div>
     <div class="alertBox bathroomAlert" id="bathroomAlert"></div>
+    <div class="alertBox packageAlert" id="packageAlert"></div>
   </div>
   <div class="prompt" id="prompt"></div>
   <div class="carry" id="carry"></div>
@@ -327,13 +338,13 @@
 <div class="overlay" id="intro">
   <div class="menuCard" id="mainMenu">
     <div class="menuLeft">
-      <button class="menuBtnBig" id="menuPlayBtn">▶️ Play</button>
+      <button class="menuBtnBig menuBtnPrimary" id="menuPlayBtn">▶️ Play</button>
       <button class="menuBtnBig" id="menuMultiplayerBtn">🌐 Multiplayer</button>
       <button class="menuBtnBig" id="menuTutorialBtn">🎓 Tutorial</button>
       <button class="menuBtnBig" id="menuSettingsBtn">⚙️ Settings</button>
       <button class="menuBtnBig" id="menuHelpBtn">❓ Help</button>
       <button class="menuBtnBig" id="menuLeaderboardBtn">🏆 Leaderboard</button>
-      <button class="menuBtnBig" id="menuAboutBtn">ℹ️ About</button>
+      <button class="menuBtnBig menuBtnMinor" id="menuAboutBtn">ℹ️ About</button>
     </div>
     <div class="menuRight">
       <div class="logoIcons">👶🍼</div>
@@ -386,6 +397,12 @@
     </div>
 
     <div class="helpSection">
+      <h3>📦 Packages</h3>
+      <p>Every so often a delivery gets left at the 🚪 <b>front door</b> — walk over and press <kbd>E</kbd>
+         to bring it in before it's stolen. Miss enough of them and Mom comes home unimpressed, even if you win.</p>
+    </div>
+
+    <div class="helpSection">
       <h3>💩 Poo &amp; Upgrades</h3>
       <p>Changing diapers banks 💩 <b>poo</b> — spend it at the 🛠️ <b>workbench</b> to upgrade everything
          above (faster needs, more poo per change, longer arm stamina, shorter back pain, and more).</p>
@@ -401,8 +418,8 @@
     <div class="helpSection">
       <h3>🏆 Winning &amp; Losing</h3>
       <p>Let any need run out and the <b style="color:var(--cry)">cry-o-meter</b> climbs — fill it and
-         you'll panic-call Mommy, game over. Survive until she's back to win! (The 🚪 closet and 🚪 front
-         door both end the game instantly if used — don't be <i>that</i> dad.)</p>
+         you'll panic-call Mommy, game over. Survive until she's back to win! (The 🚪 closet ends the game
+         instantly if used — don't be <i>that</i> dad.)</p>
     </div>
 
     <p style="font-size:12px;opacity:.65;margin-top:14px">Press <kbd>Esc</kbd> anytime in-game for this
@@ -626,9 +643,9 @@
 <!-- Win -->
 <div class="overlay hidden" id="win">
   <div class="card">
-    <div class="big">🎉🏠</div>
-    <h1>Mom's Home!</h1>
-    <p>You did it — you kept the baby happy the whole time. Mom walks in with the groceries
+    <div class="big" id="winIcon">🎉🏠</div>
+    <h1 id="winTitle">Mom's Home!</h1>
+    <p id="winBody">You did it — you kept the baby happy the whole time. Mom walks in with the groceries
        and finds a calm, content little one. <b>Dad of the year.</b></p>
     <p id="winStats" style="font-size:13px;opacity:.8"></p>
     <button class="btn cta" id="winBtn">Play Again ↻</button>
@@ -667,8 +684,10 @@
          free your hands — it escapes on its own after a bit. Watch the 🔥 <b>oven</b> in the kitchen — an
          unsupervised baby that toddles over gets burned. The 💻 <b>computer</b> in the office pings with
          work messages; reply within the time shown or it costs you — miss too many and you're
-         <b>fired</b>. Changing diapers collects 💩 <b>poo</b> — spend it at the 🛠️ workbench. Survive
-         until Mom returns to win! (The 🚪 closet and 🚪 front door both end the game instantly if used.)</p>
+         <b>fired</b>. Changing diapers collects 💩 <b>poo</b> — spend it at the 🛠️ workbench. A
+         📦 <b>package</b> occasionally shows up at the front door — grab it before it's stolen, or Mom
+         won't be thrilled even if you win. Survive until Mom returns to win! (The 🚪 closet ends the
+         game instantly if used.)</p>
     </div>
     <p style="font-size:13px;opacity:.75;margin:16px 0 4px">⌨️ Controls</p>
     <div class="hint" style="position:static;max-width:none">
@@ -832,6 +851,7 @@ const solids = [];         // furniture/station collision circles
 const stations = {};
 let tvScreen = null, computerScreen = null, houseGroup = null;
 let ovenPos = new THREE.Vector3();  // set by buildKitchen; used by the baby AI's oven hazard
+let packageSpot = new THREE.Vector3();  // set by furnishFrontDoor; where a delivered package waits on the doormat
 let lastLayout = null;              // simplified room rects set by buildHouse(); used by the pause-menu minimap
 const houseBounds = { X0:-23, X1:23, Z0:-8, Z1:22 };
 const spawnDad = new THREE.Vector3(0,0,3), spawnBaby = new THREE.Vector3(-13,0,1);
@@ -1479,6 +1499,12 @@ function buildFrontDoorGroup(){ const g=new THREE.Group();
   const knob=sph(0.06,'#e8d08a'); knob.position.set(0.42,1.2,0.15); g.add(knob);
   const rug=box(1.5,0.04,0.55,'#c9a24b'); rug.position.set(0,0.02,0.55); g.add(rug);
   return g; }
+function packageBoxGroup(){ const g=new THREE.Group();     // a delivery on the doormat — grab it before it's stolen
+  const b=box(0.55,0.5,0.55,'#c9a06a'); b.position.y=0.25; g.add(b);
+  const tapeA=box(0.6,0.03,0.1,'#eee4cd'); tapeA.position.y=0.51; g.add(tapeA);
+  const tapeB=box(0.1,0.03,0.6,'#eee4cd'); tapeB.position.y=0.51; g.add(tapeB);
+  const tapeFront=box(0.1,0.52,0.03,'#eee4cd'); tapeFront.position.set(0,0.25,0.28); g.add(tapeFront);
+  return g; }
 // a runner rug per hallway segment, oriented along whichever axis that segment is longer on
 function furnishHalls(halls){
   halls.forEach(h=>{
@@ -1501,6 +1527,9 @@ function furnishFrontDoor(layout){
     outsideDoor.position.set(fd.outX, 0, fd.outZ); outsideDoor.rotation.y = fd.outRotY;
     houseGroup.add(outsideDoor);
   }
+  // doormat spot for a delivered package — a step in from the door, toward the hallway (spawnDad's direction)
+  const dx = layout.spawnDad.x-fd.x, dz = layout.spawnDad.z-fd.z, dlen = Math.hypot(dx,dz)||1;
+  packageSpot.set(fd.x + dx/dlen*1.1, 0, fd.z + dz/dlen*1.1);
 }
 
 /* ---------- house layouts: each picks its own room/hallway geometry and hands back a uniform
@@ -1945,7 +1974,8 @@ const DIFFICULTIES = {
     notifyMin:38, notifyMax:60, notifyWindow:20, notifyPenalty:14, fireLimit:4,
     backPainMin:46, backPainMax:72, backPainCrippleBase:1.9,
     chokeMin:58, chokeMax:92, chokeWindow:10,
-    bathroomMin:135, bathroomMax:195, bathroomWindow:30},
+    bathroomMin:135, bathroomMax:195, bathroomWindow:30,
+    packageMin:100, packageMax:170, packageWindow:24},
   veteran: {key:'veteran', label:"Been There, Done That", gameLen:285,
     decayMul:1.12, cryFillMul:1.12, cryDrainMul:0.9, vomitMin:22, vomitMax:42,
     walkChance:0.4, fallMin:5, fallMax:10, needStart:{food:92,milk:85,diaper:90,cartoon:78},
@@ -1953,7 +1983,8 @@ const DIFFICULTIES = {
     notifyMin:26, notifyMax:44, notifyWindow:14, notifyPenalty:19, fireLimit:3,
     backPainMin:33, backPainMax:54, backPainCrippleBase:3.0,
     chokeMin:45, chokeMax:74, chokeWindow:7.5,
-    bathroomMin:98, bathroomMax:150, bathroomWindow:24},
+    bathroomMin:98, bathroomMax:150, bathroomWindow:24,
+    packageMin:80, packageMax:140, packageWindow:19},
   king:    {key:'king', label:'King', gameLen:345,
     decayMul:1.55, cryFillMul:1.5, cryDrainMul:0.65, vomitMin:12, vomitMax:26,
     walkChance:0.55, fallMin:3, fallMax:7, needStart:{food:78,milk:72,diaper:80,cartoon:62},
@@ -1961,7 +1992,8 @@ const DIFFICULTIES = {
     notifyMin:16, notifyMax:30, notifyWindow:9, notifyPenalty:24, fireLimit:3,
     backPainMin:21, backPainMax:38, backPainCrippleBase:4.3,
     chokeMin:33, chokeMax:54, chokeWindow:6,
-    bathroomMin:74, bathroomMax:115, bathroomWindow:19},
+    bathroomMin:74, bathroomMax:115, bathroomWindow:19,
+    packageMin:60, packageMax:110, packageWindow:14},
   // practice mode: needs never decay and no random hazard can fire — every mechanic is either
   // explained as plain text or triggered deliberately by the tutorial script, at the player's own pace
   tutorial: {key:'tutorial', label:'Tutorial', gameLen:Infinity,
@@ -1971,7 +2003,8 @@ const DIFFICULTIES = {
     notifyMin:9999, notifyMax:9999, notifyWindow:9999, notifyPenalty:0, fireLimit:9999,
     backPainMin:9999, backPainMax:9999, backPainCrippleBase:0,
     chokeMin:9999, chokeMax:9999, chokeWindow:9999,
-    bathroomMin:9999, bathroomMax:9999, bathroomWindow:9999},
+    bathroomMin:9999, bathroomMax:9999, bathroomWindow:9999,
+    packageMin:9999, packageMax:9999, packageWindow:9999},
 };
 let difficulty = 'veteran';
 let endlessMode = false;
@@ -2087,7 +2120,7 @@ function resetState(){
     cry:0,
     joy:0,                             // topped up by play/cuddles; eases crying
     cartoonsOn:false, tvTimer:0,
-    endless: endlessMode,               // no win-timer — plays until a lose/fired/hide/leave condition
+    endless: endlessMode,               // no win-timer — plays until a lose/fired/hide condition
     tasksEnabled: tasksMode, tasks:[],   // tasks[] is actually filled in by buildHouse() (needs the seed)
     gameLen: endlessMode ? Infinity : D.gameLen,
     timeLeft: endlessMode ? Infinity : D.gameLen,
@@ -2103,6 +2136,11 @@ function resetState(){
     paused:false,                      // Esc pause menu open — freezes gameplay updates, keeps rendering
     penEscapedTimer:0,                 // >0 briefly after an escape, for the HUD message
     armsTiredTimer:0,                  // (mirrors me().armsTiredTimer at reset time; kept for the HUD)
+    nextPackage: rand(D.packageMin*0.6, D.packageMax*0.6), // first delivery comes a bit sooner, like notifyTimer
+    packageWaiting:false,              // a package is sitting on the doormat, waiting to be grabbed or stolen
+    packageDeadline:0,                 // seconds left to grab it before it's stolen
+    packageMesh:null,                  // the box mesh currently on the doormat, if any
+    missedPackages:0,                  // stolen this run — enough of these sours the win message
   };
   players = {}; players[myId] = freshPlayer(myName, 0);
   const P = players[myId];
@@ -2218,9 +2256,13 @@ function doStation(k){
     if(S.tutorial){ Audio.error(); return; }
     personLeftGame('hide'); return;
   }
-  if(k==='frontdoor'){                                 // dad walks out on the baby entirely
-    if(S.tutorial){ Audio.error(); return; }
-    personLeftGame('leave'); return;
+  if(k==='frontdoor'){                                 // grab a delivered package before it's stolen, if one's waiting
+    if(S.packageWaiting){
+      S.packageWaiting=false;
+      if(S.packageMesh){ houseGroup.remove(S.packageMesh); disposeGroup(S.packageMesh); S.packageMesh=null; }
+      S.joy=Math.min(1,S.joy+0.1); Audio.chime();
+    } else Audio.error();
+    return;
   }
   if(k==='toilet'){
     const hadTask = hasTask('toilet');
@@ -2338,6 +2380,7 @@ const el = {
   carry:document.getElementById('carry'), topbar:document.getElementById('topbar'),
   workAlert:document.getElementById('workAlert'), chokeAlert:document.getElementById('chokeAlert'),
   backPainAlert:document.getElementById('backPainAlert'), bathroomAlert:document.getElementById('bathroomAlert'),
+  packageAlert:document.getElementById('packageAlert'),
   mpPlayerHud:document.getElementById('mpPlayerHud'), tasksHud:document.getElementById('tasksHud'),
   timeLabel:document.getElementById('timeLabel'), scoreStat:document.getElementById('scoreStat'), scoreVal:document.getElementById('scoreVal'),
 };
@@ -2529,12 +2572,17 @@ const GAMEOVER_FLAVOR = {
     body:"The crying got to be too much and you had to phone Mom for backup. She's not thrilled she had to leave her shopping…"},
   hide: {icon:'🙈🚪', title:'You Hid in the Closet!',
     body:"The baby needed you and you climbed in with the sweaters instead. The crying didn't stop — you just stopped listening. You're a coward."},
-  leave: {icon:'🚪🌙', title:'You Walked Out?!',
-    body:"You left an infant home alone and strolled out the front door. That's not “popping out for milk,” that's abandonment. Mom is never trusting you with babysitting again."},
   fired: {icon:'💻📤', title:"You've Been Fired!",
     body:"Too many missed messages and your boss finally had enough — you're let go, mid-shift, with a baby on your hip. Remote work and babysitting don't mix as well as you thought."},
   choke: {icon:'🚑😰', title:'The Baby Choked!',
     body:"You didn't clear the airway in time. Panicked, you're rushing to the ER — Mom is going to want a very long explanation for this one."},
+};
+const PACKAGES_DISAPPOINTED_THRESHOLD = 2;  // this many stolen packages sours an otherwise-clean win
+const WIN_FLAVOR = {
+  proud: {icon:'🎉🏠', title:"Mom's Home!",
+    body:"You did it — you kept the baby happy the whole time. Mom walks in with the groceries and finds a calm, content little one. <b>Dad of the year.</b>"},
+  disappointed: {icon:'🏠😕', title:"Mom's Home... Sort Of",
+    body:"You kept the baby alive and happy, sure — but Mom also came home to an empty porch and a stack of \"where's my package?\" emails. <b>Dad of the year, minus a few stars.</b>"},
 };
 function endGame(reason){                              // 'win' | 'lose' | 'hide'
   S.mode = reason==='win' ? 'win' : 'over';
@@ -2544,8 +2592,13 @@ function endGame(reason){                              // 'win' | 'lose' | 'hide
   const mins = Math.floor(S.elapsed/60), secs = Math.round(S.elapsed%60); // to rejoin its lobby instead of
   const diffLabel = DIFFICULTIES[S.diff].label;           // an outright restart
   if(reason==='win'){
+    const wf = S.missedPackages >= PACKAGES_DISAPPOINTED_THRESHOLD ? WIN_FLAVOR.disappointed : WIN_FLAVOR.proud;
+    document.getElementById('winIcon').textContent = wf.icon;
+    document.getElementById('winTitle').textContent = wf.title;
+    document.getElementById('winBody').innerHTML = wf.body;
+    const packageNote = S.missedPackages>0 ? ` · 📦 ${S.missedPackages} package${S.missedPackages===1?'':'s'} stolen` : '';
     document.getElementById('winStats').textContent =
-      `${diffLabel} · Diapers changed: ${P.changes} · Poo banked: 💩${P.poo}`;
+      `${diffLabel} · Diapers changed: ${P.changes} · Poo banked: 💩${P.poo}${packageNote}`;
     document.getElementById('winBtn').textContent = roomCode ? 'Back to Lobby ↻' : 'Play Again ↻';
     document.getElementById('win').classList.remove('hidden');
   } else {
@@ -2575,7 +2628,7 @@ function endGame(reason){                              // 'win' | 'lose' | 'hide
   }
   if(roomCode && isHost) Net.setGameOver(reason);         // let every guest's client know the round is over
 }
-function personLeftGame(reason){                        // closet/front-door: solo, or the host doing it in
+function personLeftGame(reason){                        // hiding in the closet: solo, or the host doing it in
   const P = actingPlayer();                               // multiplayer, ends the round for everyone as usual —
   if(P.holdingBaby>=0) putBabyDown(P);                     // but a GUEST doing it only ends their own session,
   if(!roomCode || actingPlayerId===myId){ endGame(reason); return; } // leaving everyone else's round running
@@ -2792,6 +2845,7 @@ const Net = (function(){
       babiesRef.set(bSnap);                                 // saw the baby dragging along the ground at the
       worldRef.set({cry:S.cry, cartoonsOn:S.cartoonsOn, notification:S.notification,   // holder's feet instead
         elapsed:S.elapsed, timeLeft: isFinite(S.timeLeft)?S.timeLeft:-1, score:S.score, // of lifted into their arms
+        packageWaiting:S.packageWaiting,
         messes:S.messes.map(m=>({x:m.x,z:m.z})),
         tasksDone:S.tasks.map(t=>t.done)});      // task identity/order is already deterministic from the shared
                                                   // seed — only the done-flags actually need to be synced
@@ -3110,6 +3164,15 @@ function applyRemoteWorld(w){
   if(!w) return;
   S.cry=w.cry||0; S.cartoonsOn=!!w.cartoonsOn; S.notification=!!w.notification;
   S.elapsed=w.elapsed||0; S.timeLeft = w.timeLeft<0 ? Infinity : w.timeLeft; S.score=w.score||0;
+  const packageNowWaiting = !!w.packageWaiting;
+  if(packageNowWaiting !== S.packageWaiting){
+    S.packageWaiting = packageNowWaiting;
+    if(S.packageWaiting && !S.packageMesh){
+      S.packageMesh = packageBoxGroup(); S.packageMesh.position.copy(packageSpot); houseGroup.add(S.packageMesh);
+    } else if(!S.packageWaiting && S.packageMesh){
+      houseGroup.remove(S.packageMesh); disposeGroup(S.packageMesh); S.packageMesh=null;
+    }
+  }
   const list = w.messes||[];
   while(S.messes.length>list.length){ const m=S.messes.pop(); if(m.mesh){ houseGroup.remove(m.mesh); disposeGroup(m.mesh); } }
   while(S.messes.length<list.length){ const mesh=messBlob(); houseGroup.add(mesh); S.messes.push({x:0,z:0,mesh,playerInside:false}); }
@@ -3167,8 +3230,10 @@ const TUTORIAL_STEPS = [
          "Buy 💊 Pain Medication at the workbench to shorten it. (Not triggering it right now — just "+
          "something to watch for out there!)" },
   { text:"🔥🚪 <b>Hazards to avoid:</b> An unattended baby that wanders to the 🔥 oven gets burned. And "+
-         "whatever you do, never hide in the 🚪 closet or walk out the 🚪 front door — both instantly end "+
-         "a real game!" },
+         "whatever you do, never hide in the 🚪 closet — it instantly ends a real game!" },
+  { text:"📦 <b>Packages:</b> Every so often a delivery gets left at the 🚪 front door — walk over and press "+
+         "<kbd>E</kbd> to bring it in before it's stolen. Miss too many in a real run and Mom notices the "+
+         "empty boxes on the porch." },
   { text:"💩 <b>Upgrades:</b> Diaper changes bank 💩 poo. I've topped up your balance — press <kbd>U</kbd> "+
          "or visit the 🛠️ workbench and buy an upgrade.",
     onEnter:()=>{ me().poo = Math.max(me().poo, 20); },
@@ -3475,6 +3540,28 @@ function tick(){
         if(S.missedNotifyTimer>0) S.missedNotifyTimer = Math.max(0, S.missedNotifyTimer-dt);
       }
 
+      // ---- rare package delivery: grab it off the doormat before it's stolen ----
+      if(!S.tutorial){
+        const dPkg = curDiff();
+        if(S.packageWaiting){
+          S.packageDeadline -= dt;
+          if(S.packageDeadline <= 0){
+            S.packageWaiting=false; S.missedPackages++; Audio.error();
+            if(S.packageMesh){ houseGroup.remove(S.packageMesh); disposeGroup(S.packageMesh); S.packageMesh=null; }
+            S.nextPackage = rand(dPkg.packageMin, dPkg.packageMax);
+          }
+        } else {
+          S.nextPackage -= dt;
+          if(S.nextPackage <= 0){
+            S.packageWaiting=true; S.packageDeadline=dPkg.packageWindow;
+            S.packageMesh = packageBoxGroup();
+            S.packageMesh.position.copy(packageSpot);
+            houseGroup.add(S.packageMesh);
+            Audio.chime();
+          }
+        }
+      }
+
       // ---- occasional throw-up: leaves a mess only the mop can clean (any unheld baby might be the culprit) ----
       if(!S.tutorial){
         S.vomitTimer -= dt;
@@ -3655,6 +3742,10 @@ function updateHUD(){
     el.bathroomAlert.textContent = `🚽 Gotta go! Reach the toilet within ${Math.ceil(P.bathroomUrge)}s`;
     el.bathroomAlert.classList.add('show');
   } else el.bathroomAlert.classList.remove('show');
+  if(S.packageWaiting){
+    el.packageAlert.textContent = `📦 A package was delivered! Grab it before it's stolen (${Math.ceil(S.packageDeadline)}s)`;
+    el.packageAlert.classList.add('show');
+  } else el.packageAlert.classList.remove('show');
   const hp = happiness();
   el.hap.textContent = hp>70?'😄':hp>40?'🙂':hp>15?'😟':'😢';
   el.poo.textContent = '💩 '+P.poo;
@@ -3692,8 +3783,8 @@ function updateHUD(){
     msg = '';                                    // the top alertsArea banner already covers this — no duplicate here
   } else if(k==='closet'){
     msg = '🚪 Hide in the closet? Ends the game — <kbd>E</kbd>';
-  } else if(k==='frontdoor'){
-    msg = '🚪 Walk out the front door? Ends the game — <kbd>E</kbd>';
+  } else if(k==='frontdoor' && S.packageWaiting){
+    msg = `📦 Grab the package before it's stolen — <kbd>E</kbd> (${Math.ceil(S.packageDeadline)}s)`;
   } else if(nb && (nb.fallen || nb.burned) && P.holdingBaby<0){
     const hurtMsg = nb.burned ? `🔥 ${babyLabel(nb)} got burned on the oven!` : `😢 ${babyLabel(nb)} fell!`;
     const hurtMsgFar = nb.burned ? `🔥 ${babyLabel(nb)} got burned and is crying — go comfort them!` : `😢 ${babyLabel(nb)} fell and is crying — go pick them up!`;
@@ -3722,7 +3813,7 @@ function updateHUD(){
     else if(k==='computer') msg = S.notification ? '💻 Reply to the work message — <kbd>E</kbd>' : '';
     else if(k==='toilet') msg = P.bathroomUrge>0 ? '🚽 Go now — <kbd>E</kbd>' : (hasTask('toilet') ? '🧽 Clean the toilet — <kbd>E</kbd>' : '');
     else if(k==='closet') msg = 'Hide in the closet (ends your shift) — <kbd>E</kbd>';
-    else if(k==='frontdoor') msg = 'Walk out the front door (ends your shift) — <kbd>E</kbd>';
+    else if(k==='frontdoor') msg = '';
     else if(k==='bed') msg = hasTask('bed') ? '🛏️ Tidy the bed — <kbd>E</kbd>' : '';
     else if(k==='oven') msg = hasTask('oven') ? '🍱 Grab lunch from the oven — <kbd>E</kbd>' : '';
     else if(k==='sink') msg = hasTask('sink') ? '🚿 Clean the sink — <kbd>E</kbd>' : '';
