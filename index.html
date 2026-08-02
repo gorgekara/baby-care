@@ -298,17 +298,23 @@
   @keyframes pop{40%{transform:scale(1.06)}}
 
   /* ---------- Main menu ----------
-     A 2-column grid, not flex — every item gets an explicit grid-row (set inline in the HTML) so the
-     leaderboard's top edge lands exactly on the Play button's row regardless of either column's exact
-     content height, with no magic-number offsets to keep in sync. Row 1 is the header row: logo on the
-     left, the Dad Level bar pinned top-right on the right (see justify-self on .menuLevelBar below). */
+     Two independent flex columns (menuLeft/menuRight), NOT a shared CSS grid — a grid item spanning
+     multiple auto-sized rows (the leaderboard, needing to start at Play's row) forces every row it spans
+     to grow to fit its own content, which visually inflated the gaps between every button below Play.
+     Instead: menuLeft is just a plain top-aligned button stack; the level bar is pinned top-right of
+     menuRight via absolute positioning (out of flow, so it can't push the leaderboard down); and the
+     leaderboard preview's top offset is set in JS (alignMenuLbPreview(), called alongside the other
+     menu renders) to match Play's actual measured top — robust to size changes on either side, no
+     magic-number offsets to keep in sync by hand. */
   .menuCard{background:var(--panel);border:1px solid var(--panelborder);border-radius:22px;margin:auto;
     padding:36px 40px;max-width:780px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);
-    display:grid;grid-template-columns:minmax(230px,300px) 1fr;column-gap:34px;row-gap:14px;align-items:start}
+    display:flex;align-items:flex-start;justify-content:space-between;gap:34px;flex-wrap:wrap}
   .menuCard.hidden{display:none}
-  /* narrower than the column it's in, and pinned to the right edge — "top right, always" */
-  .menuLevelBar{justify-self:end;width:230px;box-sizing:border-box;pointer-events:auto;cursor:pointer;
-    display:flex;align-items:center;gap:8px;margin-bottom:22px;
+  .menuLeft{display:flex;flex-direction:column;gap:14px;min-width:220px}
+  .menuRight{position:relative;flex:1;min-width:260px}
+  /* pinned top-right of menuRight, narrower than the column — "top right, always" */
+  .menuLevelBar{position:absolute;top:0;right:0;width:230px;box-sizing:border-box;pointer-events:auto;cursor:pointer;
+    display:flex;align-items:center;gap:8px;
     border:1px solid var(--panelborder);background:rgba(255,255,255,.06);border-radius:14px;padding:8px 14px;
     color:var(--text);font-family:inherit;text-align:left;transition:background .15s,transform .1s}
   .menuLevelBar:hover{background:rgba(255,255,255,.13);transform:translateY(-1px)}
@@ -321,8 +327,6 @@
   .menuLevelXpBar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ffcf5c,#ffa25c);
     border-radius:5px;transition:width .3s ease}
   .menuLevelArrow{opacity:.55;font-size:12px}
-  /* extra breathing room before Play — added to both row-1 items (not row-gap, which is shared by every
-     row) so the grid's row-2 line — and with it the leaderboard preview's aligned top — moves down too */
   .menuLogoCompact{display:flex;align-items:center;gap:10px;margin-bottom:22px}
   .menuLogoIconSm{font-size:36px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.4))}
   .menuLogoTextSm{font-family:'Baloo 2',cursive,'Comic Sans MS',sans-serif}
@@ -470,29 +474,33 @@
 <!-- Intro / main menu -->
 <div class="overlay" id="intro">
   <div class="menuCard" id="mainMenu">
-    <div class="menuLogoCompact" style="grid-column:1;grid-row:1">
-      <span class="menuLogoIconSm">👶🍼</span>
-      <div class="menuLogoTextSm">
-        <div class="menuLogoTopSm">Baby Care</div>
-        <div class="menuLogoSubSm">Dad's on Duty</div>
+    <div class="menuLeft">
+      <div class="menuLogoCompact">
+        <span class="menuLogoIconSm">👶🍼</span>
+        <div class="menuLogoTextSm">
+          <div class="menuLogoTopSm">Baby Care</div>
+          <div class="menuLogoSubSm">Dad's on Duty</div>
+        </div>
       </div>
+      <button class="menuBtnBig menuBtnPrimary" id="menuPlayBtn">▶️ Play</button>
+      <button class="menuBtnBig menuBtnSecondary" id="menuMultiplayerBtn">🌐 Multiplayer</button>
+      <button class="menuBtnBig menuBtnSecondary" id="menuTutorialBtn">🎓 Tutorial</button>
+      <button class="menuBtnBig menuBtnSecondary" id="menuSettingsBtn">⚙️ Settings</button>
+      <button class="menuBtnBig menuBtnSecondary" id="menuHelpBtn">❓ Help</button>
+      <button class="menuBtnBig menuBtnMinor" id="menuAboutBtn">ℹ️ About</button>
     </div>
-    <button class="menuLevelBar" id="menuLevelBar" style="grid-column:2;grid-row:1" title="View your Dad Level profile">
-      <span class="menuLevelIcon">👤</span>
-      <span class="menuLevelText" id="menuLevelText">Level 1</span>
-      <span class="menuLevelColorDot" id="menuLevelColorDot" title="Your outfit color"></span>
-      <span class="menuLevelXpBar"><i id="menuLevelXpFill"></i></span>
-      <span class="menuLevelArrow">▸</span>
-    </button>
-    <button class="menuBtnBig menuBtnPrimary" id="menuPlayBtn" style="grid-column:1;grid-row:2">▶️ Play</button>
-    <button class="menuBtnBig menuBtnSecondary" id="menuMultiplayerBtn" style="grid-column:1;grid-row:3">🌐 Multiplayer</button>
-    <button class="menuBtnBig menuBtnSecondary" id="menuTutorialBtn" style="grid-column:1;grid-row:4">🎓 Tutorial</button>
-    <button class="menuBtnBig menuBtnSecondary" id="menuSettingsBtn" style="grid-column:1;grid-row:5">⚙️ Settings</button>
-    <button class="menuBtnBig menuBtnSecondary" id="menuHelpBtn" style="grid-column:1;grid-row:6">❓ Help</button>
-    <button class="menuBtnBig menuBtnMinor" id="menuAboutBtn" style="grid-column:1;grid-row:7">ℹ️ About</button>
-    <div class="menuLbPreview menuLbPreviewFull" style="grid-column:2;grid-row:2 / 8">
-      <div class="menuLbPreviewTitle">🏆 Top Endless Scores</div>
-      <div class="leaderboardList" id="menuLbList"><div class="lbEmpty">Loading…</div></div>
+    <div class="menuRight" id="menuRight">
+      <button class="menuLevelBar" id="menuLevelBar" title="View your Dad Level profile">
+        <span class="menuLevelIcon">👤</span>
+        <span class="menuLevelText" id="menuLevelText">Level 1</span>
+        <span class="menuLevelColorDot" id="menuLevelColorDot" title="Your outfit color"></span>
+        <span class="menuLevelXpBar"><i id="menuLevelXpFill"></i></span>
+        <span class="menuLevelArrow">▸</span>
+      </button>
+      <div class="menuLbPreview menuLbPreviewFull" id="menuLbPreview">
+        <div class="menuLbPreviewTitle">🏆 Top Endless Scores</div>
+        <div class="leaderboardList" id="menuLbList"><div class="lbEmpty">Loading…</div></div>
+      </div>
     </div>
   </div>
 
@@ -3395,8 +3403,20 @@ function showMenuScreen(id){
   });
   // the main menu carries its own always-visible Dad Level bar + endless-leaderboard preview —
   // refresh both every time it comes back on screen, not just once at boot
-  if(id==='mainMenu'){ renderMenuLevelBadge(); renderMenuLeaderboardPreview(); }
+  if(id==='mainMenu'){ renderMenuLevelBadge(); renderMenuLeaderboardPreview(); alignMenuLbPreview(); }
 }
+// menuLeft and menuRight are independent flex columns (see the CSS comment above .menuCard), so nothing
+// declarative ties the leaderboard preview's top to Play's — measure it for real and set margin-top to
+// match, instead of guessing a magic-number offset that'd drift the next time either column's content changes
+function alignMenuLbPreview(){
+  const play = document.getElementById('menuPlayBtn'), right = document.getElementById('menuRight'),
+        preview = document.getElementById('menuLbPreview');
+  if(!play || !right || !preview) return;
+  preview.style.marginTop = Math.max(0, play.getBoundingClientRect().top - right.getBoundingClientRect().top) + 'px';
+}
+window.addEventListener('resize', ()=>{
+  if(!document.getElementById('mainMenu').classList.contains('hidden')) alignMenuLbPreview();
+});
 document.getElementById('menuPlayBtn').addEventListener('click', ()=>showMenuScreen('modeScreen'));
 document.getElementById('menuSettingsBtn').addEventListener('click', ()=>{ syncMusicPickers(); showMenuScreen('settingsScreen'); });
 document.getElementById('menuHelpBtn').addEventListener('click', ()=>showMenuScreen('helpScreen'));
@@ -4927,8 +4947,9 @@ if(devMode){
 }
 
 updateBestScoreLabel();
-renderMenuLevelBadge(); renderMenuLeaderboardPreview();  // main menu is visible by default at boot —
-                                                          // showMenuScreen('mainMenu') is never called for it
+renderMenuLevelBadge(); renderMenuLeaderboardPreview(); alignMenuLbPreview();  // main menu is visible by
+                                                          // default at boot — showMenuScreen('mainMenu')
+                                                          // is never called for it
 tick();
 })();
 </script>
