@@ -20,46 +20,87 @@ ball, rattle) — playing keeps it happy, helps calm the crying, and nudges the 
 floor as it fidgets with it. You can **scoop the baby up** and carry it anywhere to soothe it,
 though your hands are then too full to fetch supplies.
 
-The baby can also **randomly throw up** — a mess appears on the floor that only a 🧹 **mop**
-(grab one from the bathroom) can clean up, and leaving it too long adds to the cry-o-meter.
-It can also toddle into the 🔥 **oven** in the kitchen if left unsupervised (a burn — instant
-crying until you comfort it), or trip and fall while walking upright. Need your hands free for
-a bit? Scoop the baby into the 🔒 **playpen** (living room) — it's safe there, but only for a
-short while before it climbs back out on its own.
+Every baby also rolls 1–2 **personality traits** for the run (shown as small icons on its HUD
+cluster and on the end card) — 🥺 **Clingy** frets if you wander too far away, 🧗 **Climber** is
+riskier around the oven and trips more, 🥣 **Picky Eater** refuses food in stretches (milk still
+works), 🧸 **Favorite Toy** means one specific toy soothes it twice as well, 🧷 **Diaper Machine**
+dirties diapers faster but pays out more 💩 per change, and 🥰 **Cuddle Bug** builds happiness just
+from being held. Same seed, same traits — so a daily challenge run stays fair between players.
+
+The baby can also **randomly throw up** (going visibly queasy 🤢 first) — a mess appears on the
+floor that only a 🧹 **mop** (grab one from the bathroom) can clean up, and leaving it too long
+adds to the cry-o-meter. It can also toddle into the 🔥 **oven** in the kitchen if left
+unsupervised (a burn — instant crying until you comfort it; a persistent banner warns you the
+moment it starts heading that way), or choke on something small (a cough warns you shortly
+before), or trip and fall while walking upright. Every hazard telegraphs itself first — nothing
+fires with zero warning. Need your hands free for a bit? Scoop the baby into the 🔒 **playpen**
+(living room) — it's safe there, but only for a short while before it climbs back out on its own.
+
+You're not just reacting, either. **Tidy toys** near the baby to push back the choking risk,
+**baby-proof the oven** (at the oven, costs 💩) to remove that hazard for the rest of the run,
+**stretch** at the bed to reset your own back-pain clock before it strikes, and use the toilet
+preemptively even without an urgent need.
+
+Babies also get messy over time — a 🧼 **dirty meter** on their HUD cluster climbs from throwing
+up, an overdue diaper, or just ordinary crawling around, and eventually starts adding to the
+cry-o-meter. Pick the baby up and carry them to the 🛁 **bath** (whichever the bathroom generated)
+and press `E` to wash them off — you're braced in place for a few seconds, safe but immobile —
+then bring them straight to the 🧺 **towel rack** to dry off. Skip the towel and they stay wet,
+which nudges the cry-o-meter a little faster until you finish the job.
 
 Dad's also supposed to be working from home. The 💻 **computer** in the office pings with a
 message now and then — get there and reply within the shown time window, or missing it costs
 you a chunk of the cry-o-meter. Miss too many across a run and you're **fired** — instant game
 over.
 
+Every run moves through four **day phases**, shown next to the timer with a banner on each
+transition: 🌅 **Morning** (needs drain fast, but work stays quiet), 🍽️ **Lunch** (food drains
+double and the oven hazard gets real), 🕑 **Afternoon** (a bit of a breather, but every work ping
+you dodged earlier shows up now), and 🌆 **Evening** — always the run's last 60 seconds — when
+everything ramps up at once as Mom gets close. Endless Mode just cycles the four phases
+indefinitely instead of ending on Evening.
+
 Press `Esc` any time during play to pause: switch the background music track, re-read the how-to-play
 help, or check a live 2D map of the house showing exactly where Dad and the baby are.
 
 Prefer no fixed end time? Turn on **Endless Mode** on the difficulty screen — the "Mom's back in…"
 timer is replaced by a survival clock and a score (seconds survived + a bonus per 💩 poo banked),
-with a per-difficulty high score saved locally in the browser.
+multiplied by up to +200% the longer you keep every need on every baby above a healthy floor
+without a single one running empty — your current streak shows right next to the score, and
+pushing a diaper to 0% for the 4× poo bonus is a real, deliberate trade-off against it. A
+per-difficulty high score is saved locally in the browser.
 
-Built as a single self-contained `index.html` — [Three.js](https://threejs.org) for the 3D,
-the Web Audio API for sound effects, and two selectable background tracks (pick one on the
-difficulty screen) mixed in quietly under the gameplay. No build step, no bundler.
+Whether you win or lose, the end screen breaks down the run: a sparkline of the cry-o-meter over
+time, a tally of every hazard you faced, your longest calm streak, and a **Copy Result** button
+that puts a shareable text summary (plus the game's URL) on your clipboard.
+
+Want to compare a run against everyone else, not just yourself? **📅 Daily Challenge** (main menu)
+gives every player the same house, the same hazard timing, and the same difficulty for the whole
+UTC day — the difficulty rotates day to day, so today might be King while tomorrow's First Born.
+One attempt per day (tracked in this browser), with its own leaderboard scored the same way as
+Endless Mode's.
+
+Built around a single `index.html` — [Three.js](https://threejs.org) for the 3D (vendored locally
+in `vendor/`, no CDN dependency), the Web Audio API for sound effects, and two selectable
+background tracks (pick one on the difficulty screen) mixed in quietly under the gameplay.
+Multiplayer and both leaderboards (endless mode and the daily challenge) use Firebase, loaded from
+Google's CDN since they need a live backend regardless. No build step, no bundler.
+
+The game is also an installable, offline-capable PWA (`manifest.json` + `sw.js`) — once you've
+loaded it once over `http(s)`, it keeps working with no network at all (solo/local play; anything
+Firebase-backed obviously still needs a connection).
 
 ## Run it
 
-Just open the file:
-
-```bash
-open index.html
-```
-
-Some browsers restrict `file://` pages (the 3D engine loads from a CDN). If it doesn't run,
-serve it locally instead:
+Service workers (and thus offline play) require `http(s)`, not `file://`, so serve it locally:
 
 ```bash
 npx serve .
 ```
 
 …then open the printed `http://localhost:…` URL. (Any static server works, e.g.
-`python3 -m http.server`.)
+`python3 -m http.server`.) Opening `index.html` directly via `file://` still runs the game, just
+without offline caching.
 
 ## How to play
 
@@ -101,6 +142,20 @@ coward"), and the 🚪 **front door** at the end of the hallway ("you just walke
 - 🧷 **Premium Diapers** — collect more poo per change
 - 📺 **Fun Cartoons** — holds attention longer
 - 👟 **Quick Steps** — Dad moves faster around the house
+- 💪 **Strong Arms** — carry the baby longer before your arms give out
+- 💊 **Pain Medication** — shortens back-pain episodes, and makes stretching at the bed cheaper
+
+Each upgrade has a level cap, so no single lucky run can trivialize the house.
+
+## 👤 Dad Level
+
+Every run — win *or* lose — banks ⭐ XP toward a persistent Dad Level: diaper changes, cuddles,
+baths given, and hazards handled all count, plus a little just for how long you survived. It's
+saved on this device and never resets, so even a rough run leaves you with something to show for
+it. Check **👤 Profile** on the main menu for your level, lifetime stats, and unlock progress.
+Leveling up raises solo runs' upgrade cap and starting 💩, and unlocks more 🎨 outfit colors to
+pick from there — multiplayer rounds always use the base cap and no starting bonus, so nobody's
+Dad Level gives them an edge in a shared room.
 
 ## Tuning
 

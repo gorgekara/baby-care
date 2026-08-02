@@ -12,6 +12,7 @@
 <link rel="icon" href="assets/favicon-16.png" type="image/png" sizes="16x16">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="icon" href="assets/icon-192.png" type="image/png" sizes="192x192">
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#2b2140">
 
 <meta property="og:type" content="website">
@@ -73,6 +74,17 @@
   .babyCluster{display:flex;gap:5px;align-items:center;padding:3px 6px;border-radius:10px}
   .babyCluster.multi{background:rgba(255,255,255,.05);border:1px solid var(--panelborder)}
   .babyClusterLabel{font-size:11px;opacity:.7;margin-right:2px;white-space:nowrap}
+  .traitBadges{font-size:13px;line-height:1;margin-right:2px;white-space:nowrap;display:inline-flex;gap:3px}
+  .traitBadge{position:relative;cursor:default;pointer-events:auto}
+  .traitBadge::after{
+    content:attr(data-tt); position:absolute; left:0; top:100%; margin-top:6px;
+    background:rgba(15,10,25,.96); color:#fff; padding:6px 10px; border-radius:8px;
+    border:1px solid var(--panelborder); font-size:11px; font-weight:normal; line-height:1.35;
+    width:max-content; max-width:220px; white-space:normal;
+    opacity:0; pointer-events:none; transform:translateY(-4px); transition:opacity .12s ease,transform .12s ease;
+    z-index:50;
+  }
+  .traitBadge:hover::after{opacity:1; transform:translateY(0)}
   .needMini{display:flex;flex-direction:column;align-items:center;width:34px}
   .needMini .lblMini{font-size:11px;line-height:1;margin-bottom:2px}
   .barMini{width:32px;height:9px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden}
@@ -81,6 +93,7 @@
   .needMini[data-k=milk] .barMini>i{background:var(--milk)}
   .needMini[data-k=diaper] .barMini>i{background:var(--diaper)}
   .needMini[data-k=cartoon] .barMini>i{background:var(--cartoon)}
+  .needMini[data-k=dirty] .barMini>i{background:#8a6a4a}
   .barMini.low>i{animation:flash .5s steps(2) infinite}
 
   .stat{display:flex;flex-direction:column;align-items:center;min-width:66px;padding:0 4px}
@@ -116,6 +129,15 @@
   .bathroomAlert.show{animation-duration:.9s}
   .packageAlert{background:rgba(24,18,8,.94);border:1px solid #ffcf5c;color:#ffedc2}
   .packageAlert.show{animation-duration:.85s}
+  .ovenAlert{background:rgba(24,12,6,.94);border:1px solid #ff7a3c;color:#ffd9b8}
+  .ovenAlert.show{animation-duration:.75s}
+  /* phase-transition banner — informational, not urgent, so it fades in/out instead of flashing */
+  .phaseAlert{background:rgba(16,14,26,.94);border:1px solid #b7a6ff;color:#e6dfff;font-size:14px;
+    transition:opacity .5s}
+  .phaseAlert.show{display:block;animation:none;opacity:1}
+  /* amber pre-warning state — a hazard is coming but hasn't fired yet, so it reads calmer than the
+     urgent flashing .show state above: no flash animation, slightly dimmer */
+  .alertBox.warn.show{animation:none;opacity:.72}
 
   .topRightHud{position:absolute;top:10px;right:12px;display:flex;flex-direction:column;gap:8px;
     align-items:flex-end;z-index:6}
@@ -130,6 +152,8 @@
   .tasksHud h4{margin:0 0 4px;font-size:12px;opacity:.7;font-weight:normal;text-align:right}
   .taskRow{display:flex;align-items:center;gap:6px;white-space:nowrap;margin:3px 0;justify-content:flex-end}
   .taskRow.done{opacity:.45;text-decoration:line-through}
+  .taskRow.inSeason{color:#ffd76b}
+  .taskRow.inSeason::after{content:'⭐';font-size:11px}
 
   .tutorialPanel{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);width:min(560px,92vw);
     background:var(--panel);border:1px solid var(--panelborder);border-radius:14px;padding:14px 18px;
@@ -198,11 +222,21 @@
   .tag{display:inline-block;background:rgba(255,255,255,.1);border-radius:20px;padding:4px 14px;
     font-size:13px;margin:4px 3px}
 
+  .runSummary{margin-top:14px;padding-top:14px;border-top:1px solid var(--panelborder);text-align:left}
+  .runSummary canvas{width:100%;height:46px;display:block;border-radius:8px;background:rgba(255,255,255,.04)}
+  .summaryLine{font-size:13px;opacity:.85;margin:8px 0 0;text-align:center}
+  .runSummary .btn{margin-top:12px;width:100%;box-sizing:border-box}
+
   .diffPicker{display:flex;flex-direction:column;gap:8px;margin:18px 0;text-align:left}
   .diffOpt{pointer-events:auto;cursor:pointer;background:rgba(255,255,255,.06);border:2px solid var(--panelborder);
     border-radius:12px;padding:10px 14px;transition:border-color .15s,background .15s}
   .diffOpt:hover{background:rgba(255,255,255,.1)}
   .diffOpt.selected{border-color:var(--good);background:rgba(126,231,135,.12)}
+  /* daily challenge gets its own gold accent instead of the generic green "selected" look, so it
+     reads as a distinct, special mode rather than just another option in the same list */
+  .diffOpt.daily{border-color:#ffd166;background:rgba(255,209,102,.08)}
+  .diffOpt.daily:hover{background:rgba(255,209,102,.14)}
+  .diffOpt.daily.selected{border-color:#ffd166;background:rgba(255,209,102,.2)}
   .diffTitle{font-weight:bold;font-size:15px}
   .diffSub{font-size:12px;opacity:.75;margin-top:2px}
   .musicPicker{flex-direction:row;gap:8px;margin:0}
@@ -221,6 +255,9 @@
   .lbDiff{font-size:18px}
   .lbScore{font-weight:bold;font-size:15px;color:var(--good);min-width:44px;text-align:right}
   .lbEmpty{font-size:13px;opacity:.7;text-align:center;padding:20px 0}
+  .menuLbPreview{text-align:left}
+  .menuLbPreviewTitle{font-size:15px;font-weight:bold;opacity:.85;margin-bottom:8px;text-align:center}
+  .menuLbPreviewFull .leaderboardList{max-height:420px}
 
   .colorGrid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:4px 0 14px}
   .colorSwatch{width:30px;height:30px;border-radius:50%;cursor:pointer;pointer-events:auto;
@@ -228,6 +265,18 @@
   .colorSwatch:hover{transform:scale(1.12)}
   .colorSwatch.selected{border-color:#fff;transform:scale(1.12)}
   .colorSwatch.taken{opacity:.2;cursor:not-allowed;pointer-events:none}
+
+  /* ---------- Profile / Dad Level ---------- */
+  .dadLevelBadge{font-size:36px;font-weight:bold;line-height:1}
+  .xpBarWrap{max-width:360px;margin:6px auto 4px}
+  .xpBarLbl{display:flex;justify-content:space-between;font-size:12px;opacity:.8;margin-bottom:4px}
+  .xpBar{height:14px;border-radius:8px;background:rgba(255,255,255,.12);overflow:hidden}
+  .xpBar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ffcf5c,#ffa25c);
+    transition:width .3s ease;border-radius:8px}
+  .profileStats{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;text-align:left;margin:16px auto;
+    max-width:360px;font-size:13px}
+  .profileStats b{opacity:.95}
+  .profileUnlocks{font-size:12px;opacity:.75;margin:10px 0}
 
   /* ---------- Upgrade panel ---------- */
   #shop.hidden{display:none}
@@ -248,12 +297,39 @@
   .flash{animation:pop .4s ease}
   @keyframes pop{40%{transform:scale(1.06)}}
 
-  /* ---------- Main menu ---------- */
+  /* ---------- Main menu ----------
+     A 2-column grid, not flex — every item gets an explicit grid-row (set inline in the HTML) so the
+     leaderboard's top edge lands exactly on the Play button's row regardless of either column's exact
+     content height, with no magic-number offsets to keep in sync. Row 1 is the header row: logo on the
+     left, the Dad Level bar pinned top-right on the right (see justify-self on .menuLevelBar below). */
   .menuCard{background:var(--panel);border:1px solid var(--panelborder);border-radius:22px;margin:auto;
     padding:36px 40px;max-width:780px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);
-    display:flex;align-items:center;justify-content:space-between;gap:34px;flex-wrap:wrap}
+    display:grid;grid-template-columns:minmax(230px,300px) 1fr;column-gap:34px;row-gap:14px;align-items:start}
   .menuCard.hidden{display:none}
-  .menuLeft{display:flex;flex-direction:column;gap:14px;min-width:220px}
+  /* narrower than the column it's in, and pinned to the right edge — "top right, always" */
+  .menuLevelBar{justify-self:end;width:230px;box-sizing:border-box;pointer-events:auto;cursor:pointer;
+    display:flex;align-items:center;gap:8px;margin-bottom:22px;
+    border:1px solid var(--panelborder);background:rgba(255,255,255,.06);border-radius:14px;padding:8px 14px;
+    color:var(--text);font-family:inherit;text-align:left;transition:background .15s,transform .1s}
+  .menuLevelBar:hover{background:rgba(255,255,255,.13);transform:translateY(-1px)}
+  .menuLevelBar:active{transform:scale(.98)}
+  .menuLevelIcon{font-size:18px}
+  .menuLevelText{font-weight:bold;font-size:13px;white-space:nowrap}
+  .menuLevelColorDot{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+  .menuLevelXpBar{flex:1;height:8px;border-radius:5px;background:rgba(255,255,255,.12);
+    overflow:hidden;display:inline-block}
+  .menuLevelXpBar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ffcf5c,#ffa25c);
+    border-radius:5px;transition:width .3s ease}
+  .menuLevelArrow{opacity:.55;font-size:12px}
+  /* extra breathing room before Play — added to both row-1 items (not row-gap, which is shared by every
+     row) so the grid's row-2 line — and with it the leaderboard preview's aligned top — moves down too */
+  .menuLogoCompact{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+  .menuLogoIconSm{font-size:36px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.4))}
+  .menuLogoTextSm{font-family:'Baloo 2',cursive,'Comic Sans MS',sans-serif}
+  .menuLogoTopSm{font-size:23px;font-weight:800;color:#ffd166;line-height:1.05;
+    text-shadow:1.5px 1.5px 0 #7a4a1a,-1.5px -1.5px 0 #7a4a1a,1.5px -1.5px 0 #7a4a1a,-1.5px 1.5px 0 #7a4a1a}
+  .menuLogoSubSm{font-size:13px;font-weight:700;color:#ff9ec7;margin-top:1px;
+    text-shadow:1px 1px 0 #6a2a4a,-1px -1px 0 #6a2a4a,1px -1px 0 #6a2a4a,-1px 1px 0 #6a2a4a}
   .menuBtnBig{pointer-events:auto;cursor:pointer;border:1px solid var(--panelborder);background:rgba(255,255,255,.08);
     color:var(--text);border-radius:16px;padding:16px 22px;font-size:19px;font-family:inherit;font-weight:bold;
     text-align:left;display:flex;align-items:center;gap:12px;transition:transform .1s,background .15s}
@@ -263,24 +339,41 @@
   .menuBtnPrimary{background:linear-gradient(135deg,#ffd166,#ffb347);color:#3a2410;border-color:#ffb347;
     font-size:22px;padding:19px 24px;box-shadow:0 8px 24px rgba(255,177,71,.35)}
   .menuBtnPrimary:hover{background:linear-gradient(135deg,#ffdb85,#ffbf5e);box-shadow:0 10px 28px rgba(255,177,71,.5)}
+  /* Multiplayer/Tutorial/Settings/Help read as secondary options next to Play — smaller and a touch dimmer */
+  .menuBtnSecondary{font-size:15px;padding:11px 18px;border-radius:13px;opacity:.82}
+  .menuBtnSecondary:hover{opacity:1}
   /* About is the least essential item — shrink it down and drop the border so it doesn't compete for attention */
   .menuBtnMinor{border-color:transparent;background:transparent;color:var(--text);opacity:.6;
     font-size:14px;font-weight:normal;padding:6px 22px;margin-top:2px}
   .menuBtnMinor:hover{opacity:.9;background:rgba(255,255,255,.08);transform:none}
-  .menuRight{flex:1;text-align:center;min-width:260px}
-  .logoIcons{font-size:72px;margin-bottom:6px;filter:drop-shadow(0 6px 18px rgba(0,0,0,.45));
-    animation:logoFloat 3.6s ease-in-out infinite}
-  .gameLogo{font-family:'Baloo 2',cursive,'Comic Sans MS',sans-serif}
-  .logoTop{font-size:76px;font-weight:800;color:#ffd166;line-height:1.05;letter-spacing:.5px;
-    text-shadow:4px 4px 0 #7a4a1a,-3px -3px 0 #7a4a1a,3px -3px 0 #7a4a1a,-3px 3px 0 #7a4a1a,3px 3px 0 #7a4a1a,
-      0 0 46px rgba(255,209,102,.5)}
-  .logoSub{font-size:36px;font-weight:700;color:#ff9ec7;margin-top:10px;
-    text-shadow:3px 3px 0 #6a2a4a,-2px -2px 0 #6a2a4a,2px -2px 0 #6a2a4a,-2px 2px 0 #6a2a4a,2px 2px 0 #6a2a4a}
-  @keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
   .creditFooter{position:fixed;left:0;right:0;bottom:14px;text-align:center;font-size:13px;
     color:var(--text);opacity:.6;z-index:1}
   .creditFooter a{color:inherit;text-decoration:underline;text-decoration-color:rgba(244,238,252,.4)}
   .creditFooter a:hover{opacity:.85;text-decoration-color:currentColor}
+
+  /* ---- Dev tools panel (?dev=1 only) ---- */
+  #devPanel{position:fixed;top:10px;left:10px;width:230px;max-height:calc(100vh - 20px);overflow-y:auto;
+    background:rgba(18,12,28,.92);border:1px solid rgba(255,255,255,.18);border-radius:10px;
+    padding:10px;font-size:11px;color:#f4eefc;z-index:9999;font-family:system-ui,sans-serif}
+  #devPanel.hidden{display:none}
+  .devHead{display:flex;align-items:center;justify-content:space-between;font-weight:800;
+    font-size:13px;margin-bottom:6px}
+  .devHead button{background:none;border:none;color:inherit;cursor:pointer;font-size:14px;opacity:.7}
+  .devHead button:hover{opacity:1}
+  .devSection{margin:10px 0 4px;font-weight:700;opacity:.8;display:flex;align-items:center;
+    justify-content:space-between;border-top:1px solid rgba(255,255,255,.12);padding-top:8px}
+  .devSection button{background:none;border:none;color:inherit;cursor:pointer;font-size:12px}
+  .devRow{display:flex;align-items:center;gap:6px;margin:3px 0}
+  .devRow label{flex:1;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .devRow input[type=range]{flex:1.4;width:0}
+  .devRow input[type=number]{width:70px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);
+    color:inherit;border-radius:4px;padding:2px 4px}
+  .devRow span{min-width:22px;text-align:right;opacity:.75}
+  .devSeedShown{font-size:10px;opacity:.6;margin:2px 0 4px;word-break:break-all}
+  .devBtnGrid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+  .devBtnGrid button{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:inherit;
+    border-radius:6px;padding:5px 4px;font-size:10.5px;cursor:pointer}
+  .devBtnGrid button:hover{background:rgba(255,255,255,.16)}
 </style>
 </head>
 <body>
@@ -293,7 +386,9 @@
     <div class="stat"><b id="hapVal">😊</b><span>Happiness</span></div>
     <div class="stat"><b id="pooVal">💩 0</b><span>Poo</span></div>
     <div class="stat"><b id="timeVal">3:00</b><span id="timeLabel">Mom back in</span></div>
+    <div class="stat" id="phaseStat" style="display:none"><b id="phaseIcon">🌅</b><span id="phaseLabel">Morning</span></div>
     <div class="stat" id="scoreStat" style="display:none"><b id="scoreVal">0</b><span>Score</span></div>
+    <div class="stat" id="streakStat" style="display:none"><b id="streakVal">0s</b><span>Streak</span></div>
   </div>
 
   <div class="crywrap">
@@ -307,6 +402,8 @@
     <div class="alertBox backPainAlert" id="backPainAlert"></div>
     <div class="alertBox bathroomAlert" id="bathroomAlert"></div>
     <div class="alertBox packageAlert" id="packageAlert"></div>
+    <div class="alertBox ovenAlert" id="ovenAlert"></div>
+    <div class="alertBox phaseAlert" id="phaseBanner"></div>
   </div>
   <div class="prompt" id="prompt"></div>
   <div class="carry" id="carry"></div>
@@ -334,24 +431,68 @@
   </div>
 </div>
 
+<!-- Dev tools panel — only shown when the page is loaded with ?dev=1 -->
+<div id="devPanel" class="hidden">
+  <div class="devHead">🛠️ Dev Tools <button id="devCloseBtn" title="Hide">✕</button></div>
+  <div class="devRow"><label>Time scale</label>
+    <input type="range" id="devTimeScale" min="0" max="8" step="0.25" value="1">
+    <span id="devTimeScaleVal">1×</span></div>
+  <div class="devRow"><label>Seed</label>
+    <input type="number" id="devSeedInput" placeholder="random"></div>
+  <div class="devSeedShown">Run seed: <span id="devSeedShown">—</span></div>
+
+  <div class="devSection">Hazards</div>
+  <div class="devBtnGrid" id="devHazardBtns">
+    <button data-hazard="vomit">🤢 Vomit</button>
+    <button data-hazard="choke">😵 Choke</button>
+    <button data-hazard="oven">🔥 Burn</button>
+    <button data-hazard="fall">🤕 Fall</button>
+    <button data-hazard="backpain">💥 Back pain</button>
+    <button data-hazard="bathroom">🚽 Bathroom</button>
+    <button data-hazard="notify">💻 Work ping</button>
+    <button data-hazard="package">📦 Package</button>
+  </div>
+
+  <div class="devSection">Needs <button id="devRefreshBtn" title="Refresh from current babies">🔄</button></div>
+  <div id="devNeedSliders"></div>
+  <div class="devRow"><label>😭 Cry-o-meter</label>
+    <input type="range" id="devCrySlider" min="0" max="100" step="1" value="0">
+    <span id="devCryVal">0</span></div>
+
+  <div class="devSection">Outcomes</div>
+  <div class="devBtnGrid">
+    <button id="devWinBtn">🏆 Win</button>
+    <button id="devLoseBtn">😭 Lose</button>
+    <button id="devFiredBtn">🔥 Fired</button>
+  </div>
+</div>
+
 <!-- Intro / main menu -->
 <div class="overlay" id="intro">
   <div class="menuCard" id="mainMenu">
-    <div class="menuLeft">
-      <button class="menuBtnBig menuBtnPrimary" id="menuPlayBtn">▶️ Play</button>
-      <button class="menuBtnBig" id="menuMultiplayerBtn">🌐 Multiplayer</button>
-      <button class="menuBtnBig" id="menuTutorialBtn">🎓 Tutorial</button>
-      <button class="menuBtnBig" id="menuSettingsBtn">⚙️ Settings</button>
-      <button class="menuBtnBig" id="menuHelpBtn">❓ Help</button>
-      <button class="menuBtnBig" id="menuLeaderboardBtn">🏆 Leaderboard</button>
-      <button class="menuBtnBig menuBtnMinor" id="menuAboutBtn">ℹ️ About</button>
-    </div>
-    <div class="menuRight">
-      <div class="logoIcons">👶🍼</div>
-      <div class="gameLogo">
-        <div class="logoTop">Baby Care</div>
-        <div class="logoSub">Dad's on Duty</div>
+    <div class="menuLogoCompact" style="grid-column:1;grid-row:1">
+      <span class="menuLogoIconSm">👶🍼</span>
+      <div class="menuLogoTextSm">
+        <div class="menuLogoTopSm">Baby Care</div>
+        <div class="menuLogoSubSm">Dad's on Duty</div>
       </div>
+    </div>
+    <button class="menuLevelBar" id="menuLevelBar" style="grid-column:2;grid-row:1" title="View your Dad Level profile">
+      <span class="menuLevelIcon">👤</span>
+      <span class="menuLevelText" id="menuLevelText">Level 1</span>
+      <span class="menuLevelColorDot" id="menuLevelColorDot" title="Your outfit color"></span>
+      <span class="menuLevelXpBar"><i id="menuLevelXpFill"></i></span>
+      <span class="menuLevelArrow">▸</span>
+    </button>
+    <button class="menuBtnBig menuBtnPrimary" id="menuPlayBtn" style="grid-column:1;grid-row:2">▶️ Play</button>
+    <button class="menuBtnBig menuBtnSecondary" id="menuMultiplayerBtn" style="grid-column:1;grid-row:3">🌐 Multiplayer</button>
+    <button class="menuBtnBig menuBtnSecondary" id="menuTutorialBtn" style="grid-column:1;grid-row:4">🎓 Tutorial</button>
+    <button class="menuBtnBig menuBtnSecondary" id="menuSettingsBtn" style="grid-column:1;grid-row:5">⚙️ Settings</button>
+    <button class="menuBtnBig menuBtnSecondary" id="menuHelpBtn" style="grid-column:1;grid-row:6">❓ Help</button>
+    <button class="menuBtnBig menuBtnMinor" id="menuAboutBtn" style="grid-column:1;grid-row:7">ℹ️ About</button>
+    <div class="menuLbPreview menuLbPreviewFull" style="grid-column:2;grid-row:2 / 8">
+      <div class="menuLbPreviewTitle">🏆 Top Endless Scores</div>
+      <div class="leaderboardList" id="menuLbList"><div class="lbEmpty">Loading…</div></div>
     </div>
   </div>
 
@@ -382,12 +523,37 @@
     </div>
 
     <div class="helpSection">
+      <h3>🛁 Baths</h3>
+      <p>Babies get messy — a 🧼 <b>dirty meter</b> on their HUD cluster climbs from throw-up, an
+         overdue diaper, or just ordinary time spent crawling around. Too dirty and it starts adding
+         to the 😭 cry-o-meter. Fix it at the 🛁 <b>bath</b> (whichever the bathroom generated): pick
+         the baby up, walk over, and press <kbd>E</kbd>. You'll be braced in place for a few seconds
+         — the baby's perfectly safe, but you can't move — then carry them straight to the 🧺
+         <b>towel rack</b> to dry off. Skipping the towel leaves them wet, which makes the cry-o-meter
+         a little quicker to fill until you finish the job.</p>
+    </div>
+
+    <div class="helpSection">
+      <h3>🌅 The Shape of the Day</h3>
+      <p>Every run moves through four phases, shown next to the timer: 🌅 <b>Morning</b> (needs drain fast,
+         but work stays quiet), 🍽️ <b>Lunch</b> (food drains double and the 🔥 oven is genuinely dangerous),
+         🕑 <b>Afternoon</b> (a bit of a breather — but every work ping you dodged earlier shows up now),
+         and 🌆 <b>Evening</b>, always the last 60 seconds, when everything ramps up at once as Mom gets
+         close. A banner announces each transition.</p>
+    </div>
+
+    <div class="helpSection">
       <h3>⚠️ Hazards to Watch For</h3>
-      <p>An unsupervised baby near the 🔥 <b>oven</b> gets burned. They can also swallow something small —
-         rush over and clear their airway before time runs out. Messes appear on the floor sometimes — only
-         the 🧹 <b>mop</b> cleans them up. And watch your <i>own</i> body: random <b>back pain</b> freezes
-         you in place for a few seconds (upgrade 💊 <b>Pain Medication</b> to shorten it), and every so often
-         you'll need the 🚽 <b>toilet</b> — get there before time runs out or it's an awkward miss.</p>
+      <p>Every hazard gives you a warning first. A baby about to swallow something small coughs (😮) before
+         it happens — clear their airway in time. A baby heading for the 🔥 <b>oven</b> triggers a banner
+         before it gets there. Your back gives an amber twinge-warning before it seizes up, and a bathroom
+         urge builds before it's truly urgent. A baby about to throw up goes visibly queasy (🤢) first.
+         Messes still need the 🧹 <b>mop</b> to clean up.</p>
+      <p>You can act on all of this ahead of time: <b>tidy toys</b> near the baby to push back the choking
+         risk, <b>baby-proof the oven</b> at the oven itself to remove that hazard for the whole run,
+         <b>stretch</b> at the bed to reset your back-pain clock, and use the 🚽 <b>toilet</b> preemptively
+         even without an active urge. Upgrade 💊 <b>Pain Medication</b> to shorten episodes <i>and</i>
+         make stretching cheaper.</p>
     </div>
 
     <div class="helpSection">
@@ -405,14 +571,27 @@
     <div class="helpSection">
       <h3>💩 Poo &amp; Upgrades</h3>
       <p>Changing diapers banks 💩 <b>poo</b> — spend it at the 🛠️ <b>workbench</b> to upgrade everything
-         above (faster needs, more poo per change, longer arm stamina, shorter back pain, and more).</p>
+         above (faster needs, more poo per change, longer arm stamina, shorter back pain, and more).
+         Each upgrade has a level cap that starts low and rises with your 👤 <b>Dad Level</b> below.</p>
+    </div>
+
+    <div class="helpSection">
+      <h3>👤 Dad Level</h3>
+      <p>Every run banks ⭐ <b>XP</b> toward a persistent Dad Level — for diaper changes, cuddles, baths
+         given, and hazards handled, plus a chunk just for how long you survived. It's saved on this
+         device and never resets, and a loss still earns something. Click your level in the bar at the
+         top of the main menu to see lifetime stats and unlock progress. Leveling up raises
+         solo runs' upgrade cap and starting 💩, and unlocks more 🎨 outfit colors — multiplayer rounds
+         always use the base cap and no starting bonus, so nobody's Dad Level gives them an edge in a
+         shared room.</p>
     </div>
 
     <div class="helpSection">
       <h3>📋 Chores Mode (optional)</h3>
       <p>Turn it on before you start and you'll get a random checklist for the run — things like tidying the
          🛏️ bed, grabbing lunch from the 🍱 oven, or cleaning the 🚽 toilet/🚿 sink. Walk up and press
-         <kbd>E</kbd> to check each one off — purely a bonus challenge, no penalty for skipping any.</p>
+         <kbd>E</kbd> to check each one off — purely a bonus challenge, no penalty for skipping any. A ⭐
+         marks whichever chore best fits the current day phase (lunch → oven, nap → toys, and so on).</p>
     </div>
 
     <div class="helpSection">
@@ -443,20 +622,59 @@
     <p style="font-size:13px;opacity:.75;margin:16px 0 4px">⌨️ Controls</p>
     <div class="hint" style="position:static;max-width:none">
       <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · <kbd>E</kbd> interact · <kbd>Q</kbd> drop item ·
-      <kbd>Space</kbd> pick up baby · <kbd>U</kbd> shop · <kbd>M</kbd> mute · <kbd>Esc</kbd> pause · scroll to zoom
+      <kbd>Space</kbd> pick up baby · <kbd>U</kbd> shop · <kbd>M</kbd> mute ·
+      <kbd>Esc</kbd> pause · scroll to zoom
     </div>
     <div class="stepnav">
       <button class="btn cta" id="settingsBackBtn">◀ Back to Menu</button>
     </div>
   </div>
 
-  <div class="card hidden" id="leaderboardScreen">
-    <div class="big">🏆</div>
-    <h2>Endless Mode Leaderboard</h2>
-    <p style="font-size:13px;opacity:.8">Top 12 survivors, across all difficulties.</p>
-    <div id="leaderboardList" class="leaderboardList"></div>
+  <div class="card hidden" id="profileScreen">
+    <div class="big">👤</div>
+    <h2>Dad's Profile</h2>
+    <div class="dadLevelBadge" id="profileLevelBadge">Level 1</div>
+    <div class="xpBarWrap">
+      <div class="xpBarLbl"><span>⭐ XP</span><span id="profileXpLabel">0 / 60</span></div>
+      <div class="xpBar"><i id="profileXpFill"></i></div>
+    </div>
+    <p style="font-size:12px;opacity:.7;margin:2px 0 0" id="profileMaxedNote"></p>
+    <div class="profileStats">
+      <div><b id="profileRuns">0</b> runs played</div>
+      <div><b id="profileWins">0</b> runs survived</div>
+      <div><b id="profileDiapers">0</b> diapers changed</div>
+      <div><b id="profileCuddles">0</b> cuddles</div>
+      <div><b id="profileBaths">0</b> baths given</div>
+      <div><b id="profileHazards">0</b> hazards handled</div>
+    </div>
+    <p class="profileUnlocks" id="profileUnlocksNote">Upgrade cap: Level 3 · Starting 💩: 0</p>
+    <p style="font-size:13px;opacity:.8;margin:14px 0 4px">🎨 Outfit color (solo &amp; tutorial)</p>
+    <div class="colorGrid" id="profileColorPicker"></div>
     <div class="stepnav">
-      <button class="btn cta" id="leaderboardBackBtn">◀ Back to Menu</button>
+      <button class="btn cta" id="profileBackBtn">◀ Back to Menu</button>
+    </div>
+  </div>
+
+  <div class="card hidden" id="dailyScreen">
+    <div class="big">📅</div>
+    <h2>Daily Challenge</h2>
+    <p id="dailyDateLabel" style="font-size:13px;opacity:.8">—</p>
+    <p style="font-size:13px;opacity:.85">Same house, same hazards, same difficulty — for
+       <i>everyone</i>, all day. One attempt per day, tracked on this device.</p>
+    <div class="legend" style="grid-template-columns:1fr">
+      <div id="dailyDiffLabel">🍼 First Born</div>
+      <div id="dailyCountdown">Resets in —</div>
+    </div>
+    <div id="dailyResultBox" class="hidden" style="margin:14px 0;padding:10px;border-radius:10px;
+      background:rgba(255,255,255,.06);border:1px solid var(--panelborder)">
+      <p style="margin:0;font-size:14px">✅ Already played today</p>
+      <p id="dailyResultStats" style="margin:4px 0 0;font-size:13px;opacity:.85">—</p>
+    </div>
+    <button class="btn cta" id="dailyStartBtn" style="width:100%">▶️ Start Today's Challenge</button>
+    <p style="font-size:12px;opacity:.7;margin:16px 0 4px">Today's top scores</p>
+    <div id="dailyLeaderboardList" class="leaderboardList"></div>
+    <div class="stepnav">
+      <button class="btn cta" id="dailyBackBtn">◀ Back</button>
     </div>
   </div>
 
@@ -566,6 +784,10 @@
     <h2>Choose Your Game Mode</h2>
     <p style="font-size:13px;opacity:.8">Pick how tonight's shift plays out — you'll choose a difficulty next.</p>
     <div class="diffPicker" id="modePicker">
+      <div class="diffOpt daily" data-mode="daily">
+        <div class="diffTitle">📅 Daily Challenge</div>
+        <div class="diffSub">Same house, same hazards, same difficulty as everyone else today — one attempt per day</div>
+      </div>
       <div class="diffOpt selected" data-mode="normal">
         <div class="diffTitle">👶 Normal</div>
         <div class="diffSub">A timed run — keep the baby happy until Mom's back from shopping</div>
@@ -621,16 +843,24 @@
     <p id="goBody">The crying got to be too much and you had to phone Mom for backup.
        She's not thrilled she had to leave her shopping…</p>
     <p id="goStats" style="font-size:13px;opacity:.8"></p>
-    <div class="hidden" id="scoreSubmit">
-      <p style="font-size:13px;opacity:.85;margin:10px 0 6px">🏆 New personal best! Add your name to the leaderboard:</p>
-      <input type="text" id="scoreNameInput" maxlength="16" placeholder="Your name"
+    <div class="runSummary" id="goSummary">
+      <canvas id="goSparkline" width="440" height="46"></canvas>
+      <p class="summaryLine" id="goHazards"></p>
+      <p class="summaryLine" id="goExtra"></p>
+      <p class="summaryLine" id="goTraits"></p>
+      <p class="summaryLine" id="goXp"></p>
+      <button class="btn" id="goCopyBtn">📋 Copy Result</button>
+    </div>
+    <div class="hidden" id="goScoreSubmit">
+      <p id="goScoreSubmitLede" style="font-size:13px;opacity:.85;margin:10px 0 6px">🏆 New personal best! Add your name to the leaderboard:</p>
+      <input type="text" id="goScoreNameInput" maxlength="16" placeholder="Your name"
         style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--panelborder);
         background:rgba(255,255,255,.06);color:var(--text);font-size:15px;font-family:inherit;
         text-align:center;box-sizing:border-box">
-      <p id="scoreSubmitError" style="font-size:12px;color:var(--cry);min-height:1.4em;margin:6px 0 0"></p>
+      <p id="goScoreSubmitError" style="font-size:12px;color:var(--cry);min-height:1.4em;margin:6px 0 0"></p>
       <div class="stepnav">
-        <button class="btn" id="scoreSkipBtn">Skip</button>
-        <button class="btn cta" id="scoreSubmitBtn">Save Score 🏆</button>
+        <button class="btn" id="goScoreSkipBtn">Skip</button>
+        <button class="btn cta" id="goScoreSubmitBtn">Save Score 🏆</button>
       </div>
     </div>
     <div class="stepnav" id="goStepnav">
@@ -648,7 +878,29 @@
     <p id="winBody">You did it — you kept the baby happy the whole time. Mom walks in with the groceries
        and finds a calm, content little one. <b>Dad of the year.</b></p>
     <p id="winStats" style="font-size:13px;opacity:.8"></p>
-    <button class="btn cta" id="winBtn">Play Again ↻</button>
+    <div class="runSummary" id="winSummary">
+      <canvas id="winSparkline" width="440" height="46"></canvas>
+      <p class="summaryLine" id="winHazards"></p>
+      <p class="summaryLine" id="winExtra"></p>
+      <p class="summaryLine" id="winTraits"></p>
+      <p class="summaryLine" id="winXp"></p>
+      <button class="btn" id="winCopyBtn">📋 Copy Result</button>
+    </div>
+    <div class="hidden" id="winScoreSubmit">
+      <p id="winScoreSubmitLede" style="font-size:13px;opacity:.85;margin:10px 0 6px">🏆 Add your name to today's leaderboard:</p>
+      <input type="text" id="winScoreNameInput" maxlength="16" placeholder="Your name"
+        style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--panelborder);
+        background:rgba(255,255,255,.06);color:var(--text);font-size:15px;font-family:inherit;
+        text-align:center;box-sizing:border-box">
+      <p id="winScoreSubmitError" style="font-size:12px;color:var(--cry);min-height:1.4em;margin:6px 0 0"></p>
+      <div class="stepnav">
+        <button class="btn" id="winScoreSkipBtn">Skip</button>
+        <button class="btn cta" id="winScoreSubmitBtn">Save Score 🏆</button>
+      </div>
+    </div>
+    <div class="stepnav" id="winStepnav">
+      <button class="btn cta" id="winBtn">Play Again ↻</button>
+    </div>
   </div>
 </div>
 
@@ -692,7 +944,8 @@
     <p style="font-size:13px;opacity:.75;margin:16px 0 4px">⌨️ Controls</p>
     <div class="hint" style="position:static;max-width:none">
       <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · <kbd>E</kbd> interact · <kbd>Q</kbd> drop item ·
-      <kbd>Space</kbd> pick up baby · <kbd>U</kbd> shop · <kbd>M</kbd> mute · <kbd>Esc</kbd> pause · scroll to zoom
+      <kbd>Space</kbd> pick up baby · <kbd>U</kbd> shop · <kbd>M</kbd> mute ·
+      <kbd>Esc</kbd> pause · scroll to zoom
     </div>
     <div class="stepnav" style="margin-top:14px">
       <button class="btn" id="pauseQuitBtn">🚪 Quit to Menu</button>
@@ -701,7 +954,9 @@
   </div>
 </div>
 
-<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script src="vendor/three.min.js"></script>
+<!-- Firebase talks to a live backend regardless, so it stays on Google's CDN — only three.js (a static
+     asset with no network behavior of its own) is worth vendoring to remove a load-time dependency -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script>
@@ -830,6 +1085,13 @@ const WALL_H = 3.35, WT = 0.4, WALL_COLOR = '#efe4d2';
 // room generates byte-for-byte the same rooms/furniture/layout from one shared seed. Outside of
 // buildHouse() (falsy houseRng), rand/pick/shuffle fall back to Math.random as before.
 let houseRng = null;
+// gameplay PRNG — seeded alongside houseRng in buildHouse(seed) but (unlike houseRng) stays live for the
+// whole run, so hazard timing and baby AI are reproducible from a seed instead of falling back to
+// Math.random once the house finishes building. Solo/tutorial runs get a fresh random seed each time
+// (see startGame()); multiplayer reuses the host's shared layout seed so hazards stay in sync too.
+let runRng = null;
+const devMode = new URLSearchParams(location.search).get('dev')==='1';
+let devTimeScale = 1, devSeedOverride = null;
 function mulberry32(seed){
   return function(){
     seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
@@ -838,7 +1100,7 @@ function mulberry32(seed){
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-function random0to1(){ return houseRng ? houseRng() : Math.random(); }
+function random0to1(){ return houseRng ? houseRng() : (runRng ? runRng() : Math.random()); }
 const rand = (a,b)=>a+random0to1()*(b-a);
 const pick = a=>a[(random0to1()*a.length)|0];
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=(random0to1()*(i+1))|0; const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
@@ -1070,12 +1332,6 @@ function buildWorkbenchGroup(){ const g=new THREE.Group();
   const vise=box(0.4,0.4,0.4,'#5a5a66'); vise.position.set(-0.7,1.4,0); g.add(vise);
   const handle=box(0.6,0.14,0.14,'#c0392b'); handle.position.set(0.6,1.35,0); handle.rotation.z=0.5; g.add(handle);
   const head2=box(0.16,0.34,0.3,'#888'); head2.position.set(0.78,1.55,0); g.add(head2);
-  return g; }
-function cribGroup(){ const g=new THREE.Group();
-  const base=box(2.6,0.7,1.6,'#c79a63'); base.position.y=0.55; g.add(base);
-  const mattress=box(2.2,0.22,1.3,'#f7d9e6'); mattress.position.y=0.95; g.add(mattress);
-  [[-1.2,-0.7],[1.2,-0.7],[-1.2,0.7],[1.2,0.7]].forEach(([x,z])=>{
-    const p=box(0.14,1.2,0.14,'#e6c79a'); p.position.set(x,1.0,z); g.add(p); });
   return g; }
 function playpenGroup(){ const g=new THREE.Group();               // pack-n-play style pen: a padded fabric bumper
   const R = 1.15;                                                  // under a low, barely-there mesh wall — reads as
@@ -1311,19 +1567,27 @@ function buildLiving(room){
 function buildKitchen(room){
   const {outer, inner} = sidesFor(room);
   const wallSide = outer[0];
+  // guarantee a real-world minimum gap between the counter stations, not just fractional wall
+  // position — on a small room's counter wall, two independently-random fractions can land close
+  // enough that interacting with one also puts the other in range (nearestStationAt() then just
+  // picks whichever happens to be closer), making it hard to target either one precisely. Capped
+  // by wallLen so four slots always fit even on the shortest possible kitchen wall.
+  const wallLen = (wallSide==='N'||wallSide==='S') ? (room.maxX-room.minX-2) : (room.maxZ-room.minZ-2);
+  const kitchenGapT = Math.min(2.8, wallLen/4.5) / wallLen;
   const foodT = rand(0.06,0.16);
+  const sinkT = Math.max(rand(0.22,0.32), foodT + kitchenGapT);
+  const cabinetT = Math.max(rand(0.4,0.56), sinkT + kitchenGapT);
+  const fridgeT = Math.min(0.94, Math.max(rand(0.84,0.94), cabinetT + kitchenGapT));
   let p = wallPos(room, wallSide, foodT, 0.7);
   addStation('food', p.x, p.z, buildFoodGroup(), '🍎 Kitchen', 2.7, p.rot);
-  const sinkT = rand(0.22,0.32);
   p = wallPos(room, wallSide, sinkT, 0.55);
   const sinkMesh = kitchenSink();
   addPropOriented(sinkMesh, p.x, p.z, 0.55, 0.34, p.rot);
   sinkMesh.add(label('🍽️ Sink', 1.3));
   stations.kitchensink = {group: sinkMesh, x: p.x, z: p.z, radius: 1.9};  // manual registration, see oven note above
-  const cabinetT = rand(0.4,0.56);
   p = wallPos(room, wallSide, cabinetT, 0.65);
   addProp(cabinet(pick(['#c9a45a','#b98b52','#9a7a4a'])), p.x, p.z, 0.78, 0.3, p.rot);
-  p = wallPos(room, wallSide, rand(0.84,0.94), 0.65);
+  p = wallPos(room, wallSide, fridgeT, 0.65);
   addStation('milk', p.x, p.z, buildFridgeGroup(), '🍼 Fridge', 3.5, p.rot);
 
   // upper cupboards mounted above the food/cabinet counters — wall decor, no collision
@@ -1430,8 +1694,6 @@ function buildNursery(room){
   p = wallPos(room, shopSide, edgeT(), 0.65);
   addStation('shop', p.x, p.z, buildWorkbenchGroup(), '🛠️ Workbench', 2.7, p.rot);
 
-  addProp(cribGroup(), room.cx, room.cz, 1.3, 0.8);
-
   const chairSide = pick(inner.length?inner:outer);
   p = wallPos(room, chairSide, edgeT(), 0.4);
   addProp(chair('#a9d0c6'), p.x, p.z, 0.35, 0.35);
@@ -1448,8 +1710,15 @@ function buildBathroom(room){
   const {outer, inner} = sidesFor(room);
   const wetSide = outer[0], wetT = edgeT();
   let p = wallPos(room, wetSide, wetT, 0.8);
-  if(room.area < 105) addPropOriented(shower(), p.x, p.z, 0.65, 0.7, p.rot);
-  else addPropOriented(bathtub(), p.x, p.z, 1.55, 0.85, p.rot);
+  // whichever of tub/shower the room's size picked, it's a real interactive station now (the bath —
+  // registered manually, same reasoning as the oven/bed/sink: addPropOriented already gives it a
+  // properly oriented collision box, so addStation()'s generic circular one would be wrong for it
+  let bathGroup, bathHx, bathHz;
+  if(room.area < 105){ bathGroup = shower(); bathHx=0.65; bathHz=0.7; }
+  else { bathGroup = bathtub(); bathHx=1.55; bathHz=0.85; }
+  addPropOriented(bathGroup, p.x, p.z, bathHx, bathHz, p.rot);
+  bathGroup.add(label('🛁 Bath', 2.15));
+  stations.bath = {group: bathGroup, x: p.x, z: p.z, radius: 1.9};
 
   const sinkSide = outer[1] || pick(inner);
   const sinkT = edgeT();
@@ -1474,8 +1743,14 @@ function buildBathroom(room){
   p = wallPos(room, sinkSide, rand(0.42,0.58), 0.5);
   addStation('washer', p.x, p.z, washingMachine(), '🧺 Washer', 1.5, p.rot);
 
-  const towel = wallPos(room, wetSide, edgeT(), 0.05);
-  addWallDecor(towelRack(), towel.x, towel.z, 1.3, towel.rot);
+  // opposite corner from the bath (edgeT() alone could land in the same corner and end up too close
+  // to precisely target — same class of issue fixed for the kitchen counter)
+  const towelT = wetT<0.5 ? rand(0.78,0.92) : rand(0.08,0.22);
+  const towel = wallPos(room, wetSide, towelT, 0.05);
+  const towelGroup = towelRack();
+  addWallDecor(towelGroup, towel.x, towel.z, 1.3, towel.rot);
+  towelGroup.add(label('🧺 Towel', 0.55));
+  stations.towel = {group: towelGroup, x: towel.x, z: towel.z, radius: 1.9};
 
   const spot = centeredWallDecorSpot(room, [wetSide, sinkSide], 0.2);
   addWallDecor(wallShelfDecor(['#ffffff','#bcdff0','#f5ede0']), spot.x, spot.z, 1.7, spot.rot);
@@ -1644,6 +1919,9 @@ function buildHouse(seed){
   // in multiplayer every client calls buildHouse(seed) with the same host-picked seed, so everyone
   // gets byte-for-byte identical rooms/furniture/collision — houseRng is only live for this call
   houseRng = (seed!==undefined && seed!==null) ? mulberry32(seed) : null;
+  // distinct stream from houseRng (XORed constant) so the two don't tick in lockstep; stays live after
+  // this function returns, unlike houseRng, since gameplay hazard rolls happen for the whole run
+  runRng = (seed!==undefined && seed!==null) ? mulberry32((seed ^ 0x5bd1e995) >>> 0) : null;
   if(houseGroup){ scene.remove(houseGroup); disposeGroup(houseGroup); }
   houseGroup = new THREE.Group(); scene.add(houseGroup);
   blockAABBs.length=0; wallMeshes.length=0; toys.length=0; solids.length=0;
@@ -1717,7 +1995,8 @@ function buildHouse(seed){
   // because buildHouse()'s very first, top-level call (building the main-menu background) runs before
   // resetState() has ever given S a real value.
   if(S) S.tasks = S.tasksEnabled ? shuffle(TASK_POOL.slice()).slice(0, Math.min(4, TASK_POOL.length)).map(t=>({...t, done:false})) : [];
-  houseRng = null;   // done — runtime gameplay randomness (hazard timing etc.) goes back to Math.random
+  if(S) S.seed = seed;              // stashed for the dev panel / a future "copy seed" share action
+  houseRng = null;   // done — layout randomness goes back to Math.random; runRng (gameplay) stays live
 }
 
 /* ---------- Character builders ---------- */
@@ -1844,7 +2123,7 @@ function discardCarrying(){
   spr.scale.set(1.1,1.1,1.1); spr.renderOrder=10;
   spr.position.set(pos.x, 3.3, pos.z);
   scene.add(spr);
-  const ang = pos.rotY + (Math.random()-0.5)*0.6;
+  const ang = pos.rotY + (random0to1()-0.5)*0.6;
   thrownItems.push({mesh:spr, vx:Math.sin(ang)*3.2, vz:Math.cos(ang)*3.2, vy:4.2, life:0.9});
   Audio.error();
   P.carrying = null; if(actingPlayerId===myId) setCarrySprite(null);
@@ -1873,11 +2152,16 @@ function spawnBabies(){                                  // (re)builds the babie
   babies = [];
   const count = Math.max(1, S.babyCount||1);
   const names = shuffle(BABY_NAMES.slice());              // unique random names, one per baby this run
+  // no personality during the tutorial — it's a fixed, hands-off script and traits like Clingy or
+  // Picky would fight the "nothing here can end the game" promise
+  const traitSets = S.tutorial ? Array.from({length:count},()=>[]) : rollBabyTraitSets(count);
   for(let i=0;i<count;i++){
     const ang = (i/count)*Math.PI*2, off = count>1 ? 1.6 : 0;
     const pos = new THREE.Vector3(spawnBaby.x+Math.cos(ang)*off, 0, spawnBaby.z+Math.sin(ang)*off);
     const b = freshBaby(pos);
     b.name = names[i % names.length] + (i>=names.length ? ` ${Math.floor(i/names.length)+1}` : '');
+    b.traits = traitSets[i];
+    if(b.traits.includes('favoriteToy') && toys.length) b.favoriteToyRef = pick(toys);
     b.mesh = buildBaby(); b.mesh.position.copy(pos); scene.add(b.mesh);
     b.moodSprite = makeSprite('🙂',{bg:null,font:80}); b.moodSprite.position.set(0,2.3,0);
     b.moodSprite.scale.set(1.5,1.5,1.5); b.moodSprite.renderOrder=10; b.mesh.add(b.moodSprite);
@@ -1916,6 +2200,8 @@ const Audio = (function(){
     buy(){ blip(660,0.1,'triangle',0.2); setTimeout(()=>blip(990,0.16,'triangle',0.2),80); },
     cry(){ blip(520,0.5,'sawtooth',0.12,180); },
     error(){ blip(200,0.18,'sawtooth',0.15,120); },
+    cough(){ blip(340,0.09,'triangle',0.16); setTimeout(()=>blip(260,0.11,'triangle',0.14),70); },  // hazard telegraph — distinct from cry/error
+    doorbell(){ blip(784,0.2,'sine',0.22); setTimeout(()=>blip(587,0.28,'sine',0.2),150); },        // descending, unlike chime's ascending contour — for packages, not work pings
     setMuted(m){ muted=m; },
     get muted(){ return muted; }
   };
@@ -1958,12 +2244,92 @@ const UPGRADES = {
   cartoon:{icon:'📺', title:'Fun Cartoons',   desc:'Holds attention longer (slower drain)',      base:5},
   speed:  {icon:'👟', title:'Quick Steps',   desc:'Dad moves faster around the house',          base:6},
   arms:   {icon:'💪', title:'Strong Arms',   desc:'Carry the baby longer before your arms give out', base:5},
-  backpain:{icon:'💊', title:'Pain Medication', desc:'Shortens back-pain episodes (less time frozen)', base:5},
+  backpain:{icon:'💊', title:'Pain Medication', desc:'Shortens back-pain episodes and cheapens stretching at the bed', base:5},
 };
 const MOVE_SPEED = 7.2;
 const DIAPER_CHANGE_MAX = 40; // diaper need must have decayed to at most this % before a change is allowed
 const ARM_UPGRADE_SECONDS = 3;    // seconds of extra hold time per Strong Arms level
 const ARM_RECOVER_MIN_FRAC = 0.2; // can't pick the baby back up until arms recover to at least this fraction
+const CHOKE_WARN_SECONDS = 1.5;   // cough + 😮 mood this long before a choking episode actually starts
+const VOMIT_WARN_SECONDS = 2;     // culprit baby goes queasy this long before the mess appears
+const BACKPAIN_WARN_SECONDS = 6;  // amber pre-warning window before a back-pain episode fires
+const BATHROOM_WARN_SECONDS = 8;  // amber pre-warning window before a bathroom urge opens
+const OVEN_PROOF_COST = 8;        // one-time 💩 cost to zero out ovenChance for the rest of the run
+const STRETCH_BASE_COST = 4;      // 💩 cost to preemptively reset nextBackPain at the bed (discounted by Pain Medication)
+const TOY_TIDY_CHOKE_BONUS = 12;  // seconds added to every baby's chokeTimer per toy-tidy action
+const TOY_TIDY_COOLDOWN_SECONDS = 20; // can't re-trigger the choke-timer bonus more often than this
+const STREAK_HEALTHY_THRESHOLD = 60; // every need on every baby must stay above this to keep the streak alive
+const STREAK_SCORE_CAP = 60;      // seconds of streak to reach the max +200% score multiplier
+const CRY_HISTORY_INTERVAL = 2;   // seconds between cry-o-meter samples kept for the end-card sparkline
+
+// ---- bath & the dirty meter: gives the bathroom's tub/shower a real job. Fed by vomit, an overdue
+// diaper, and ordinary unattended floor time; a bath (Dad braces in place, holding the baby, for
+// BATH_SECONDS) resets it, but leaves the baby wet until a follow-up trip to the towel rack. ----
+const DIRTY_VOMIT_ADD = 40;        // dirty gained in one shot when this baby is the vomit culprit
+const DIRTY_DIAPER_RATE = 2.2;     // dirty/sec while a change is overdue (need.diaper <= DIAPER_CHANGE_MAX)
+const DIRTY_CRAWL_RATE = 0.6;      // dirty/sec while unattended on the floor (held/penned babies don't accrue it)
+const DIRTY_CRY_THRESHOLD = 70;    // at/above this, dirty counts toward the cry-o-meter like an empty need
+const BATH_SECONDS = 6;            // how long a bath pins Dad in place, holding the baby, once started
+const WET_CRY_MUL = 1.15;          // small cry-fill bump while wet and waiting on a towel
+
+// ---- meta-progression: a persistent Dad Level (see getProfile()/dadLevelForXp() below) earned from
+// lifetime totals, independent of any single run. Every run — win or lose — banks some XP, so a failed
+// run still visibly advances something. ----
+const XP_PER_DIAPER = 2, XP_PER_CUDDLE = 1, XP_PER_BATH = 3, XP_PER_HAZARD_HANDLED = 4;
+const XP_PER_SURVIVAL_SEC = 0.1, XP_WIN_BONUS = 50;
+const UPGRADE_LEVEL_CAP_BASE = 3;  // every upgrade's level cap, at Dad Level 1
+const UPGRADE_LEVEL_CAP_MAX = 6;   // the cap the base can grow to, one Dad Level unlock at a time
+const UPGRADE_CAP_UNLOCK_EVERY = 4;// +1 to the cap every this-many Dad Levels, until UPGRADE_LEVEL_CAP_MAX
+const STARTING_POO_PER_LEVEL = 1;  // solo-only starting 💩, capped below — see startingPooBonus()
+const STARTING_POO_CAP = 10;
+const COSMETIC_UNLOCK_BASE = 5;    // outfit colors unlocked at Dad Level 1, +1 per level after that
+
+// ---- baby personality: 1-2 seeded traits per baby so runs on the same difficulty stop feeling
+// interchangeable. Every trait leans on a system that already exists rather than inventing a new one. ----
+const CLINGY_DISTANCE = 9;        // units from Dad before a clingy baby starts fussing, held or not
+const CLIMBER_OVEN_MUL = 2.2;     // multiplies the oven-approach chance in pickBabyTarget()
+const CLIMBER_FALL_MUL = 0.55;    // multiplies the walk-mode fall timer range — trips more often
+const CLIMBER_PEN_MUL = 0.55;     // multiplies playpen dwell time — escapes sooner
+const PICKY_ACCEPT_MIN = 35, PICKY_ACCEPT_MAX = 65;   // seconds between refusal stretches
+const PICKY_REFUSE_MIN = 15, PICKY_REFUSE_MAX = 28;   // seconds a refusal stretch lasts
+const FAVORITE_TOY_JOY_MUL = 2;   // joy-gain multiplier while playing with the favorite toy specifically
+const FAVORITE_TOY_PICK_CHANCE = 0.6; // how often pickBabyTarget() prefers it over a random toy
+const DIAPER_MACHINE_DECAY_MUL = 1.6; // diaper need drains this much faster
+const DIAPER_MACHINE_POO_MUL = 1.4;   // and pays out this much more 💩 per change
+const CUDDLE_BUG_JOY_RATE = 0.4;      // joy/sec gained just from holding a cuddle-bug baby
+const BABY_TRAITS = {
+  clingy:       {icon:'🥺', label:'Clingy',        desc:'Fusses when Dad wanders too far away'},
+  climber:      {icon:'🧗', label:'Climber',       desc:'More prone to oven mishaps and trips; escapes the playpen sooner'},
+  picky:        {icon:'🥣', label:'Picky Eater',   desc:'Refuses food for stretches — lean on milk instead'},
+  favoriteToy:  {icon:'🧸', label:'Favorite Toy',  desc:'One particular toy soothes them twice as well'},
+  diaperMachine:{icon:'🧷', label:'Diaper Machine',desc:'Dirties diapers faster, but pays out more 💩 per change'},
+  cuddleBug:    {icon:'🥰', label:'Cuddle Bug',    desc:'Builds happiness just from being held'},
+};
+const TRAIT_KEYS = Object.keys(BABY_TRAITS);
+// every 1-trait and 2-trait combination, precomputed once; rollBabyTraitSets() shuffles this list
+// with the seeded RNG and hands out unique combos so a multi-baby round never rolls the same
+// personality twice (21 possible combos comfortably covers the 8-baby multiplayer cap)
+const TRAIT_COMBOS = (()=>{
+  const combos = TRAIT_KEYS.map(k=>[k]);
+  for(let i=0;i<TRAIT_KEYS.length;i++) for(let j=i+1;j<TRAIT_KEYS.length;j++) combos.push([TRAIT_KEYS[i],TRAIT_KEYS[j]]);
+  return combos;
+})();
+function rollBabyTraitSets(count){
+  const shuffled = shuffle(TRAIT_COMBOS.slice());
+  const picks = [];
+  for(let i=0;i<count;i++) picks.push(shuffled[i % shuffled.length]);
+  return picks;
+}
+function traitIconsHtml(traits){ return (traits||[]).map(k=>BABY_TRAITS[k].icon).join(''); }
+// each trait gets its own hoverable badge with a custom CSS tooltip (not just a native `title`,
+// which is slow to appear, tiny, and easy to miss on a small HUD icon) showing that trait's own
+// name+description — clearer than one combined tooltip for a baby with two traits at once
+function traitBadgesHtml(traits){
+  return (traits||[]).map(k=>{
+    const t = BABY_TRAITS[k];
+    return `<span class="traitBadge" data-tt="${escapeHtml(t.label+': '+t.desc)}">${t.icon}</span>`;
+  }).join('');
+}
 
 // ---- difficulty: picked on the intro screen, locked in for the run ----
 const DIFFICULTIES = {
@@ -1972,28 +2338,28 @@ const DIFFICULTIES = {
     walkChance:0.26, fallMin:7, fallMax:15, needStart:{food:95,milk:92,diaper:95,cartoon:88},
     holdBase:13, holdRecoverMul:1.3, ovenChance:0.03, penSeconds:27,
     notifyMin:38, notifyMax:60, notifyWindow:20, notifyPenalty:14, fireLimit:4,
-    backPainMin:46, backPainMax:72, backPainCrippleBase:1.9,
+    backPainMin:70, backPainMax:105, backPainCrippleBase:1.9,
     chokeMin:58, chokeMax:92, chokeWindow:10,
     bathroomMin:135, bathroomMax:195, bathroomWindow:30,
-    packageMin:100, packageMax:170, packageWindow:24},
+    packageMin:100, packageMax:170, packageWindow:24, dirtyMul:0.7},
   veteran: {key:'veteran', label:"Been There, Done That", gameLen:285,
     decayMul:1.12, cryFillMul:1.12, cryDrainMul:0.9, vomitMin:22, vomitMax:42,
     walkChance:0.4, fallMin:5, fallMax:10, needStart:{food:92,milk:85,diaper:90,cartoon:78},
     holdBase:8.5, holdRecoverMul:1.18, ovenChance:0.06, penSeconds:19,
     notifyMin:26, notifyMax:44, notifyWindow:14, notifyPenalty:19, fireLimit:3,
-    backPainMin:33, backPainMax:54, backPainCrippleBase:3.0,
+    backPainMin:52, backPainMax:80, backPainCrippleBase:3.0,
     chokeMin:45, chokeMax:74, chokeWindow:7.5,
     bathroomMin:98, bathroomMax:150, bathroomWindow:24,
-    packageMin:80, packageMax:140, packageWindow:19},
+    packageMin:80, packageMax:140, packageWindow:19, dirtyMul:1},
   king:    {key:'king', label:'King', gameLen:345,
     decayMul:1.55, cryFillMul:1.5, cryDrainMul:0.65, vomitMin:12, vomitMax:26,
     walkChance:0.55, fallMin:3, fallMax:7, needStart:{food:78,milk:72,diaper:80,cartoon:62},
     holdBase:5, holdRecoverMul:1.05, ovenChance:0.10, penSeconds:13,
     notifyMin:16, notifyMax:30, notifyWindow:9, notifyPenalty:24, fireLimit:3,
-    backPainMin:21, backPainMax:38, backPainCrippleBase:4.3,
+    backPainMin:34, backPainMax:58, backPainCrippleBase:4.3,
     chokeMin:33, chokeMax:54, chokeWindow:6,
     bathroomMin:74, bathroomMax:115, bathroomWindow:19,
-    packageMin:60, packageMax:110, packageWindow:14},
+    packageMin:60, packageMax:110, packageWindow:14, dirtyMul:1.4},
   // practice mode: needs never decay and no random hazard can fire — every mechanic is either
   // explained as plain text or triggered deliberately by the tutorial script, at the player's own pace
   tutorial: {key:'tutorial', label:'Tutorial', gameLen:Infinity,
@@ -2004,7 +2370,7 @@ const DIFFICULTIES = {
     backPainMin:9999, backPainMax:9999, backPainCrippleBase:0,
     chokeMin:9999, chokeMax:9999, chokeWindow:9999,
     bathroomMin:9999, bathroomMax:9999, bathroomWindow:9999,
-    packageMin:9999, packageMax:9999, packageWindow:9999},
+    packageMin:9999, packageMax:9999, packageWindow:9999, dirtyMul:0},
 };
 let difficulty = 'veteran';
 let endlessMode = false;
@@ -2016,14 +2382,104 @@ const TASK_POOL = [                                       // each ties to a real
   {key:'sink', icon:'🚿', label:'Clean the sink'},
   {key:'kitchensink', icon:'🍽️', label:'Clean the kitchen sink'},
   {key:'toys', icon:'🧸', label:'Put away the toys'},      // the one exception — any toy will do, no station
+  {key:'bath', icon:'🛁', label:'Give the baby a bath'},   // the other exception — needs holdingBaby>=0 first
 ];
+// which day phase each chore is thematically "in season" during — Chores Mode uses this to sort the
+// current phase's matching chore to the top of the checklist rather than changing which chores exist
+const TASK_PHASE_AFFINITY = {bed:'morning', sink:'morning', oven:'lunch', kitchensink:'lunch',
+  toys:'afternoon', toilet:'evening', bath:'evening'};
 function curDiff(){ return DIFFICULTIES[difficulty]; }
+
+// ---- day phases: same knobs as DIFFICULTIES, reweighted across four labeled stretches of the run.
+// Boundaries are absolute seconds (not fractions of gameLen) so Morning and Lunch feel the same length
+// regardless of difficulty; Afternoon absorbs whatever's left before the fixed-length Evening, so shorter
+// runs get a shorter afternoon and longer ones get a longer breather. Endless mode has no natural end, so
+// it reuses the same Morning/Lunch boundaries with a flat Afternoon length instead, then repeats forever.
+const PHASE_MORNING_SECONDS = 70;
+const PHASE_LUNCH_SECONDS = 60;
+const PHASE_EVENING_SECONDS = 60;      // always the run's last 60s of real time — "mom's 60s out"
+const PHASE_AFTERNOON_ENDLESS_SECONDS = 90;  // endless mode's stand-in Afternoon length (no "time left" to anchor off)
+const PHASE_BANNER_SECONDS = 4.5;      // how long the transition banner stays up
+const PHASE_DEFAULTS = {decayMul:1, foodDecayMul:1, ovenMul:1, notifyMul:1, cryFillMul:1,
+  vomitMul:1, chokeMul:1, fallMul:1, backpainMul:1, bathroomMul:1};
+const PHASES = [
+  {key:'morning', label:'Morning', icon:'🌅',
+    decayMul:1.15, notifyMul:0,
+    banner:'🌅 Morning — needs drain fast, but work stays quiet for now'},
+  {key:'lunch', label:'Lunch', icon:'🍽️',
+    foodDecayMul:2, ovenMul:3.2, notifyMul:0,
+    banner:'🍽️ Lunchtime — food drains fast and the oven is a real danger now'},
+  {key:'afternoon', label:'Afternoon', icon:'🕑',
+    decayMul:0.85, ovenMul:0.4, notifyMul:2.5,
+    banner:'🕑 Afternoon — a bit of a breather, but every ping you dodged this morning piles up now'},
+  {key:'evening', label:'Evening', icon:'🌆',
+    decayMul:1.3, ovenMul:1.4, notifyMul:1.2, cryFillMul:1.2,
+    vomitMul:1.3, chokeMul:1.3, fallMul:1.3, backpainMul:1.3, bathroomMul:1.3,
+    banner:"🌆 Evening — everything at once. Mom's almost home!"},
+].map(p=>({...PHASE_DEFAULTS, ...p}));
+function phaseBoundaries(gameLen){
+  const morningEnd = PHASE_MORNING_SECONDS;
+  const lunchEnd = morningEnd + PHASE_LUNCH_SECONDS;
+  if(!isFinite(gameLen)){                       // endless: fixed repeating cycle, Afternoon gets a flat length
+    const eveningStart = lunchEnd + PHASE_AFTERNOON_ENDLESS_SECONDS;
+    return {morningEnd, lunchEnd, eveningStart, cycleLen: eveningStart + PHASE_EVENING_SECONDS};
+  }
+  const eveningStart = Math.max(lunchEnd, gameLen - PHASE_EVENING_SECONDS); // Afternoon fills whatever's left
+  return {morningEnd, lunchEnd, eveningStart, cycleLen: gameLen};
+}
+function phaseIndexAt(elapsed, b){
+  const t = elapsed % b.cycleLen;                       // no-op for timed runs; wraps forever for endless
+  if(t < b.morningEnd) return 0;
+  if(t < b.lunchEnd) return 1;
+  if(t < b.eveningStart) return 2;
+  return 3;
+}
+function curPhase(){ return (S && S.phaseIdx!=null) ? PHASES[S.phaseIdx] : null; } // null during the tutorial
+function phaseMul(key){ const p = curPhase(); return p ? p[key] : 1; }
 
 // ---- endless-mode high score, persisted per difficulty ----
 function highScoreKey(){ return `babycare_hs_${difficulty}`; }
 function getHighScore(){ try{ return +(localStorage.getItem(highScoreKey())||0); }catch(e){ return 0; } }
 function setHighScore(v){ try{ localStorage.setItem(highScoreKey(), String(v)); }catch(e){} }
 function updateBestScoreLabel(){ const el2=document.getElementById('bestScoreLabel'); if(el2) el2.textContent = getHighScore(); }
+
+// ---- meta-progression: a small persistent profile, independent of the endless/daily leaderboards
+// above (those are a single best score; this is lifetime totals that never reset). ----
+const PROFILE_KEY = 'babycare_profile_v1';
+function defaultProfile(){
+  return {xp:0, runsPlayed:0, runsSurvived:0, diaperChanges:0, cuddles:0, baths:0, hazardsHandled:0, colorIdx:0};
+}
+function getProfile(){
+  try{ const raw = localStorage.getItem(PROFILE_KEY); return raw ? Object.assign(defaultProfile(), JSON.parse(raw)) : defaultProfile(); }
+  catch(e){ return defaultProfile(); }
+}
+function saveProfile(p){ try{ localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); }catch(e){} }
+const DAD_MAX_LEVEL = 20;
+function xpThreshold(lvl){ return Math.round(60 * lvl * lvl); }   // lifetime XP needed to REACH this level
+function dadLevelForXp(xp){
+  let lvl=1; while(lvl<DAD_MAX_LEVEL && xp>=xpThreshold(lvl+1)) lvl++; return lvl;
+}
+function dadLevelProgress(xp){                                    // {lvl, cur, need, frac, maxed} for a progress bar
+  const lvl = dadLevelForXp(xp);
+  if(lvl>=DAD_MAX_LEVEL) return {lvl, cur:1, need:1, frac:1, maxed:true};
+  const prev = lvl===1?0:xpThreshold(lvl), next = xpThreshold(lvl+1);
+  return {lvl, cur:xp-prev, need:next-prev, frac:(xp-prev)/(next-prev), maxed:false};
+}
+// perks below are read from the LOCAL profile only and only ever applied to solo/tutorial/daily runs —
+// multiplayer rounds always use the base values so a higher Dad Level never advantages one player over
+// another in a shared room (cosmetics still carry over there — see freshPlayer's colorIdx default)
+function upgradeCapForLevel(lvl){
+  return Math.min(UPGRADE_LEVEL_CAP_MAX, UPGRADE_LEVEL_CAP_BASE + Math.floor((lvl-1)/UPGRADE_CAP_UNLOCK_EVERY));
+}
+function upgradeCapFor(){
+  return roomCode ? UPGRADE_LEVEL_CAP_BASE : upgradeCapForLevel(dadLevelForXp(getProfile().xp));
+}
+function startingPooBonus(){
+  return Math.min(STARTING_POO_CAP, (dadLevelForXp(getProfile().xp)-1) * STARTING_POO_PER_LEVEL);
+}
+function unlockedColorCount(){
+  return Math.min(PLAYER_COLORS.length, COSMETIC_UNLOCK_BASE + dadLevelForXp(getProfile().xp));
+}
 
 // ---- endless-mode global leaderboard (Firebase Realtime Database, top 12) ----
 const PROFANITY_LIST = ['fuck','shit','bitch','asshole','bastard','cunt','dick','pussy','piss',
@@ -2045,21 +2501,75 @@ async function fetchLeaderboardTop(n){
   rows.sort((a,b)=>b.score-a.score);
   return rows;
 }
-async function renderLeaderboard(){
-  const el = document.getElementById('leaderboardList');
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ---- daily seed challenge: same date -> same seed -> same house AND same hazard timing for everyone,
+// since buildHouse(seed) already derives both houseRng and runRng from one shared integer seed ----
+const DAILY_DIFFICULTY_ROTATION = ['first','veteran','king'];  // which DIFFICULTIES key each day rotates to
+const DAILY_EPOCH_MS = Date.UTC(2024,0,1);                     // arbitrary fixed reference point — day 0
+function dailyDateKey(d){                        // 'YYYY-MM-DD' in UTC — stable across every player's timezone
+  d = d || new Date();
+  return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
+}
+function dailyDayIndex(d){                       // whole UTC days since DAILY_EPOCH_MS — drives the rotation
+  d = d || new Date();
+  const utcMidnight = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  return Math.floor((utcMidnight - DAILY_EPOCH_MS) / 86400000);
+}
+function dailyDifficulty(d){                     // same rotation for every player, no per-player randomness
+  const n = DAILY_DIFFICULTY_ROTATION.length;
+  const idx = ((dailyDayIndex(d) % n) + n) % n;  // defensive: stays in range even before the epoch
+  return DAILY_DIFFICULTY_ROTATION[idx];
+}
+function hashStringToSeed(str){                  // deterministic 32-bit hash (djb2 variant) — not
+  let h = 5381;                                   // cryptographic, just needs to be stable and well-mixed
+  for(let i=0;i<str.length;i++){ h = ((h*33) ^ str.charCodeAt(i)) >>> 0; }
+  return h >>> 0;
+}
+function dailySeed(dateKey){ return hashStringToSeed('babycare-daily-'+(dateKey||dailyDateKey())); }
+function msUntilNextUtcMidnight(){
+  const now = new Date();
+  const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()+1);
+  return next - now.getTime();
+}
+function dailyStorageKey(dateKey){ return `babycare_daily_${dateKey||dailyDateKey()}`; }
+function getDailyResult(dateKey){                // {score,elapsed,poo,reason,ts}, or null if not played yet
+  try{ const raw = localStorage.getItem(dailyStorageKey(dateKey)); return raw ? JSON.parse(raw) : null; }
+  catch(e){ return null; }
+}
+function setDailyResult(dateKey, result){
+  try{ localStorage.setItem(dailyStorageKey(dateKey), JSON.stringify(result)); }catch(e){}
+}
+
+// ---- daily challenge's own leaderboard branch — same shape as the endless one, scoped per date so
+// different days' (different-difficulty) runs never get compared against each other ----
+function dailyLeaderboardPath(dateKey){ return `dailyLeaderboard/${dateKey||dailyDateKey()}`; }
+async function submitDailyScore(name, score, dateKey){
+  if(!fbDb) throw new Error('offline');
+  await fbDb.ref(dailyLeaderboardPath(dateKey)).push({name, score, ts:Date.now()});
+}
+async function fetchDailyLeaderboardTop(n, dateKey){
+  if(!fbDb) return null;
+  const snap = await fbDb.ref(dailyLeaderboardPath(dateKey)).orderByChild('score').limitToLast(n).once('value');
+  const rows = [];
+  snap.forEach(child=>{ rows.push(child.val()); });
+  rows.sort((a,b)=>b.score-a.score);
+  return rows;
+}
+async function renderDailyLeaderboard(){
+  const el = document.getElementById('dailyLeaderboardList');
+  if(!el) return;
   el.innerHTML = '<div class="lbEmpty">Loading…</div>';
   let rows;
-  try{ rows = await fetchLeaderboardTop(12); }catch(e){ rows = null; }
+  try{ rows = await fetchDailyLeaderboardTop(12); }catch(e){ rows = null; }
   if(!rows){ el.innerHTML = '<div class="lbEmpty">Leaderboard unavailable right now — check your connection.</div>'; return; }
-  if(!rows.length){ el.innerHTML = '<div class="lbEmpty">No scores yet — be the first! 🏆</div>'; return; }
+  if(!rows.length){ el.innerHTML = '<div class="lbEmpty">No scores yet today — be the first! 🏆</div>'; return; }
   el.innerHTML = rows.map((r,i)=>`<div class="lbRow">
       <div class="lbRank">${i+1}</div>
-      <div class="lbDiff" title="${(DIFFICULTIES[r.difficulty]||{label:''}).label}">${DIFF_ICON[r.difficulty]||'🍼'}</div>
       <div class="lbName">${escapeHtml(r.name||'Dad')}</div>
       <div class="lbScore">${r.score}</div>
     </div>`).join('');
 }
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* ---------- Multiplayer core: players (per-player poo/upgrades/carry state) & babies (shared) ----------
    Solo play is just the degenerate case of this model: one entry in `players` (me), `isHost` always
@@ -2081,6 +2591,7 @@ function freshPlayer(name, colorIdx){
     bathroomUrge:0, nextBathroom:0,   // >0 while an urge is active (counts down to "too late")
     wetPants:false,                  // missed the toilet in time — walks slower until the washing machine fixes it
     changes:0, cuddles:0,
+    hazardsHandled:0, bathsGiven:0,  // feed the lifetime profile's XP at endGame() — see applyRunToProfile()
     x:0, z:0, rotY:0,                // synced transform — read directly from `dad` for me, else from Firebase
     avatar:null,                     // remote-only: {group, nameSprite} rendered in the scene
     connected:true,
@@ -2101,17 +2612,22 @@ function freshBaby(pos){
     need:{food:100,milk:100,diaper:100,cartoon:100},
     heldBy:null,                     // playerId currently holding this baby, or null
     fallen:false, burned:false,
-    choking:false, chokeDeadline:0,
+    choking:false, chokeDeadline:0, chokeWarned:false,
     chokeTimer: rand(D.chokeMin, D.chokeMax) + 15,  // generous grace period before the first choking risk
     penned:false, penTimer:0,
+    queasy:false,                    // brief pre-vomit telegraph — see S.vomitCulprit in tick()
     target:new THREE.Vector3().copy(pos), retime:0, play:0, playingToy:null, targetIsOven:false,
     mode:'crawl', poseT:0, fallTimer:0,
     moodLast:'🙂', moodSprite:null, cryTimer:0,
-  };
-}
+    traits:[], favoriteToyRef:null,  // personality — rolled and assigned in spawnBabies()
+    pickyTimer: rand(PICKY_ACCEPT_MIN, PICKY_ACCEPT_MAX), pickyRefusing:false,
+    dirty:0, wet:false, bathTimer:0, // dirty climbs from vomit/overdue diapers/floor time; a bath at
+  };                                 // the tub or shower (held the whole time) resets it but leaves
+}                                    // the baby wet until a towel-rack follow-up
 
 function resetState(){
   const D = curDiff();
+  const gameLen = endlessMode ? Infinity : D.gameLen;
   S = {
     mode:'menu',                       // menu|play|over|win
     tutorial:false,                    // true during the guided, no-pressure tutorial run
@@ -2121,13 +2637,26 @@ function resetState(){
     joy:0,                             // topped up by play/cuddles; eases crying
     cartoonsOn:false, tvTimer:0,
     endless: endlessMode,               // no win-timer — plays until a lose/fired/hide condition
+    dailyChallenge: false,             // set true by startGame(_, true) — same seed & difficulty for everyone
+    dailyDateKey: null,                 // which day's challenge this run is (set alongside dailyChallenge)
     tasksEnabled: tasksMode, tasks:[],   // tasks[] is actually filled in by buildHouse() (needs the seed)
-    gameLen: endlessMode ? Infinity : D.gameLen,
-    timeLeft: endlessMode ? Infinity : D.gameLen,
+    gameLen: gameLen,
+    timeLeft: gameLen,
     elapsed:0,                          // seconds survived — endless mode's clock and score basis
     score:0,
+    phaseIdx: null,                     // 0-3 index into PHASES, or null during the tutorial (phases are off)
+    phaseBounds: phaseBoundaries(gameLen), // {morningEnd,lunchEnd,eveningStart,cycleLen} for this run's length
+    phaseBannerTimer: 0,                // >0 briefly after a transition, to show the phase banner
+    streak:0,                          // seconds every baby's every need has stayed above STREAK_HEALTHY_THRESHOLD
+    longestStreak:0,                   // best streak reached this run — shown on the end card regardless of mode
+    hazardCounts:{choke:0, burn:0, fall:0, vomit:0, backpain:0, bathroom:0}, // times each hazard fired this run
+    cryHistory:[],                     // cry-o-meter sampled every CRY_HISTORY_INTERVAL, for the end-card sparkline
+    cryHistoryTimer:0,
     messes:[],                         // active vomit puddles {x,z,mesh,playerInside}
     vomitTimer: rand(D.vomitMin*0.5, D.vomitMax*0.5), // first throw-up comes sooner than the steady interval
+    vomitCulprit: null,                // pre-selected baby shown queasy shortly before the mess appears
+    ovenProofed: false,                // baby-proofed at the oven (💩) — zeroes ovenChance for the rest of the run
+    toyTidyCooldown: 0,                // >0 briefly after tidying toys — keeps the choke-timer bonus from being spammed
     notifyTimer: rand(D.notifyMin*0.6, D.notifyMax*0.6), // first work notification comes a bit sooner
     notification:false,                // an unanswered work notification is pending on the computer
     notifyDeadline:0,                  // seconds left to respond before a penalty
@@ -2142,7 +2671,7 @@ function resetState(){
     packageMesh:null,                  // the box mesh currently on the doormat, if any
     missedPackages:0,                  // stolen this run — enough of these sours the win message
   };
-  players = {}; players[myId] = freshPlayer(myName, 0);
+  players = {}; players[myId] = freshPlayer(myName, getProfile().colorIdx);
   const P = players[myId];
   P.holdStamina = holdMaxFor(D, 0);
   P.nextBackPain = rand(D.backPainMin*0.6, D.backPainMax*0.6);
@@ -2162,9 +2691,15 @@ function happiness(){                                    // average across every
 }
 function decayRate(k){
   // passive drain is shared per baby, so it's slowed by whoever in the house has the best upgrade —
-  // buying Tasty Food/Bigger Bottle/etc. helps every baby, not just the buyer's own actions
-  return BASE_DECAY[k] * curDiff().decayMul * Math.pow(0.8, maxLvl(k));
+  // buying Tasty Food/Bigger Bottle/etc. helps every baby, not just the buyer's own actions.
+  let rate = BASE_DECAY[k] * curDiff().decayMul * phaseMul('decayMul') * Math.pow(0.8, maxLvl(k));
+  if(k==='food') rate *= phaseMul('foodDecayMul');   // Lunch: food drains 2x on top of the general phase rate
+  return rate;
 }
+// Pain Medication (backpain upgrade) does double duty: it still shortens a back-pain episode once one
+// hits (see the crippled-duration formula in tick()), and now also discounts the active "stretch at the
+// bed" verb — so it's no longer just a passive tax-reducer once you have a real counterplay to spend it on.
+function stretchCost(player){ player = player || me(); return Math.max(1, Math.round(STRETCH_BASE_COST * Math.pow(0.8, player.lvl.backpain))); }
 function holdMaxFor(D, armsLvl){ return D.holdBase + armsLvl*ARM_UPGRADE_SECONDS; }
 function holdMax(player){ player = player || me(); return holdMaxFor(curDiff(), player.lvl.arms); }
 function upgradeCost(k, player){ player = player || me(); return UPGRADES[k].base * (player.lvl[k]+1); }
@@ -2226,7 +2761,7 @@ function nearestMess(){
 function cleanMess(m){
   houseGroup.remove(m.mesh); disposeGroup(m.mesh);
   const i = S.messes.indexOf(m); if(i>=0) S.messes.splice(i,1);
-  Audio.buy();
+  Audio.buy(); actingPlayer().hazardsHandled++;
   if(S.tutorial) tutorialProgress.mopped = true;
 }
 function hasTask(key){ return S.tasksEnabled && S.tasks.some(t=>t.key===key && !t.done); }
@@ -2260,21 +2795,40 @@ function doStation(k){
     if(S.packageWaiting){
       S.packageWaiting=false;
       if(S.packageMesh){ houseGroup.remove(S.packageMesh); disposeGroup(S.packageMesh); S.packageMesh=null; }
-      S.joy=Math.min(1,S.joy+0.1); Audio.chime();
-    } else Audio.error();
-    return;
+      S.nextPackage = rand(curDiff().packageMin, curDiff().packageMax);  // otherwise nextPackage was
+      S.joy=Math.min(1,S.joy+0.1); Audio.chime();                        // already <=0 (why one just
+    } else Audio.error();                                                // arrived) and a new one would
+    return;                                                              // spawn again next frame
   }
   if(k==='toilet'){
     const hadTask = hasTask('toilet');
     completeTask('toilet');                             // cleaning counts regardless of your own urge state
-    if(P.bathroomUrge>0){ P.bathroomUrge=0; P.nextBathroom=rand(curDiff().bathroomMin, curDiff().bathroomMax);
+    if(P.bathroomUrge>0){ P.bathroomUrge=0; P.nextBathroom=rand(curDiff().bathroomMin, curDiff().bathroomMax)/phaseMul('bathroomMul');
       S.joy=Math.min(1,S.joy+0.15); Audio.chime(); }
     else if(hadTask) Audio.chime();
+    else {                                              // preemptive use — no urge yet, but buys some time
+      P.nextBathroom += curDiff().bathroomMin*0.5/phaseMul('bathroomMul'); Audio.chime();
+    }
+    return;
+  }
+  if(k==='bed'){
+    const had=hasTask('bed');
+    if(had){ completeTask('bed'); Audio.chime(); return; }
+    const cost = stretchCost(P);                        // preventive verb: reset nextBackPain for 💩
+    if(P.poo >= cost){ P.poo -= cost; P.nextBackPain = rand(curDiff().backPainMin, curDiff().backPainMax)/phaseMul('backpainMul'); Audio.buy(); }
     else Audio.error();
     return;
   }
-  if(k==='bed'){ const had=hasTask('bed'); completeTask('bed'); (had?Audio.chime():Audio.error()); return; }
-  if(k==='oven'){ const had=hasTask('oven'); completeTask('oven'); (had?Audio.chime():Audio.error()); return; }
+  if(k==='oven'){
+    const had=hasTask('oven');
+    if(had){ completeTask('oven'); Audio.chime(); return; }
+    if(!S.ovenProofed){                                 // preventive verb: pay once, oven hazard gone for the run
+      if(P.poo >= OVEN_PROOF_COST){ P.poo -= OVEN_PROOF_COST; S.ovenProofed = true; Audio.buy(); }
+      else Audio.error();
+      return;
+    }
+    Audio.error(); return;
+  }
   if(k==='sink'){ const had=hasTask('sink'); completeTask('sink'); (had?Audio.chime():Audio.error()); return; }
   if(k==='kitchensink'){ const had=hasTask('kitchensink'); completeTask('kitchensink'); (had?Audio.chime():Audio.error()); return; }
   if(k==='washer'){                                     // grab a clean pair of pants — clears the wetPants debuff
@@ -2287,21 +2841,40 @@ function doStation(k){
     P.holdingBaby=-1; b.heldBy=null;
     b.mesh.scale.set(1,1,1); b.mesh.userData.mat.visible=true;
     b.mesh.position.set(stations.playpen.x, 0, stations.playpen.z); b.mesh.rotation.y=0;
-    b.penned=true; b.penTimer=curDiff().penSeconds; b.fallen=false; b.burned=false;
+    b.penned=true; b.penTimer=curDiff().penSeconds*(b.traits.includes('climber')?CLIMBER_PEN_MUL:1); b.fallen=false; b.burned=false;
     if(S.tutorial) tutorialProgress.penned = true;
     Audio.chime(); return;
+  }
+  if(k==='bath'){                                        // baby stays in Dad's arms the whole time —
+    if(P.holdingBaby<0){ Audio.error(); return; }         // see the P.bathTimer/`bathing` freeze logic in tick()
+    const b = babies[P.holdingBaby];
+    if(b.bathTimer>0){ Audio.error(); return; }           // already bathing
+    b.bathTimer = BATH_SECONDS;
+    Audio.chime(); return;
+  }
+  if(k==='towel'){                                        // required follow-up: dries off a just-bathed baby
+    if(P.holdingBaby<0){ Audio.error(); return; }
+    const b = babies[P.holdingBaby];
+    if(!b.wet){ Audio.error(); return; }
+    b.wet = false; Audio.chime();
+    if(S.tutorial) tutorialProgress.toweled = true;
+    return;
   }
   if(P.holdingBaby>=0){ Audio.error(); return; }        // hands full holding baby
   P.carrying=k; if(actingPlayerId===myId) setCarrySprite(CARRY_ICON[k]); Audio.chime(); flashCarry();
 }
 function deliverToBaby(b){
   const P = actingPlayer();
-  if(P.carrying==='food'){ b.need.food=100; Audio.chime(); if(S.tutorial) tutorialProgress.fed=true; }
+  if(P.carrying==='food'){
+    if(b.pickyRefusing){ Audio.error(); return; }        // picky eater — milk only during a refusal stretch
+    b.need.food=100; Audio.chime(); if(S.tutorial) tutorialProgress.fed=true;
+  }
   else if(P.carrying==='milk'){ b.need.milk=100; Audio.chime(); if(S.tutorial) tutorialProgress.milk=true; }
   else if(P.carrying==='diaper'){
     if(b.need.diaper > DIAPER_CHANGE_MAX){ Audio.error(); return; }   // not dirty enough yet — keep the diaper
     const dirtiness = 1 - b.need.diaper/DIAPER_CHANGE_MAX;             // 0 right at the threshold, 1 when fully empty
-    const gained = Math.max(1, Math.round((1 + dirtiness*3) * (1 + 0.6*P.lvl.diaper)));
+    const traitMul = b.traits.includes('diaperMachine') ? DIAPER_MACHINE_POO_MUL : 1;
+    const gained = Math.max(1, Math.round((1 + dirtiness*3) * (1 + 0.6*P.lvl.diaper) * traitMul));
     b.need.diaper=100;
     P.poo += gained; P.changes++; popPoo(gained); Audio.poo();
     if(S.tutorial) tutorialProgress.diaper=true;
@@ -2312,7 +2885,7 @@ function interact(){                                   // core logic for the E k
   const P = actingPlayer();
   const {baby:nb, dist:nd} = nearestBaby();
   if(nb && nb.choking){                                 // top priority: clear the airway
-    if(nd < 2.6){ nb.choking=false; nb.chokeDeadline=0; S.joy=Math.min(1,S.joy+0.3); Audio.chime();
+    if(nd < 2.6){ nb.choking=false; nb.chokeDeadline=0; S.joy=Math.min(1,S.joy+0.3); Audio.chime(); P.hazardsHandled++;
       if(S.tutorial) tutorialProgress.choke=true; }
     else Audio.error();
     return;
@@ -2327,7 +2900,17 @@ function interact(){                                   // core logic for the E k
     Audio.error(); return;
   }
   if(k){ doStation(k); return; }
-  if(hasTask('toys') && nearestToyDist()<1.8){ completeTask('toys'); Audio.chime(); return; }
+  if(nearestToyDist()<1.8){                             // tidy toys — always available, not just in Chores Mode
+    const hadTask = hasTask('toys');
+    if(hadTask) completeTask('toys');
+    if(S.toyTidyCooldown<=0){                           // fewer small objects around — buys the choking hazard some time
+      babies.forEach(b=>{ b.chokeTimer += TOY_TIDY_CHOKE_BONUS; b.chokeWarned=false; });
+      S.toyTidyCooldown = TOY_TIDY_COOLDOWN_SECONDS;
+      Audio.chime();
+    } else if(hadTask) Audio.chime();
+    else Audio.error();                                 // tidied too recently — nothing more to do right now
+    return;
+  }
   Audio.error();
 }
 function putBabyDown(player){                          // shared by voluntary put-down and forced (arms-tired) drop
@@ -2352,7 +2935,8 @@ function toggleHoldBaby(){                              // core logic for the Sp
     if(P.holdStamina < holdMax(P)*ARM_RECOVER_MIN_FRAC){ Audio.error(); return; } // arms still too tired
     const {baby:nb, dist:nd, index:ni} = nearestBaby();
     if(nb && !nb.heldBy && nd < 2.9){
-      P.holdingBaby=ni; nb.heldBy=actingPlayerId; P.cuddles++; nb.fallen=false; nb.burned=false; nb.penned=false;
+      if(nb.fallen || nb.burned) P.hazardsHandled++;    // scooping up a hurt baby comforts them — that's the counterplay
+      P.holdingBaby=ni; nb.heldBy=actingPlayerId; P.cuddles++; nb.fallen=false; nb.burned=false; nb.penned=false; nb.queasy=false;
       nb.mesh.scale.set(0.9,0.9,0.9); nb.mesh.userData.mat.visible = false; Audio.chime();
       if(S.tutorial) tutorialProgress.held=true;
     } else Audio.error();
@@ -2381,8 +2965,11 @@ const el = {
   workAlert:document.getElementById('workAlert'), chokeAlert:document.getElementById('chokeAlert'),
   backPainAlert:document.getElementById('backPainAlert'), bathroomAlert:document.getElementById('bathroomAlert'),
   packageAlert:document.getElementById('packageAlert'),
+  ovenAlert:document.getElementById('ovenAlert'), phaseBanner:document.getElementById('phaseBanner'),
   mpPlayerHud:document.getElementById('mpPlayerHud'), tasksHud:document.getElementById('tasksHud'),
   timeLabel:document.getElementById('timeLabel'), scoreStat:document.getElementById('scoreStat'), scoreVal:document.getElementById('scoreVal'),
+  streakStat:document.getElementById('streakStat'), streakVal:document.getElementById('streakVal'),
+  phaseStat:document.getElementById('phaseStat'), phaseIcon:document.getElementById('phaseIcon'), phaseLabel:document.getElementById('phaseLabel'),
 };
 function buildBabyNeedsHUD(){                          // one compact 4-bar cluster per baby (labeled once >1)
   const container = document.getElementById('babyNeeds');
@@ -2401,9 +2988,15 @@ function buildBabyNeedsHUD(){                          // one compact 4-bar clus
   babies.forEach((b,i)=>{
     const cluster = document.createElement('div'); cluster.className = 'babyCluster'+(multi?' multi':'');
     let html = multi ? `<div class="babyClusterLabel">${b.name||('👶'+(i+1))}</div>` : '';
+    if(b.traits && b.traits.length){
+      html += `<div class="traitBadges">${traitBadgesHtml(b.traits)}</div>`;
+    }
     NEEDS.forEach(k=>{
       html += `<div class="needMini" data-k="${k}"><div class="lblMini">${NEED_ICON[k]}</div><div class="barMini"><i></i></div></div>`;
     });
+    // dirty meter — same bar visual as the other four, but inverted: it starts empty and fills UP as
+    // the baby gets messier, so the "low is bad, flashing" convention below is flipped to "high is bad"
+    html += `<div class="needMini" data-k="dirty"><div class="lblMini">🧼</div><div class="barMini"><i></i></div></div>`;
     cluster.innerHTML = html;
     container.appendChild(cluster);
     const bars = {label: cluster.querySelector('.babyClusterLabel')};
@@ -2411,6 +3004,8 @@ function buildBabyNeedsHUD(){                          // one compact 4-bar clus
       const n = cluster.querySelector(`[data-k="${k}"]`);
       bars[k] = {fill:n.querySelector('.barMini>i'), bar:n.querySelector('.barMini')};
     });
+    const dn = cluster.querySelector('[data-k="dirty"]');
+    bars.dirty = {fill:dn.querySelector('.barMini>i'), bar:dn.querySelector('.barMini')};
     el.babyBars.push(bars);
   });
 }
@@ -2441,17 +3036,20 @@ function buildShopRows(){
 }
 function refreshShop(){
   const P = me();
+  const cap = upgradeCapFor();
   document.getElementById('shopPoo').textContent = '💩 '+P.poo;
   Object.keys(UPGRADES).forEach(k=>{
     const cost = upgradeCost(k, P);
-    upsEl.querySelector(`[data-lv="${k}"]`).textContent = `Level ${P.lvl[k]}`;
+    const atCap = P.lvl[k]>=cap;
+    upsEl.querySelector(`[data-lv="${k}"]`).textContent = `Level ${P.lvl[k]} / ${cap}`;
     const b = upsEl.querySelector(`[data-buy="${k}"]`);
-    b.textContent = `💩 ${cost}`;
-    b.disabled = P.poo < cost;
+    b.textContent = atCap ? 'MAX' : `💩 ${cost}`;
+    b.disabled = atCap || P.poo < cost;
   });
 }
 function buyUpgrade(k){                                 // core logic — poo/levels are always the acting player's own
   const P = actingPlayer();
+  if(P.lvl[k]>=upgradeCapFor()){ Audio.error(); return; }   // capped — see upgradeCapFor()'s Dad Level unlock
   const cost = upgradeCost(k, P);
   if(P.poo < cost){ Audio.error(); return; }
   P.poo -= cost; P.lvl[k]++;
@@ -2534,6 +3132,65 @@ function drawMinimap(){
   }
 }
 
+const HAZARD_ICON = {vomit:'🤢', choke:'😵', burn:'🔥', fall:'🤕', backpain:'💥', bathroom:'🚽'};
+function drawCrySparkline(canvas){                       // the cry-o-meter's shape over the whole run
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  const data = S.cryHistory;
+  if(data.length<2) return;                               // too short a run to plot anything meaningful
+  ctx.beginPath();
+  data.forEach((v,i)=>{
+    const x = i/(data.length-1)*W, y = H - (v/100)*H;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle = '#ff6b8a'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+  ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath();
+  ctx.fillStyle = 'rgba(255,107,138,.18)'; ctx.fill();
+}
+const NEEDS_HAZARD_ORDER = ['choke','burn','fall','vomit','backpain','bathroom'];
+function hazardSummaryLine(){
+  return 'Hazards faced — ' + NEEDS_HAZARD_ORDER.map(k=>`${HAZARD_ICON[k]} ${S.hazardCounts[k]}`).join('  ');
+}
+function babyTraitsSummaryLine(){
+  const withTraits = babies.filter(b=>b.traits && b.traits.length);
+  if(!withTraits.length) return '';
+  return withTraits.map(b=>`${b.name||'Baby'} ${traitIconsHtml(b.traits)}`).join('  ·  ');
+}
+function renderRunSummary(prefix){                        // shared between the win and game-over cards
+  const canvas = document.getElementById(prefix+'Sparkline');
+  if(canvas) drawCrySparkline(canvas);
+  document.getElementById(prefix+'Hazards').textContent = hazardSummaryLine();
+  document.getElementById(prefix+'Extra').textContent =
+    `😌 Longest calm streak: ${Math.round(S.longestStreak)}s`;
+  document.getElementById(prefix+'Traits').textContent = babyTraitsSummaryLine();
+}
+function buildShareText(reason){                          // plain-text summary + URL for the Copy Result button
+  const P = me();
+  const diffLabel = DIFFICULTIES[S.diff].label;
+  const mins = Math.floor(S.elapsed/60), secs = Math.round(S.elapsed%60);
+  const lines = [`👶 Baby Care: Dad's on Duty — ${diffLabel}`];
+  lines.push(reason==='win' ? `🎉 Made it — Mom's home!` : `${GAMEOVER_FLAVOR[reason].icon} Lasted ${mins}m ${secs}s`);
+  if(S.endless) lines.push(`🏆 Score: ${S.score}`);
+  lines.push(`😌 Longest calm streak: ${Math.round(S.longestStreak)}s · 💩 ${P.poo} · 👶 ${P.changes} changes`);
+  lines.push(hazardSummaryLine());
+  const traitsLine = babyTraitsSummaryLine();
+  if(traitsLine) lines.push(traitsLine);
+  lines.push(location.href.split('?')[0].split('#')[0]);
+  return lines.join('\n');
+}
+function wireCopyResultBtn(btnId, reasonFn){
+  const btn = document.getElementById(btnId);
+  const original = btn.textContent;
+  btn.addEventListener('click', ()=>{
+    const text = buildShareText(reasonFn());
+    const flash = ()=>{ btn.textContent='✅ Copied!'; setTimeout(()=>{ btn.textContent=original; }, 1400); };
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(flash).catch(()=>fallbackCopyText(text, flash));
+    else fallbackCopyText(text, flash);
+  });
+}
+let lastEndReason = null;                                 // most recent reason passed to endGame() — feeds Copy Result
+
 /* ---------- Flow ---------- */
 function enterHouseCommon(){                            // shared teardown/setup used by every game-start path
   dad.position.copy(spawnDad); dad.rotation.y=0;
@@ -2551,13 +3208,26 @@ function enterHouseCommon(){                            // shared teardown/setup
   closeShopFn();
   Audio.start(); Music.start();
 }
-function startGame(isTutorial){
+function startGame(isTutorial, isDaily){
   if(isTutorial){ preTutorialDifficulty = difficulty; difficulty = 'tutorial'; }
+  else if(isDaily){ difficulty = dailyDifficulty(); }   // same rotating difficulty for every player, every day
   roomCode = null; isHost = true;                       // solo & tutorial are always local-only
   resetState();
   S.tutorial = !!isTutorial;
   if(isTutorial){ S.endless = false; S.tasksEnabled = false; } // ignore Endless/Chores toggles during the tutorial
-  buildHouse();                                    // fresh randomized-but-sensible room layout each run
+  if(isDaily){                                          // ignore Endless/Chores toggles here too — every
+    S.endless = false; S.tasksEnabled = false;           // player's daily run needs to be the same shape
+    S.dailyChallenge = true; S.dailyDateKey = dailyDateKey();
+  }
+  // Dad Level starting-💩 perk: a normal solo practice run only — never the tutorial (nothing to spend it
+  // on) and never Daily Challenge (every player's run has to start even for the leaderboard to be fair)
+  if(!isTutorial && !isDaily) players[myId].poo = startingPooBonus();
+  // solo/tutorial runs still pick a fresh random seed each time (same visible behavior as before) — but
+  // *picking* one means the run is reproducible, which the dev panel's seed override relies on, and which
+  // the daily-challenge mode overrides with a shared date-derived seed instead, so every player's house
+  // layout *and* hazard timing (buildHouse derives both from this one integer) are byte-identical
+  const seed = isDaily ? dailySeed(S.dailyDateKey) : (devSeedOverride!=null ? devSeedOverride : Math.floor(Math.random()*1e9));
+  buildHouse(seed);                                // fresh randomized-but-sensible room layout each run
   spawnBabies();
   enterHouseCommon();
   document.getElementById('tutorialPanel').classList.toggle('hidden', !isTutorial);
@@ -2567,6 +3237,10 @@ function startGame(isTutorial){
   if(isTutorial) tutorialStepEnter(0);
   S.mode='play';
 }
+function startDailyChallenge(){                         // dailyStartBtn on #dailyScreen — bypasses the
+  if(getDailyResult(dailyDateKey())) return;             // normal diff picker (fixed rotating difficulty),
+  startGame(false, true);                                // like the tutorial bypasses both pickers. Guarded
+}                                                         // again here since the button should already be hidden
 const GAMEOVER_FLAVOR = {
   lose: {icon:'📞😱', title:'You called Mommy!',
     body:"The crying got to be too much and you had to phone Mom for backup. She's not thrilled she had to leave her shopping…"},
@@ -2584,13 +3258,81 @@ const WIN_FLAVOR = {
   disappointed: {icon:'🏠😕', title:"Mom's Home... Sort Of",
     body:"You kept the baby alive and happy, sure — but Mom also came home to an empty porch and a stack of \"where's my package?\" emails. <b>Dad of the year, minus a few stars.</b>"},
 };
+// shared by both end cards: does this run qualify for a leaderboard entry, and what note explains why —
+// endless competes for an all-time per-difficulty high score, daily challenge gets one entry per UTC day
+function scoreSubmitState(){
+  if(S.endless){
+    const hs = getHighScore();
+    const isNew = S.score > hs;
+    if(isNew) setHighScore(S.score);
+    return {
+      note: isNew ? ` · Score: ${S.score} — New High Score! 🏆` : ` · Score: ${S.score} · Best: ${hs}`,
+      offer: isNew && S.score>0 && !roomCode,          // solo-only: MP rounds don't map to one player's score
+      lede: '🏆 New personal best! Add your name to the leaderboard:',
+      pending: {score:S.score, difficulty:S.diff, kind:'endless'},
+    };
+  }
+  if(S.dailyChallenge){
+    const already = !!getDailyResult(S.dailyDateKey);
+    return {
+      note: ` · Score: ${S.score}`,
+      offer: !already && S.score>0 && !roomCode,
+      lede: "🏆 Add your name to today's leaderboard:",
+      pending: {score:S.score, dateKey:S.dailyDateKey, kind:'daily'},
+    };
+  }
+  return {note:'', offer:false, lede:'', pending:null};
+}
+function applyScoreSubmitUI(prefix, state){
+  pendingScore = state.offer ? state.pending : null;
+  document.getElementById(prefix+'ScoreSubmit').classList.toggle('hidden', !state.offer);
+  document.getElementById(prefix+'Stepnav').classList.toggle('hidden', state.offer);
+  document.getElementById(prefix+'ScoreSubmitLede').textContent = state.lede;
+  document.getElementById(prefix+'ScoreNameInput').value = '';
+  document.getElementById(prefix+'ScoreSubmitError').textContent = '';
+}
+function applyRunToProfile(reason){                     // banks this run's totals into the lifetime profile;
+  const P = me();                                        // called once, right at the top of endGame()
+  const xpEarned = Math.round(
+    P.changes*XP_PER_DIAPER + P.cuddles*XP_PER_CUDDLE + P.bathsGiven*XP_PER_BATH +
+    P.hazardsHandled*XP_PER_HAZARD_HANDLED + S.elapsed*XP_PER_SURVIVAL_SEC +
+    (reason==='win' ? XP_WIN_BONUS : 0)
+  );
+  const prof = getProfile();
+  const beforeLvl = dadLevelForXp(prof.xp);
+  prof.xp += xpEarned;
+  prof.runsPlayed++;
+  if(reason==='win') prof.runsSurvived++;
+  prof.diaperChanges += P.changes;
+  prof.cuddles += P.cuddles;
+  prof.baths += P.bathsGiven;
+  prof.hazardsHandled += P.hazardsHandled;
+  saveProfile(prof);
+  return {xpEarned, leveledUp: dadLevelForXp(prof.xp)>beforeLvl, newLevel: dadLevelForXp(prof.xp)};
+}
 function endGame(reason){                              // 'win' | 'lose' | 'hide'
   S.mode = reason==='win' ? 'win' : 'over';
+  lastEndReason = reason;
   closeShopFn();
   const P = me();
-  retryAction = roomCode ? 'lobby' : 'solo';              // MP round ended with the room still alive → offer
-  const mins = Math.floor(S.elapsed/60), secs = Math.round(S.elapsed%60); // to rejoin its lobby instead of
-  const diffLabel = DIFFICULTIES[S.diff].label;           // an outright restart
+  // MP round ended with the room still alive → offer to rejoin its lobby instead of an outright restart;
+  // a daily-challenge run's primary button goes to the menu instead of silently starting a normal run
+  // (which would otherwise be the most obvious way to route around the one-run-per-day limit)
+  retryAction = roomCode ? 'lobby' : (S.dailyChallenge ? 'menu' : 'solo');
+  const mins = Math.floor(S.elapsed/60), secs = Math.round(S.elapsed%60);
+  const diffLabel = DIFFICULTIES[S.diff].label;
+  // scoreSubmitState() checks "already played today" via getDailyResult() — must run before
+  // setDailyResult() below overwrites that check's answer with this very run's own result
+  const state = scoreSubmitState();
+  if(S.dailyChallenge){
+    setDailyResult(S.dailyDateKey, {score:S.score, elapsed:Math.floor(S.elapsed), poo:P.poo, reason, ts:Date.now()});
+  }
+  // Dad Level profile: every real run banks XP toward it, win or lose — the tutorial doesn't (nothing
+  // "real" happened). See applyRunToProfile() for what counts.
+  const profResult = S.tutorial ? null : applyRunToProfile(reason);
+  const xpNote = profResult
+    ? `⭐ +${profResult.xpEarned} XP` + (profResult.leveledUp ? ` — Dad Level ${profResult.newLevel}! 🎉` : ` (Dad Level ${profResult.newLevel})`)
+    : '';
   if(reason==='win'){
     const wf = S.missedPackages >= PACKAGES_DISAPPOINTED_THRESHOLD ? WIN_FLAVOR.disappointed : WIN_FLAVOR.proud;
     document.getElementById('winIcon').textContent = wf.icon;
@@ -2598,8 +3340,11 @@ function endGame(reason){                              // 'win' | 'lose' | 'hide
     document.getElementById('winBody').innerHTML = wf.body;
     const packageNote = S.missedPackages>0 ? ` · 📦 ${S.missedPackages} package${S.missedPackages===1?'':'s'} stolen` : '';
     document.getElementById('winStats').textContent =
-      `${diffLabel} · Diapers changed: ${P.changes} · Poo banked: 💩${P.poo}${packageNote}`;
-    document.getElementById('winBtn').textContent = roomCode ? 'Back to Lobby ↻' : 'Play Again ↻';
+      `${diffLabel} · Diapers changed: ${P.changes} · Poo banked: 💩${P.poo}${packageNote}${state.note}`;
+    document.getElementById('winBtn').textContent = roomCode ? 'Back to Lobby ↻' : (S.dailyChallenge ? '🚪 Back to Menu' : 'Play Again ↻');
+    applyScoreSubmitUI('win', state);
+    renderRunSummary('win');
+    document.getElementById('winXp').textContent = xpNote;
     document.getElementById('win').classList.remove('hidden');
   } else {
     const f = GAMEOVER_FLAVOR[reason];
@@ -2607,23 +3352,14 @@ function endGame(reason){                              // 'win' | 'lose' | 'hide
     document.getElementById('goTitle').textContent = f.title;
     document.getElementById('goBody').textContent = f.body;
     const missedNote = reason==='fired' ? ` · ${S.missedCount} missed message${S.missedCount===1?'':'s'}` : '';
-    let scoreNote = '';
-    let offerScoreSubmit = false;
-    if(S.endless){
-      const hs = getHighScore();
-      const isNew = S.score > hs;
-      if(isNew) setHighScore(S.score);
-      scoreNote = isNew ? ` · Score: ${S.score} — New High Score! 🏆` : ` · Score: ${S.score} · Best: ${hs}`;
-      offerScoreSubmit = isNew && S.score>0 && !roomCode;    // solo-only: MP rounds don't map to one player's score
-    }
     document.getElementById('goStats').textContent =
-      `${diffLabel} · You lasted ${mins}m ${secs}s · ${P.changes} diaper change${P.changes===1?'':'s'}${missedNote}${scoreNote}.`;
-    document.getElementById('retryBtn').textContent = roomCode ? 'Back to Lobby ↻' : 'Try Again ↻';
-    pendingScore = offerScoreSubmit ? {score:S.score, difficulty:S.diff} : null;
-    document.getElementById('scoreSubmit').classList.toggle('hidden', !offerScoreSubmit);
-    document.getElementById('goStepnav').classList.toggle('hidden', offerScoreSubmit);
-    document.getElementById('scoreNameInput').value = '';
-    document.getElementById('scoreSubmitError').textContent = '';
+      `${diffLabel} · You lasted ${mins}m ${secs}s · ${P.changes} diaper change${P.changes===1?'':'s'}${missedNote}${state.note}.`;
+    document.getElementById('retryBtn').textContent = roomCode ? 'Back to Lobby ↻' : (S.dailyChallenge ? '🚪 Back to Menu' : 'Try Again ↻');
+    document.getElementById('goQuitBtn').classList.toggle('hidden', !!S.dailyChallenge); // retryBtn already
+    applyScoreSubmitUI('go', state);                                                     // goes to the menu —
+                                                                                          // showing both is redundant
+    renderRunSummary('go');
+    document.getElementById('goXp').textContent = xpNote;
     document.getElementById('gameover').classList.remove('hidden');
   }
   if(roomCode && isHost) Net.setGameOver(reason);         // let every guest's client know the round is over
@@ -2642,33 +3378,140 @@ document.querySelectorAll('#diffPicker .diffOpt').forEach(opt=>{
     Audio.buy();
   });
 });
-let gameMode = 'normal';                                 // 'normal' | 'endless' | 'chores' — set on modeScreen,
-document.querySelectorAll('#modePicker .diffOpt').forEach(opt=>{ // translated into endlessMode/tasksMode below
-  opt.addEventListener('click', ()=>{
+let gameMode = 'normal';                             // 'normal' | 'endless' | 'chores' | 'daily' — set on
+document.querySelectorAll('#modePicker .diffOpt').forEach(opt=>{ // modeScreen, translated into endlessMode/
+  opt.addEventListener('click', ()=>{                             // tasksMode below ('daily' skips both)
     gameMode = opt.dataset.mode;
     document.querySelectorAll('#modePicker .diffOpt').forEach(o=>o.classList.toggle('selected', o===opt));
     endlessMode = gameMode==='endless';
     tasksMode = gameMode==='chores';
+    document.getElementById('modeNextBtn').textContent = gameMode==='daily' ? 'View Challenge ▶' : 'Next ▶';
     Audio.buy();
   });
 });
 function showMenuScreen(id){
-  ['mainMenu','helpScreen','settingsScreen','aboutScreen','leaderboardScreen','modeScreen','diffScreen','mpChoiceScreen','mpJoinScreen','mpLobbyScreen'].forEach(mid=>{
+  ['mainMenu','helpScreen','settingsScreen','aboutScreen','profileScreen','dailyScreen','modeScreen','diffScreen','mpChoiceScreen','mpJoinScreen','mpLobbyScreen'].forEach(mid=>{
     document.getElementById(mid).classList.toggle('hidden', mid!==id);
   });
+  // the main menu carries its own always-visible Dad Level bar + endless-leaderboard preview —
+  // refresh both every time it comes back on screen, not just once at boot
+  if(id==='mainMenu'){ renderMenuLevelBadge(); renderMenuLeaderboardPreview(); }
 }
 document.getElementById('menuPlayBtn').addEventListener('click', ()=>showMenuScreen('modeScreen'));
 document.getElementById('menuSettingsBtn').addEventListener('click', ()=>{ syncMusicPickers(); showMenuScreen('settingsScreen'); });
 document.getElementById('menuHelpBtn').addEventListener('click', ()=>showMenuScreen('helpScreen'));
 document.getElementById('menuAboutBtn').addEventListener('click', ()=>showMenuScreen('aboutScreen'));
-document.getElementById('menuLeaderboardBtn').addEventListener('click', ()=>{ showMenuScreen('leaderboardScreen'); renderLeaderboard(); });
+// the Dad Level bar at the top of the main menu IS the entry point to the profile/details screen now
+// — there's no separate "Profile" menu button any more
+document.getElementById('menuLevelBar').addEventListener('click', ()=>{ showMenuScreen('profileScreen'); renderProfileScreen(); });
+document.getElementById('profileBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
+function renderMenuLevelBadge(){
+  const prof = getProfile();
+  const prog = dadLevelProgress(prof.xp);
+  document.getElementById('menuLevelText').textContent = prog.maxed ? `Level ${prog.lvl} (Max)` : `Level ${prog.lvl}`;
+  document.getElementById('menuLevelXpFill').style.width = (prog.frac*100)+'%';
+  document.getElementById('menuLevelColorDot').style.background = PLAYER_COLORS[prof.colorIdx%PLAYER_COLORS.length].body;
+}
+// Placeholder rows so a brand-new install's leaderboard preview doesn't read as empty/dead — purely
+// cosmetic, client-side only, and never written to Firebase. Blended with real scores and re-sorted,
+// so they're self-obsoleting: as real players post better scores, these get pushed off the top 10 and
+// quietly stop showing up, with no code change needed later.
+const SAMPLE_LEADERBOARD_SCORES = [
+  {name:'Marcus', score:842, difficulty:'king'},
+  {name:'Priya', score:715, difficulty:'king'},
+  {name:'Jordan', score:604, difficulty:'veteran'},
+  {name:'Aiden', score:588, difficulty:'king'},
+  {name:'Sofia', score:471, difficulty:'veteran'},
+  {name:'DadOfTheYear', score:390, difficulty:'king'},
+  {name:'Wes', score:322, difficulty:'veteran'},
+  {name:'Nora', score:265, difficulty:'first'},
+  {name:'Kenji', score:198, difficulty:'veteran'},
+  {name:'Liam', score:143, difficulty:'first'},
+];
+async function renderMenuLeaderboardPreview(){
+  const el2 = document.getElementById('menuLbList');
+  el2.innerHTML = '<div class="lbEmpty">Loading…</div>';
+  let rows;
+  try{ rows = await fetchLeaderboardTop(10); }catch(e){ rows = null; }
+  if(!rows){ el2.innerHTML = '<div class="lbEmpty">Leaderboard unavailable right now.</div>'; return; }
+  const blended = rows.concat(SAMPLE_LEADERBOARD_SCORES).sort((a,b)=>b.score-a.score).slice(0,10);
+  el2.innerHTML = blended.map((r,i)=>`<div class="lbRow">
+      <div class="lbRank">${i+1}</div>
+      <div class="lbDiff" title="${(DIFFICULTIES[r.difficulty]||{label:''}).label}">${DIFF_ICON[r.difficulty]||'🍼'}</div>
+      <div class="lbName">${escapeHtml(r.name||'Dad')}</div>
+      <div class="lbScore">${r.score}</div>
+    </div>`).join('');
+}
+function renderProfileScreen(){
+  const prof = getProfile();
+  const prog = dadLevelProgress(prof.xp);
+  document.getElementById('profileLevelBadge').textContent = prog.maxed ? `Level ${prog.lvl} (Max)` : `Level ${prog.lvl}`;
+  document.getElementById('profileXpLabel').textContent = prog.maxed ? `${prof.xp} XP` : `${prog.cur} / ${prog.need}`;
+  document.getElementById('profileXpFill').style.width = (prog.frac*100)+'%';
+  document.getElementById('profileMaxedNote').textContent = prog.maxed ? "Maxed out — thanks for all the shifts, Dad." : '';
+  document.getElementById('profileRuns').textContent = prof.runsPlayed;
+  document.getElementById('profileWins').textContent = prof.runsSurvived;
+  document.getElementById('profileDiapers').textContent = prof.diaperChanges;
+  document.getElementById('profileCuddles').textContent = prof.cuddles;
+  document.getElementById('profileBaths').textContent = prof.baths;
+  document.getElementById('profileHazards').textContent = prof.hazardsHandled;
+  document.getElementById('profileUnlocksNote').textContent =
+    `🛠️ Upgrade cap: Level ${upgradeCapForLevel(prog.lvl)} (solo) · Starting 💩: ${startingPooBonus()} (solo)`;
+  renderProfileColorPicker(prof);
+}
+function renderProfileColorPicker(prof){
+  const el2 = document.getElementById('profileColorPicker');
+  const unlocked = unlockedColorCount();
+  el2.innerHTML = PLAYER_COLORS.map((c,i)=>{
+    const locked = i>=unlocked;
+    const selected = i===prof.colorIdx;
+    return `<div class="colorSwatch${selected?' selected':''}${locked?' taken':''}" data-idx="${i}" `+
+           `style="background:${c.body}" title="${locked?`Unlocks at Dad Level ${i-COSMETIC_UNLOCK_BASE+1}`:''}"></div>`;
+  }).join('');
+  el2.querySelectorAll('.colorSwatch:not(.taken)').forEach(sw=>{
+    sw.addEventListener('click', ()=>{
+      const idx = +sw.dataset.idx; if(idx===prof.colorIdx) return;
+      prof.colorIdx = idx; saveProfile(prof);
+      if(!roomCode){ players[myId].colorIdx = idx; recolorDad(idx); }  // instant preview; MP keeps its own slot
+      renderProfileColorPicker(prof);
+      Audio.buy();
+    });
+  });
+}
 document.getElementById('menuTutorialBtn').addEventListener('click', ()=>startGame(true));
+document.getElementById('dailyBackBtn').addEventListener('click', ()=>showMenuScreen('modeScreen'));
+document.getElementById('dailyStartBtn').addEventListener('click', startDailyChallenge);
+function renderDailyScreen(){
+  const dateKey = dailyDateKey();
+  const diff = DIFFICULTIES[dailyDifficulty()];
+  document.getElementById('dailyDateLabel').textContent = `Today: ${dateKey} (UTC)`;
+  document.getElementById('dailyDiffLabel').textContent = `${DIFF_ICON[diff.key]||'🍼'} ${diff.label}`;
+  const result = getDailyResult(dateKey);
+  document.getElementById('dailyResultBox').classList.toggle('hidden', !result);
+  document.getElementById('dailyStartBtn').classList.toggle('hidden', !!result);
+  if(result){
+    const m = Math.floor(result.elapsed/60), s = result.elapsed%60;
+    const outcomeLabel = result.reason==='win' ? 'Survived the whole shift!' : (GAMEOVER_FLAVOR[result.reason]||{title:'Run ended'}).title;
+    document.getElementById('dailyResultStats').textContent =
+      `${outcomeLabel} · Score: ${result.score} · Lasted ${m}m ${s}s · 💩${result.poo}`;
+  }
+  renderDailyLeaderboard();
+  updateDailyCountdown();
+}
+function updateDailyCountdown(){
+  const el2 = document.getElementById('dailyCountdown');
+  if(!el2 || document.getElementById('dailyScreen').classList.contains('hidden')) return;
+  const msLeft = msUntilNextUtcMidnight();
+  const h = Math.floor(msLeft/3600000), m = Math.floor((msLeft%3600000)/60000), s = Math.floor((msLeft%60000)/1000);
+  el2.textContent = `Resets in ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+setInterval(updateDailyCountdown, 1000);
 document.getElementById('helpBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('settingsBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('aboutBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
-document.getElementById('leaderboardBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('modeBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('modeNextBtn').addEventListener('click', ()=>{
+  if(gameMode==='daily'){ showMenuScreen('dailyScreen'); renderDailyScreen(); return; }
   document.getElementById('bestScoreNote').classList.toggle('hidden', !endlessMode);
   updateBestScoreLabel();
   showMenuScreen('diffScreen');
@@ -2715,28 +3558,35 @@ function handleRetry(){
 document.getElementById('retryBtn').addEventListener('click', handleRetry);
 document.getElementById('winBtn').addEventListener('click', handleRetry);
 document.getElementById('goQuitBtn').addEventListener('click', leaveToMainMenu);
-function dismissScoreSubmit(){
+wireCopyResultBtn('winCopyBtn', ()=>'win');
+wireCopyResultBtn('goCopyBtn', ()=>lastEndReason);
+function dismissScoreSubmit(prefix){
   pendingScore = null;
-  document.getElementById('scoreSubmit').classList.add('hidden');
-  document.getElementById('goStepnav').classList.remove('hidden');
+  document.getElementById(prefix+'ScoreSubmit').classList.add('hidden');
+  document.getElementById(prefix+'Stepnav').classList.remove('hidden');
 }
-document.getElementById('scoreSkipBtn').addEventListener('click', dismissScoreSubmit);
-document.getElementById('scoreSubmitBtn').addEventListener('click', async ()=>{
-  const errEl = document.getElementById('scoreSubmitError');
-  const name = document.getElementById('scoreNameInput').value.trim();
-  if(!pendingScore) return;
-  if(!name){ errEl.textContent = 'Enter a name first.'; return; }
-  if(containsProfanity(name)){ errEl.textContent = 'Please choose a different name.'; return; }
-  const btn = document.getElementById('scoreSubmitBtn');
-  btn.disabled = true; btn.textContent = 'Saving…';
-  try{
-    await submitLeaderboardScore(name, pendingScore.score, pendingScore.difficulty);
-    dismissScoreSubmit();
-  }catch(e){
-    errEl.textContent = "Couldn't save right now — check your connection and try again.";
-  }
-  btn.disabled = false; btn.textContent = 'Save Score 🏆';
-});
+function wireScoreSubmitForm(prefix){                    // shared between the game-over and win cards
+  document.getElementById(prefix+'ScoreSkipBtn').addEventListener('click', ()=>dismissScoreSubmit(prefix));
+  document.getElementById(prefix+'ScoreSubmitBtn').addEventListener('click', async ()=>{
+    const errEl = document.getElementById(prefix+'ScoreSubmitError');
+    const name = document.getElementById(prefix+'ScoreNameInput').value.trim();
+    if(!pendingScore) return;
+    if(!name){ errEl.textContent = 'Enter a name first.'; return; }
+    if(containsProfanity(name)){ errEl.textContent = 'Please choose a different name.'; return; }
+    const btn = document.getElementById(prefix+'ScoreSubmitBtn');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try{
+      if(pendingScore.kind==='daily') await submitDailyScore(name, pendingScore.score, pendingScore.dateKey);
+      else await submitLeaderboardScore(name, pendingScore.score, pendingScore.difficulty);
+      dismissScoreSubmit(prefix);
+    }catch(e){
+      errEl.textContent = "Couldn't save right now — check your connection and try again.";
+    }
+    btn.disabled = false; btn.textContent = 'Save Score 🏆';
+  });
+}
+wireScoreSubmitForm('go');
+wireScoreSubmitForm('win');
 document.getElementById('pauseQuitBtn').addEventListener('click', leaveToMainMenu);
 
 /* ---------- Multiplayer: Firebase-backed lobby (host/join, difficulty + baby count, player list) ----------
@@ -2839,19 +3689,24 @@ const Net = (function(){
     pushWorldSnapshot(){                                  // host-only: the shared world, plus every player's
       if(!isHost || !babiesRef) return;                   // "outcome" fields (carrying/holdingBaby/poo/lvl)
       const bSnap = {};
+      // y/rotY matter most while held — without them a guest saw the baby dragging along the ground at
+      // the holder's feet instead of lifted into their arms. traits/favoriteToy are seed-derivable and
+      // already match on every client, but synced anyway as a safety net (same reasoning as `name` below).
       babies.forEach((b,i)=>{ bSnap[i] = {x:b.mesh.position.x, y:b.mesh.position.y, z:b.mesh.position.z,
-        rotY:b.mesh.rotation.y, name:b.name,               // y/rotY matter most while held — without them a
-        need:b.need, mood:b.moodLast, fallen:b.fallen, burned:b.burned, choking:b.choking, penned:b.penned, heldBy:b.heldBy}; }); // guest
-      babiesRef.set(bSnap);                                 // saw the baby dragging along the ground at the
-      worldRef.set({cry:S.cry, cartoonsOn:S.cartoonsOn, notification:S.notification,   // holder's feet instead
-        elapsed:S.elapsed, timeLeft: isFinite(S.timeLeft)?S.timeLeft:-1, score:S.score, // of lifted into their arms
-        packageWaiting:S.packageWaiting,
+        rotY:b.mesh.rotation.y, name:b.name, traits:b.traits, pickyRefusing:b.pickyRefusing,
+        need:b.need, mood:b.moodLast, fallen:b.fallen, burned:b.burned, choking:b.choking, penned:b.penned,
+        targetIsOven:b.targetIsOven, heldBy:b.heldBy, dirty:b.dirty, wet:b.wet, bathTimer:b.bathTimer}; });
+      babiesRef.set(bSnap);
+      worldRef.set({cry:S.cry, cartoonsOn:S.cartoonsOn, notification:S.notification,
+        elapsed:S.elapsed, timeLeft: isFinite(S.timeLeft)?S.timeLeft:-1, score:S.score,
+        packageWaiting:S.packageWaiting, phaseIdx: S.phaseIdx==null?-1:S.phaseIdx,
         messes:S.messes.map(m=>({x:m.x,z:m.z})),
         tasksDone:S.tasks.map(t=>t.done)});      // task identity/order is already deterministic from the shared
                                                   // seed — only the done-flags actually need to be synced
       for(const id in players){ if(id===myId) continue;
         playersRef.child(id).update({carrying:players[id].carrying||'', holdingBaby:players[id].holdingBaby,
-          poo:players[id].poo, lvl:players[id].lvl}); }
+          poo:players[id].poo, lvl:players[id].lvl, changes:players[id].changes, cuddles:players[id].cuddles,
+          hazardsHandled:players[id].hazardsHandled, bathsGiven:players[id].bathsGiven}); }
     },
     setGameOver(reason){ if(isHost && metaRef) metaRef.update({state:'ended', reason}); },
     setPlayerLeft(id, reason){ if(isHost && playersRef) playersRef.child(id).update({gameOverReason:reason}); },
@@ -3063,6 +3918,12 @@ function applyPlayerSnapshot(id, data){
     if(data.holdingBaby!==undefined) P.holdingBaby = data.holdingBaby;
     if(data.poo!==undefined) P.poo = data.poo;
     if(data.lvl) P.lvl = data.lvl;
+    // changes/cuddles/hazardsHandled/bathsGiven are host-simulated the same way — only mirrored back down
+    // for the profile-XP tally at endGame(), so a guest's own lifetime stats aren't left stuck at zero
+    if(data.changes!==undefined) P.changes = data.changes;
+    if(data.cuddles!==undefined) P.cuddles = data.cuddles;
+    if(data.hazardsHandled!==undefined) P.hazardsHandled = data.hazardsHandled;
+    if(data.bathsGiven!==undefined) P.bathsGiven = data.bathsGiven;
     if(P.carrying !== prevCarrying) setCarrySprite(P.carrying ? CARRY_ICON[P.carrying] : null);
     if(!shopEl.classList.contains('hidden')) refreshShop();
     if(data.gameOverReason && S.mode==='play'){             // the host saw ME hide/walk out — my round ends,
@@ -3132,7 +3993,11 @@ function applyRemoteBabies(snap){
     b.netTarget = {x:d.x, y:(d.y!==undefined?d.y:b.mesh.position.y), z:d.z, // smoothed every frame in
       rotY:(d.rotY!==undefined?d.rotY:b.mesh.rotation.y)};  // updateRemoteBabies(), not just when a snapshot
     if(d.name) b.name = d.name;                            // arrives — otherwise
-    b.need = d.need || b.need; b.fallen=!!d.fallen; b.burned=!!d.burned; b.choking=!!d.choking; b.penned=!!d.penned; b.heldBy=d.heldBy||null;
+    if(d.traits) b.traits = d.traits;
+    b.pickyRefusing=!!d.pickyRefusing;
+    b.need = d.need || b.need; b.fallen=!!d.fallen; b.burned=!!d.burned; b.choking=!!d.choking; b.penned=!!d.penned;
+    b.targetIsOven=!!d.targetIsOven; b.heldBy=d.heldBy||null;
+    b.dirty = d.dirty!==undefined ? d.dirty : b.dirty; b.wet=!!d.wet; b.bathTimer = d.bathTimer||0;
     setMood(b, d.mood||'🙂');
     if(b.heldBy){ b.mesh.scale.set(0.9,0.9,0.9); b.mesh.userData.mat.visible=false; }
     else { b.mesh.scale.set(1,1,1); b.mesh.userData.mat.visible=true; }
@@ -3164,6 +4029,11 @@ function applyRemoteWorld(w){
   if(!w) return;
   S.cry=w.cry||0; S.cartoonsOn=!!w.cartoonsOn; S.notification=!!w.notification;
   S.elapsed=w.elapsed||0; S.timeLeft = w.timeLeft<0 ? Infinity : w.timeLeft; S.score=w.score||0;
+  const newPhaseIdx = (w.phaseIdx==null || w.phaseIdx<0) ? null : w.phaseIdx;
+  if(newPhaseIdx !== S.phaseIdx){                       // guest-side: detect the host's phase transitions too,
+    S.phaseIdx = newPhaseIdx;                           // so the banner/HUD indicator shows up for everyone
+    if(newPhaseIdx!=null){ S.phaseBannerTimer = PHASE_BANNER_SECONDS; Audio.chime(); }
+  }
   const packageNowWaiting = !!w.packageWaiting;
   if(packageNowWaiting !== S.packageWaiting){
     S.packageWaiting = packageNowWaiting;
@@ -3213,6 +4083,13 @@ const TUTORIAL_STEPS = [
          "place them inside. It's a safe way to free up your hands for a little while — they'll climb out "+
          "on their own eventually.",
     auto:()=>tutorialProgress.penned },
+  { text:"🛁 <b>Baths:</b> Babies get dirty — spit-up, an overdue diaper, or just crawling around (watch the "+
+         "🧼 meter on their HUD). I've made this one good and dirty. Pick them back up, carry them to the "+
+         "🛁 bath, and press <kbd>E</kbd> — you'll be braced in place for a few seconds, but the baby's "+
+         "completely safe. Afterwards, carry them straight to the 🧺 towel rack to dry off — that part's "+
+         "required too, or they stay wet.",
+    onEnter:()=>{ babies[0].penned=false; babies[0].dirty=80; },
+    auto:()=>tutorialProgress.toweled },
   { text:"🧹 <b>Messes:</b> I've left a little mess nearby — babies do that sometimes! Only the 🧹 mop can "+
          "clean it up. Grab the mop and press <kbd>E</kbd> on the mess.",
     onEnter:()=>spawnTutorialMess(),
@@ -3308,20 +4185,28 @@ function holderTransform(pid){                            // wherever the given 
   const p = players[pid]; return p ? {x:p.x, z:p.z, rotY:p.rotY} : {x:0,z:0,rotY:0};
 }
 function babyHappiness(b){ let s=0; NEEDS.forEach(k=>s+=b.need[k]); return s/NEEDS.length; }
+// clingy trait: fusses whenever Dad wanders far away, regardless of how full its needs are. Distance is
+// computed against the host's own position only — the same known simplification the old noise system
+// used, since remote players' positions aren't tracked closely enough for this yet.
+function clingyDistressed(b){
+  return b.traits.includes('clingy') && !b.heldBy && !b.fallen && !b.burned && !b.choking && !b.penned
+    && Math.hypot(b.mesh.position.x-dad.position.x, b.mesh.position.z-dad.position.z) > CLINGY_DISTANCE;
+}
 function pickBabyTarget(b){
-  b.retime = 3 + Math.random()*3;
+  b.retime = 3 + random0to1()*3;
   b.play = 0; b.playingToy = null; b.targetIsOven = false;
   const D = curDiff();
-  b.mode = Math.random() < D.walkChance ? 'walk' : 'crawl'; // crawling is the safe default; walking is occasional and riskier
-  if(b.mode==='walk') b.fallTimer = rand(D.fallMin, D.fallMax);
-  if(Math.random() < D.ovenChance){                         // rare: baby toddles straight for the hot oven — dangerous!
+  const isClimber = b.traits.includes('climber');
+  b.mode = random0to1() < D.walkChance ? 'walk' : 'crawl'; // crawling is the safe default; walking is occasional and riskier
+  if(b.mode==='walk') b.fallTimer = rand(D.fallMin, D.fallMax)/phaseMul('fallMul')*(isClimber?CLIMBER_FALL_MUL:1);
+  if(!S.ovenProofed && random0to1() < D.ovenChance*phaseMul('ovenMul')*(isClimber?CLIMBER_OVEN_MUL:1)){ // rare: baby toddles straight for the hot oven — dangerous!
     b.target.copy(ovenPos); b.targetIsOven = true;
-  } else if(toys.length && Math.random() < 0.55){           // head to a toy and play
-    const ty = toys[(Math.random()*toys.length)|0];
-    b.target.set(ty.x + (Math.random()-0.5)*0.8, 0, ty.z + (Math.random()-0.5)*0.8);
+  } else if(toys.length && random0to1() < 0.55){           // head to a toy and play
+    const ty = (b.favoriteToyRef && random0to1()<FAVORITE_TOY_PICK_CHANCE) ? b.favoriteToyRef : toys[(random0to1()*toys.length)|0];
+    b.target.set(ty.x + (random0to1()-0.5)*0.8, 0, ty.z + (random0to1()-0.5)*0.8);
     b.playingToy = ty;
   } else {                                                  // wander nearby
-    b.target.set(b.mesh.position.x + (Math.random()-0.5)*11, 0, b.mesh.position.z + (Math.random()-0.5)*11);
+    b.target.set(b.mesh.position.x + (random0to1()-0.5)*11, 0, b.mesh.position.z + (random0to1()-0.5)*11);
   }
   b.target.x = Math.max(houseBounds.X0+1.5, Math.min(houseBounds.X1-1.5, b.target.x));
   b.target.z = Math.max(houseBounds.Z0+1.5, Math.min(houseBounds.Z1-1.5, b.target.z));
@@ -3336,6 +4221,7 @@ function updateBabyAI(b, dt, t){
     b.mesh.position.set(h.x + Math.sin(h.rotY)*0.55, 1.15+bob, h.z + Math.cos(h.rotY)*0.55);
     b.mesh.rotation.y = h.rotY;
     poseBabySit(b.mesh.userData);
+    if(b.traits.includes('cuddleBug')) S.joy = Math.min(1, S.joy + CUDDLE_BUG_JOY_RATE*dt);
   } else if(b.fallen || b.burned){                                          // hurt — frozen & crying till picked up
     b.mesh.position.y *= 0.9; poseBabySit(b.mesh.userData);
   } else if(b.penned){                                                      // safe in the playpen — counts down to an escape
@@ -3345,23 +4231,25 @@ function updateBabyAI(b, dt, t){
   } else if(b.choking){                                                     // frozen, choking — needs its airway cleared
     b.mesh.position.y *= 0.9; poseBabySit(b.mesh.userData);
   } else {
+    b.dirty = Math.min(100, b.dirty + DIRTY_CRAWL_RATE*curDiff().dirtyMul*dt); // unattended floor time adds up
     const toT = new THREE.Vector3(b.target.x-b.mesh.position.x, 0, b.target.z-b.mesh.position.z);
     const distT = toT.length();
     b.retime -= dt;
     if(b.play<=0 && (b.retime<=0 || distT<0.6)){
-      if(b.playingToy && distT<1.6){ b.play = 2 + Math.random()*2; }        // arrived at a toy
+      if(b.playingToy && distT<1.6){ b.play = 2 + random0to1()*2; }        // arrived at a toy
       else pickBabyTarget(b);
     }
     if(b.play>0){
       b.play -= dt; playing = true;
-      S.joy = Math.min(1, S.joy + 0.5*dt);
+      const joyMul = (b.favoriteToyRef && b.playingToy===b.favoriteToyRef) ? FAVORITE_TOY_JOY_MUL : 1;
+      S.joy = Math.min(1, S.joy + 0.5*dt*joyMul);
       b.mesh.position.y = 0.15 + Math.abs(Math.sin(t*10))*0.12;             // happy bounce
       b.mesh.rotation.y += dt*2.5;
       poseBabySit(b.mesh.userData);
       if(b.playingToy){                                                     // baby scoots the toy around while playing
         const ty = b.playingToy;
-        if(ty.driftAngle===undefined) ty.driftAngle = Math.random()*Math.PI*2;
-        ty.driftAngle += (Math.random()-0.5)*1.4*dt;
+        if(ty.driftAngle===undefined) ty.driftAngle = random0to1()*Math.PI*2;
+        ty.driftAngle += (random0to1()-0.5)*1.4*dt;
         ty.x = Math.max(houseBounds.X0+1, Math.min(houseBounds.X1-1, ty.x + Math.cos(ty.driftAngle)*0.55*dt));
         ty.z = Math.max(houseBounds.Z0+1, Math.min(houseBounds.Z1-1, ty.z + Math.sin(ty.driftAngle)*0.55*dt));
         ty.mesh.position.x = ty.x; ty.mesh.position.z = ty.z;
@@ -3375,25 +4263,28 @@ function updateBabyAI(b, dt, t){
       b.mesh.position.x = bx; b.mesh.position.z = bz;
       b.mesh.rotation.y = Math.atan2(toT.x, toT.z);
       if(b.targetIsOven && Math.hypot(bx-ovenPos.x, bz-ovenPos.z) < 1.6){    // got close enough to touch it — ouch
-        b.burned = true; b.targetIsOven = false; Audio.cry();
+        b.burned = true; b.targetIsOven = false; Audio.cry(); S.hazardCounts.burn++;
       }
       b.poseT += dt*(b.mode==='walk'?9:7);
       if(b.mode==='walk'){
         poseBabyStand(b.mesh.userData, b.poseT);
         b.mesh.position.y = Math.abs(Math.sin(b.poseT))*0.06;
         b.fallTimer -= dt;                                                  // walking is risky — it might trip
-        if(b.fallTimer<=0){ b.fallen=true; Audio.cry(); }
+        if(b.fallTimer<=0){ b.fallen=true; Audio.cry(); S.hazardCounts.fall++; }
       } else {
         poseBabyCrawl(b.mesh.userData, b.poseT);
         b.mesh.position.y = Math.abs(Math.sin(b.poseT))*0.04;               // crawl bob
       }
     } else { b.mesh.position.y *= 0.7; }
   }
+  // an overdue diaper gets messier the longer it's left, regardless of held/penned/etc state
+  if(b.need.diaper <= DIAPER_CHANGE_MAX) b.dirty = Math.min(100, b.dirty + DIRTY_DIAPER_RATE*curDiff().dirtyMul*dt);
   // mood + cry wobble + breathing — mirrors the original single-baby logic, per baby
   const bHp = babyHappiness(b);
   const bEmpties = NEEDS.filter(k=>b.need[k]<=0.5).length;
-  const bCrying = bEmpties>0 || b.fallen || b.burned;
-  setMood(b, b.choking ? '😵' : bCrying && !b.heldBy ? '😭' : b.heldBy ? '🥰' : playing ? '🥳'
+  const bCrying = bEmpties>0 || b.fallen || b.burned || clingyDistressed(b) || b.dirty>=DIRTY_CRY_THRESHOLD;
+  setMood(b, b.choking ? '😵' : b.chokeWarned ? '😮' : b.queasy ? '🤢' : b.pickyRefusing ? '🙅'
+    : bCrying && !b.heldBy ? '😭' : b.heldBy ? '🥰' : playing ? '🥳'
     : bHp>70 ? '😄' : bHp>40 ? '🙂' : '😟');
   if(bCrying && !b.heldBy){
     b.cryTimer -= dt; if(b.cryTimer<=0){ Audio.cry(); b.cryTimer=1.1; }
@@ -3423,19 +4314,36 @@ function updateWallFade(dt){
 }
 let netSyncTimer = 0;
 function tick(){
-  const dt = Math.min(clock.getDelta(), 0.05);
+  const dt = Math.min(clock.getDelta(), 0.05) * (devMode ? devTimeScale : 1);
   const t = clock.elapsedTime;
 
   // camera gentle sway idle only? keep static. update actors.
   if(S.mode==='play' && !S.paused){
     const P = me();
+    // ---- day phase: which of Morning/Lunch/Afternoon/Evening we're in, derived from elapsed run time.
+    // Host-authoritative (guests receive it via pushWorldSnapshot/applyRemoteWorld) since S.elapsed
+    // itself only advances on the host; skipped during the tutorial, which leaves phaseIdx null so
+    // every phaseMul() lookup elsewhere falls back to a neutral 1x — old tutorial behavior, untouched.
+    if(isHost && !S.tutorial){
+      const newPhaseIdx = phaseIndexAt(S.elapsed, S.phaseBounds);
+      if(newPhaseIdx !== S.phaseIdx){
+        S.phaseIdx = newPhaseIdx;
+        S.phaseBannerTimer = PHASE_BANNER_SECONDS;
+        Audio.chime();
+      }
+    }
     // ---- dad movement (always local — every client only ever drives its own avatar) ----
     const dir = new THREE.Vector3();
     if(keys['w']||keys['arrowup']) dir.add(FWD);
     if(keys['s']||keys['arrowdown']) dir.sub(FWD);
     if(keys['d']||keys['arrowright']) dir.add(RIGHT);
     if(keys['a']||keys['arrowleft']) dir.sub(RIGHT);
-    const crippled = P.backPainTimer>0;
+    // bathing pins Dad exactly like back pain does, but it's read off the *baby's* own bathTimer
+    // (synced to every client via applyRemoteBabies) rather than a player field, so the freeze lands
+    // correctly on whichever client is actually holding the baby mid-bath, host or guest
+    const heldBaby = P.holdingBaby>=0 ? babies[P.holdingBaby] : null;
+    const bathing = !!(heldBaby && heldBaby.bathTimer>0);
+    const crippled = P.backPainTimer>0 || bathing;
     const moving = dir.lengthSq()>0 && !crippled;
     if(moving){
       dir.normalize();
@@ -3468,16 +4376,33 @@ function tick(){
         ty.mesh.position.y = ty.baseY + (active ? Math.abs(Math.sin(t*10))*0.15 : 0); });
       S.joy = Math.max(0, S.joy - 0.06*dt);
       if(S.penEscapedTimer>0) S.penEscapedTimer = Math.max(0, S.penEscapedTimer-dt);
+      if(S.toyTidyCooldown>0) S.toyTidyCooldown = Math.max(0, S.toyTidyCooldown-dt);
+
+      // ---- bath: counts down on the baby it was started on; wraps up automatically once it hits zero ----
+      babies.forEach(b=>{
+        if(b.bathTimer>0){
+          b.bathTimer = Math.max(0, b.bathTimer-dt);
+          if(b.bathTimer<=0){
+            b.dirty=0; b.wet=true;
+            if(players[b.heldBy]) players[b.heldBy].bathsGiven++;   // whoever's holding them gets the credit
+            if(hasTask('bath')) completeTask('bath');
+            if(S.tutorial) tutorialProgress.bathed = true;
+            Audio.chime();
+          }
+        }
+      });
     }
 
     // ---- arm stamina: drains while holding a baby, recovers while not, forces a put-down at empty ----
     // (simulated locally for every client's own player; the actual release always routes through the
     // host, same as a voluntary put-down, so the shared "who's holding this baby" stays consistent)
     if(P.holdingBaby>=0){
-      P.holdStamina = Math.max(0, P.holdStamina - dt);
-      if(P.holdStamina<=0){
-        P.armsTiredTimer=2.5; Audio.error();
-        if(isHost){ actingPlayerId=myId; putBabyDown(P); } else { Net.sendAction('hold'); P.holdStamina = holdMax(P)*0.05; }
+      if(!bathing){                      // braced against the tub, not actively carrying — arms get a break
+        P.holdStamina = Math.max(0, P.holdStamina - dt);
+        if(P.holdStamina<=0){
+          P.armsTiredTimer=2.5; Audio.error();
+          if(isHost){ actingPlayerId=myId; putBabyDown(P); } else { Net.sendAction('hold'); P.holdStamina = holdMax(P)*0.05; }
+        }
       }
     } else {
       P.holdStamina = Math.min(holdMax(P), P.holdStamina + dt*curDiff().holdRecoverMul);
@@ -3494,8 +4419,8 @@ function tick(){
         if(P.nextBackPain<=0){
           const Dbp = curDiff();
           P.backPainTimer = Math.max(0.5, Dbp.backPainCrippleBase * Math.pow(0.75, P.lvl.backpain));
-          P.nextBackPain = rand(Dbp.backPainMin, Dbp.backPainMax);
-          Audio.error();
+          P.nextBackPain = rand(Dbp.backPainMin, Dbp.backPainMax)/phaseMul('backpainMul');
+          Audio.error(); S.hazardCounts.backpain++;
           if(P.holdingBaby>=0){                     // can't keep hold of the baby through a back spasm
             if(isHost){ actingPlayerId=myId; putBabyDown(P); } else { Net.sendAction('hold'); }
           }
@@ -3512,7 +4437,7 @@ function tick(){
                                                                                      // grab clean pants from the washer
       } else {
         P.nextBathroom -= dt;
-        if(P.nextBathroom<=0){ P.bathroomUrge = curDiff().bathroomWindow; Audio.error(); }
+        if(P.nextBathroom<=0){ P.bathroomUrge = curDiff().bathroomWindow; Audio.error(); S.hazardCounts.bathroom++; }
       }
     }
 
@@ -3521,19 +4446,20 @@ function tick(){
       // (in the tutorial the script triggers one directly, with no countdown penalty)
       if(!S.tutorial){
         const dNotify = curDiff();
+        const notifyMul = phaseMul('notifyMul');            // 0 in Morning/Lunch — pings cluster in the Afternoon instead
         if(S.notification){
           S.notifyDeadline -= dt;
           if(S.notifyDeadline <= 0){
             S.notification=false; S.missedNotifyTimer=2.5; S.missedCount++;
             S.cry = Math.min(100, S.cry + dNotify.notifyPenalty); Audio.error();
-            S.notifyTimer = rand(dNotify.notifyMin, dNotify.notifyMax);
+            S.notifyTimer = rand(dNotify.notifyMin, dNotify.notifyMax)/(notifyMul||1);
             if(S.missedCount >= dNotify.fireLimit){ endGame('fired'); }
           }
-        } else {
+        } else if(notifyMul>0){
           S.notifyTimer -= dt;
           if(S.notifyTimer <= 0){
             S.notification=true; S.notifyDeadline=dNotify.notifyWindow;
-            S.notifyTimer = rand(dNotify.notifyMin, dNotify.notifyMax);   // primed for the one after this
+            S.notifyTimer = rand(dNotify.notifyMin, dNotify.notifyMax)/notifyMul;   // primed for the one after this
             Audio.chime();
           }
         }
@@ -3557,7 +4483,7 @@ function tick(){
             S.packageMesh = packageBoxGroup();
             S.packageMesh.position.copy(packageSpot);
             houseGroup.add(S.packageMesh);
-            Audio.chime();
+            Audio.doorbell();  // distinct from the work-ping chime — recognizable without reading the HUD
           }
         }
       }
@@ -3565,17 +4491,30 @@ function tick(){
       // ---- occasional throw-up: leaves a mess only the mop can clean (any unheld baby might be the culprit) ----
       if(!S.tutorial){
         S.vomitTimer -= dt;
-        if(S.vomitTimer <= 0){
+        // telegraph: pick the culprit early and show it queasy, rather than the mess just appearing
+        if(!S.vomitCulprit && S.vomitTimer < VOMIT_WARN_SECONDS && S.messes.length < 3){
           const candidates = babies.filter(b=>!b.heldBy);
-          if(S.messes.length < 3 && candidates.length){
-            const b = pick(candidates);
+          if(candidates.length){ S.vomitCulprit = pick(candidates); S.vomitCulprit.queasy = true; }
+        }
+        if(S.vomitTimer <= 0){
+          let b = (S.vomitCulprit && !S.vomitCulprit.heldBy) ? S.vomitCulprit : null;
+          if(!b){                                    // culprit got picked up mid-warning — fall back
+            const candidates = babies.filter(x=>!x.heldBy);
+            if(candidates.length) b = pick(candidates);
+          }
+          if(S.messes.length < 3 && b){
             const mx = Math.max(houseBounds.X0+1, Math.min(houseBounds.X1-1, b.mesh.position.x + rand(-0.5,0.5)));
             const mz = Math.max(houseBounds.Z0+1, Math.min(houseBounds.Z1-1, b.mesh.position.z + rand(-0.5,0.5)));
             const mesh = messBlob(); mesh.position.set(mx, 0.01, mz); houseGroup.add(mesh);
             S.messes.push({x:mx, z:mz, mesh, playerInside:false});
+            S.hazardCounts.vomit++;
+            b.dirty = Math.min(100, b.dirty + DIRTY_VOMIT_ADD);
+            b.queasy = false;
             Audio.error();
           }
-          S.vomitTimer = rand(curDiff().vomitMin, curDiff().vomitMax);
+          if(S.vomitCulprit) S.vomitCulprit.queasy = false;
+          S.vomitCulprit = null;
+          S.vomitTimer = rand(curDiff().vomitMin, curDiff().vomitMax)/phaseMul('vomitMul');
         }
       }
 
@@ -3584,10 +4523,14 @@ function tick(){
         babies.forEach(b=>{
           if(!b.heldBy && !b.penned && !b.fallen && !b.burned && !b.choking){
             b.chokeTimer -= dt;
+            if(!b.chokeWarned && b.chokeTimer < CHOKE_WARN_SECONDS){       // telegraph: a cough before it happens
+              b.chokeWarned = true; Audio.cough();
+            }
             if(b.chokeTimer<=0){
               const Dck = curDiff();
-              b.choking = true; b.chokeDeadline = Dck.chokeWindow; Audio.cry();
-              b.chokeTimer = rand(Dck.chokeMin, Dck.chokeMax);
+              b.choking = true; b.chokeDeadline = Dck.chokeWindow; Audio.cry(); S.hazardCounts.choke++;
+              b.chokeTimer = rand(Dck.chokeMin, Dck.chokeMax)/phaseMul('chokeMul');
+              b.chokeWarned = false;                                      // ready to warn again next cycle
             }
           }
           if(b.choking){ b.chokeDeadline -= dt; if(b.chokeDeadline<=0){ endGame('choke'); } }
@@ -3598,21 +4541,36 @@ function tick(){
       babies.forEach(b=>{
         NEEDS.forEach(k=>{
           if(k==='cartoon' && S.cartoonsOn) b.need.cartoon = Math.min(100, b.need.cartoon + 22*dt);
-          else b.need[k] = Math.max(0, b.need[k] - decayRate(k)*dt);
+          else{
+            const traitMul = (k==='diaper' && b.traits.includes('diaperMachine')) ? DIAPER_MACHINE_DECAY_MUL : 1;
+            b.need[k] = Math.max(0, b.need[k] - decayRate(k)*traitMul*dt);
+          }
         });
       });
       if(S.cartoonsOn){ S.tvTimer -= dt; if(S.tvTimer<=0) S.cartoonsOn=false; }
+
+      // ---- picky eater: periodically refuses food for a stretch, milk-only until it passes ----
+      babies.forEach(b=>{
+        if(!b.traits.includes('picky')) return;
+        b.pickyTimer -= dt;
+        if(b.pickyTimer<=0){
+          b.pickyRefusing = !b.pickyRefusing;
+          b.pickyTimer = b.pickyRefusing ? rand(PICKY_REFUSE_MIN, PICKY_REFUSE_MAX) : rand(PICKY_ACCEPT_MIN, PICKY_ACCEPT_MAX);
+        }
+      });
 
       // ---- crying / cry-o-meter (eased by play joy and by cuddling; scaled by difficulty) ----
       const diffCry = curDiff();
       const anyCryingUnsoothed = babies.some(b=>{
         const empty = NEEDS.some(k=>b.need[k]<=0.5);
-        return (empty || b.fallen || b.burned) && !b.heldBy;
+        return (empty || b.fallen || b.burned || clingyDistressed(b) || b.dirty>=DIRTY_CRY_THRESHOLD) && !b.heldBy;
       });
-      const totalEmpties = babies.reduce((s,b)=>s+NEEDS.filter(k=>b.need[k]<=0.5).length, 0);
+      const totalEmpties = babies.reduce((s,b)=>s + NEEDS.filter(k=>b.need[k]<=0.5).length
+        + (clingyDistressed(b)?1:0) + (b.dirty>=DIRTY_CRY_THRESHOLD?1:0), 0);
       const anyoneHolding = Object.values(players).some(p=>p.holdingBaby>=0);
+      const anyWet = babies.some(b=>b.wet);          // small compounding penalty, not a standalone trigger
       if(totalEmpties>0 || babies.some(b=>b.fallen||b.burned)){
-        let fill = (3.5 + totalEmpties*3) * (1 - 0.4*S.joy) * diffCry.cryFillMul;
+        let fill = (3.5 + totalEmpties*3) * (1 - 0.4*S.joy) * diffCry.cryFillMul * phaseMul('cryFillMul') * (anyWet?WET_CRY_MUL:1);
         if(!anyCryingUnsoothed){ fill *= 0.5; S.cry = Math.max(0, S.cry - 3.5*diffCry.cryDrainMul*dt); }
         S.cry = Math.min(100, S.cry + fill*dt);
       } else {
@@ -3622,9 +4580,17 @@ function tick(){
       // ---- timer / win / lose ---- (none of this applies during the tutorial — it can't be won or lost)
       if(!S.tutorial){
         S.elapsed += dt;
-        if(S.endless){
-          S.score = Math.floor(S.elapsed) + me().poo*3;
-        } else {
+
+        // ---- care streak: every need on every baby above a healthy floor keeps it running; one empty resets it ----
+        const allNeedsHealthy = babies.every(b=>NEEDS.every(k=>b.need[k] > STREAK_HEALTHY_THRESHOLD));
+        if(allNeedsHealthy){ S.streak += dt; if(S.streak > S.longestStreak) S.longestStreak = S.streak; }
+        else S.streak = 0;
+
+        if(S.endless || S.dailyChallenge){          // daily challenge is time-limited but still scored, so
+          const streakMul = 1 + Math.min(2, S.streak/STREAK_SCORE_CAP);  // up to +200% for a long clean streak
+          S.score = Math.floor((Math.floor(S.elapsed) + me().poo*3) * streakMul);  // its leaderboard has a number to rank by
+        }
+        if(!S.endless){                              // endless has no win-timer; a daily run does, same as normal
           S.timeLeft -= dt;
           if(S.timeLeft<=0){ S.timeLeft=0; endGame('win'); }
         }
@@ -3633,6 +4599,15 @@ function tick(){
     }
     tvScreen.material.emissive.set(S.cartoonsOn ? '#7fd0ff' : '#101318');           // visual, runs for everyone
     computerScreen.material.emissive.set(S.notification ? '#ff5c3d' : '#153a6b');   // visual, runs for everyone
+
+    // ---- cry-o-meter sparkline sample, for the end-of-run summary — runs on every client off its own
+    // locally-known S.cry (host computes it, guests receive it via applyRemoteWorld), so it needs no
+    // extra network payload of its own
+    if(!S.tutorial){
+      S.cryHistoryTimer -= dt;
+      if(S.cryHistoryTimer<=0){ S.cryHistory.push(S.cry); S.cryHistoryTimer = CRY_HISTORY_INTERVAL; }
+      if(S.phaseBannerTimer>0) S.phaseBannerTimer = Math.max(0, S.phaseBannerTimer-dt);
+    }
 
     // ---- stepping in a mess: drop whatever you're carrying and slip (walk slower for a few seconds) ----
     S.messes.forEach(m=>{
@@ -3692,12 +4667,17 @@ function updateTasksHud(){                                // top-right checklist
   const hud = el.tasksHud;
   if(!S.tasksEnabled || !S.tasks.length){ hud.classList.add('hidden'); return; }
   hud.classList.remove('hidden');
-  const sig = S.tasks.map(t=>`${t.key}:${t.done}`).join('|');
-  if(sig===tasksHudSig) return;
+  const phaseKey = curPhase() ? curPhase().key : null;      // sort the current phase's matching chore to the
+  const sig = S.tasks.map(t=>`${t.key}:${t.done}`).join('|') + '|' + phaseKey; // top, rather than reordering
+  if(sig===tasksHudSig) return;                             // the pool itself (keeps multiplayer sync untouched)
   tasksHudSig = sig;
   const doneCount = S.tasks.filter(t=>t.done).length;
-  hud.innerHTML = `<h4>📋 Chores ${doneCount}/${S.tasks.length}</h4>` + S.tasks.map(t=>
-    `<div class="taskRow${t.done?' done':''}">${t.done?'✅':t.icon}<span>${t.label}</span></div>`).join('');
+  const sorted = S.tasks.slice().sort((a,b)=>
+    (TASK_PHASE_AFFINITY[b.key]===phaseKey) - (TASK_PHASE_AFFINITY[a.key]===phaseKey));
+  hud.innerHTML = `<h4>📋 Chores ${doneCount}/${S.tasks.length}</h4>` + sorted.map(t=>{
+    const inSeason = !t.done && TASK_PHASE_AFFINITY[t.key]===phaseKey;
+    return `<div class="taskRow${t.done?' done':''}${inSeason?' inSeason':''}">${t.done?'✅':t.icon}<span>${t.label}</span></div>`;
+  }).join('');
 }
 function updateHUD(){
   const P = me();
@@ -3718,6 +4698,8 @@ function updateHUD(){
       bars[k].fill.style.width = v+'%';
       bars[k].bar.classList.toggle('low', v<=20);
     });
+    bars.dirty.fill.style.width = b.dirty+'%';
+    bars.dirty.bar.classList.toggle('low', b.dirty>=DIRTY_CRY_THRESHOLD);
   });
   el.cryFill.style.width = S.cry+'%';
   el.cryPct.textContent = Math.round(S.cry)+'%';
@@ -3736,16 +4718,36 @@ function updateHUD(){
   } else el.chokeAlert.classList.remove('show');
   if(P.backPainTimer>0){
     el.backPainAlert.textContent = `🤕 Back seized up! Frozen in place (${P.backPainTimer.toFixed(1)}s)`;
-    el.backPainAlert.classList.add('show');
+    el.backPainAlert.classList.remove('warn'); el.backPainAlert.classList.add('show');
+  } else if(!S.tutorial && P.nextBackPain < BACKPAIN_WARN_SECONDS){
+    el.backPainAlert.textContent = `🤕 Your back's starting to twinge... stretch it out at the bed?`;
+    el.backPainAlert.classList.add('warn'); el.backPainAlert.classList.add('show');
   } else el.backPainAlert.classList.remove('show');
   if(P.bathroomUrge>0){
     el.bathroomAlert.textContent = `🚽 Gotta go! Reach the toilet within ${Math.ceil(P.bathroomUrge)}s`;
-    el.bathroomAlert.classList.add('show');
+    el.bathroomAlert.classList.remove('warn'); el.bathroomAlert.classList.add('show');
+  } else if(!S.tutorial && P.nextBathroom < BATHROOM_WARN_SECONDS){
+    el.bathroomAlert.textContent = `🚽 Feeling a little pressure... maybe go now?`;
+    el.bathroomAlert.classList.add('warn'); el.bathroomAlert.classList.add('show');
   } else el.bathroomAlert.classList.remove('show');
   if(S.packageWaiting){
     el.packageAlert.textContent = `📦 A package was delivered! Grab it before it's stolen (${Math.ceil(S.packageDeadline)}s)`;
     el.packageAlert.classList.add('show');
   } else el.packageAlert.classList.remove('show');
+  if(babies.some(b=>b.targetIsOven)){
+    el.ovenAlert.textContent = `🔥 ${babies.length>1?'A baby is':'Baby is'} heading for the oven!`;
+    el.ovenAlert.classList.add('show');
+  } else el.ovenAlert.classList.remove('show');
+  const phase = curPhase();
+  if(phase){
+    el.phaseStat.style.display = '';
+    el.phaseIcon.textContent = phase.icon;
+    el.phaseLabel.textContent = phase.label;
+  } else el.phaseStat.style.display = 'none';
+  if(phase && S.phaseBannerTimer>0){
+    el.phaseBanner.textContent = phase.banner;
+    el.phaseBanner.classList.add('show');
+  } else el.phaseBanner.classList.remove('show');
   const hp = happiness();
   el.hap.textContent = hp>70?'😄':hp>40?'🙂':hp>15?'😟':'😢';
   el.poo.textContent = '💩 '+P.poo;
@@ -3753,17 +4755,23 @@ function updateHUD(){
     el.time.textContent = '∞';
     el.timeLabel.textContent = 'Practice run';
     el.scoreStat.style.display = 'none';
+    el.streakStat.style.display = 'none';
   } else if(S.endless){
     const m = Math.floor(S.elapsed/60), s = Math.floor(S.elapsed%60);
     el.time.textContent = m+':'+String(s).padStart(2,'0');
     el.timeLabel.textContent = 'Survived';
     el.scoreStat.style.display = '';
     el.scoreVal.textContent = S.score;
+    el.streakStat.style.display = '';
+    el.streakVal.textContent = Math.floor(S.streak)+'s';
   } else {
     const m = Math.floor(S.timeLeft/60), s = Math.floor(S.timeLeft%60);
     el.time.textContent = m+':'+String(s).padStart(2,'0');
     el.timeLabel.textContent = 'Mom back in';
-    el.scoreStat.style.display = 'none';
+    el.scoreStat.style.display = S.dailyChallenge ? '' : 'none';
+    if(S.dailyChallenge) el.scoreVal.textContent = S.score;
+    el.streakStat.style.display = S.dailyChallenge ? '' : 'none';
+    if(S.dailyChallenge) el.streakVal.textContent = Math.floor(S.streak)+'s';
   }
 
   // interaction prompt — always evaluated against MY OWN position/state, targeting the nearest baby to me
@@ -3793,6 +4801,10 @@ function updateHUD(){
     if(k==='cartoon') msg = (S.cartoonsOn?'Cartoons playing':'Turn on cartoons')+' — <kbd>E</kbd> · put baby down <kbd>Space</kbd>';
     else if(k==='shop') msg = 'Open upgrades <kbd>E</kbd> · put baby down <kbd>Space</kbd>';
     else if(k==='playpen') msg = '🔒 Put the baby in the playpen — <kbd>E</kbd> · put baby down <kbd>Space</kbd>';
+    else if(k==='bath') msg = babies[P.holdingBaby].bathTimer>0
+      ? `🛁 Bathing... (${babies[P.holdingBaby].bathTimer.toFixed(1)}s)`
+      : '🛁 Give the baby a bath — <kbd>E</kbd>';
+    else if(k==='towel') msg = babies[P.holdingBaby].wet ? '🧺 Dry them off — <kbd>E</kbd>' : '';
     else if(k==='computer') msg = S.notification ? '💻 Reply to the work message — <kbd>E</kbd> · put baby down <kbd>Space</kbd>' : 'Hands full! Put the baby down first — <kbd>Space</kbd>';
     else if(k) msg = 'Hands full! Put the baby down first — <kbd>Space</kbd>';
     else msg = 'Cuddling the baby 🥰 — put down with <kbd>Space</kbd>';
@@ -3801,6 +4813,7 @@ function updateHUD(){
   } else if(P.carrying){
     if(near){
       if(P.carrying==='diaper' && nb.need.diaper > DIAPER_CHANGE_MAX) msg = `Diaper's not dirty enough yet (${Math.round(nb.need.diaper)}%) · <kbd>Q</kbd> drop`;
+      else if(P.carrying==='food' && nb.pickyRefusing) msg = `🙅 ${babyLabel(nb)} won't touch food right now — try milk · <kbd>Q</kbd> drop`;
       else msg = (P.carrying==='diaper'?'Change the diaper':'Give the '+P.carrying)+' — <kbd>E</kbd> · <kbd>Q</kbd> drop';
     }
     else msg = `Bring the ${CARRY_ICON[P.carrying]} to the baby — <kbd>Q</kbd> to drop it`;
@@ -3808,19 +4821,23 @@ function updateHUD(){
     const armsTired = P.holdStamina < holdMax(P)*ARM_RECOVER_MIN_FRAC;
     if(near && armsTired) msg = '😩 Arms too tired to pick up the baby — give them a moment';
     else if(near) msg = 'Pick up the baby — <kbd>Space</kbd>';
+    else if(k==='playpen') msg = '';
+    else if(k==='bath') msg = '';
+    else if(k==='towel') msg = '';
     else if(k==='shop') msg = 'Open the <kbd>U</kbd>pgrade workbench — <kbd>E</kbd>';
     else if(k==='cartoon') msg = (S.cartoonsOn?'Cartoons playing':'Turn on cartoons')+' — <kbd>E</kbd>';
     else if(k==='computer') msg = S.notification ? '💻 Reply to the work message — <kbd>E</kbd>' : '';
-    else if(k==='toilet') msg = P.bathroomUrge>0 ? '🚽 Go now — <kbd>E</kbd>' : (hasTask('toilet') ? '🧽 Clean the toilet — <kbd>E</kbd>' : '');
+    else if(k==='toilet') msg = P.bathroomUrge>0 ? '🚽 Go now — <kbd>E</kbd>' : (hasTask('toilet') ? '🧽 Clean the toilet — <kbd>E</kbd>' : '🚽 Go now, just in case — <kbd>E</kbd>');
     else if(k==='closet') msg = 'Hide in the closet (ends your shift) — <kbd>E</kbd>';
     else if(k==='frontdoor') msg = '';
-    else if(k==='bed') msg = hasTask('bed') ? '🛏️ Tidy the bed — <kbd>E</kbd>' : '';
-    else if(k==='oven') msg = hasTask('oven') ? '🍱 Grab lunch from the oven — <kbd>E</kbd>' : '';
+    else if(k==='bed') msg = hasTask('bed') ? '🛏️ Tidy the bed — <kbd>E</kbd>' : `🧘 Stretch your back (💩${stretchCost(P)}) — <kbd>E</kbd>`;
+    else if(k==='oven') msg = hasTask('oven') ? '🍱 Grab lunch from the oven — <kbd>E</kbd>' : (!S.ovenProofed ? `🔒 Baby-proof the oven (💩${OVEN_PROOF_COST}) — <kbd>E</kbd>` : '');
     else if(k==='sink') msg = hasTask('sink') ? '🚿 Clean the sink — <kbd>E</kbd>' : '';
     else if(k==='kitchensink') msg = hasTask('kitchensink') ? '🍽️ Clean the kitchen sink — <kbd>E</kbd>' : '';
     else if(k==='washer') msg = P.wetPants ? '🧺 Grab clean pants — <kbd>E</kbd>' : '';
     else if(k) msg = `Grab ${NEED_ICON[k]} ${NEED_LABEL[k]||k} — <kbd>E</kbd>`;
-    else if(hasTask('toys') && nearestToyDist()<1.8) msg = '🧸 Put away the toys — <kbd>E</kbd>';
+    else if(nearestToyDist()<1.8) msg = hasTask('toys') ? '🧸 Put away the toys — <kbd>E</kbd>'
+      : (S.toyTidyCooldown<=0 ? '🧸 Tidy small toys, safer for baby — <kbd>E</kbd>' : '');
     else if(mess) msg = '🤢 Ew, a mess — go grab the 🧹 mop';
     else if(P.armsTiredTimer>0) msg = '😩 Your arms gave out — the baby slipped down!';
     else if(S.penEscapedTimer>0) msg = '👶 A baby escaped the playpen!';
@@ -3844,9 +4861,81 @@ function updateHUD(){
   if(!shopEl.classList.contains('hidden')) refreshShop();
 }
 
+/* ---------- Dev tools (?dev=1) ----------
+   Local-only debugging aids: time-scale, seed override, force-firing each hazard, direct need/cry
+   sliders, and instant win/lose/fired. All mutations are host-only (isHost is always true solo). */
+if(devMode){
+  document.getElementById('devPanel').classList.remove('hidden');
+
+  const tsInput = document.getElementById('devTimeScale'), tsVal = document.getElementById('devTimeScaleVal');
+  tsInput.addEventListener('input', ()=>{ devTimeScale = +tsInput.value; tsVal.textContent = devTimeScale.toFixed(2)+'×'; });
+
+  const seedInput = document.getElementById('devSeedInput'), seedShown = document.getElementById('devSeedShown');
+  seedInput.addEventListener('change', ()=>{
+    const v = seedInput.value.trim();
+    devSeedOverride = v ? (+v|0) : null;
+  });
+
+  document.getElementById('devCloseBtn').addEventListener('click', ()=>document.getElementById('devPanel').classList.add('hidden'));
+
+  document.getElementById('devHazardBtns').addEventListener('click', e=>{
+    const btn = e.target.closest('[data-hazard]');
+    if(!btn || S.mode!=='play' || !isHost) return;
+    const liveBaby = ()=>babies.find(b=>!b.heldBy && !b.fallen && !b.burned && !b.penned && !b.choking) || babies[0];
+    switch(btn.dataset.hazard){
+      case 'vomit':    S.vomitTimer = 0; break;
+      case 'choke':    { const b=liveBaby(); if(b) b.chokeTimer = 0; break; }
+      case 'oven':     { const b=liveBaby(); if(b){ b.burned=true; Audio.cry(); } break; }
+      case 'fall':     { const b=liveBaby(); if(b){ b.fallen=true; Audio.cry(); } break; }
+      case 'backpain': me().nextBackPain = 0; break;
+      case 'bathroom': me().nextBathroom = 0; break;
+      case 'notify':   S.notifyTimer = 0; break;
+      case 'package':  S.nextPackage = 0; break;
+    }
+  });
+
+  function rebuildDevNeedSliders(){
+    const wrap = document.getElementById('devNeedSliders');
+    wrap.innerHTML = babies.map((b,i)=>NEEDS.map(k=>
+      `<div class="devRow"><label>${b.name||('👶'+(i+1))} ${NEED_ICON[k]}</label>
+        <input type="range" min="0" max="100" step="1" value="${b.need[k]}" data-baby="${i}" data-need="${k}">
+        <span>${Math.round(b.need[k])}</span></div>`).join('')).join('');
+    wrap.querySelectorAll('input').forEach(inp=>{
+      inp.addEventListener('input', ()=>{
+        const b = babies[+inp.dataset.baby]; if(!b) return;
+        b.need[inp.dataset.need] = +inp.value;
+        inp.nextElementSibling.textContent = inp.value;
+      });
+    });
+  }
+  document.getElementById('devRefreshBtn').addEventListener('click', rebuildDevNeedSliders);
+
+  const crySlider = document.getElementById('devCrySlider'), cryVal = document.getElementById('devCryVal');
+  crySlider.addEventListener('input', ()=>{ S.cry = +crySlider.value; cryVal.textContent = crySlider.value; });
+
+  document.getElementById('devWinBtn').addEventListener('click', ()=>{ if(S.mode==='play') endGame('win'); });
+  document.getElementById('devLoseBtn').addEventListener('click', ()=>{ if(S.mode==='play') endGame('lose'); });
+  document.getElementById('devFiredBtn').addEventListener('click', ()=>{ if(S.mode==='play') endGame('fired'); });
+
+  // keep the seed readout and (while playing) the need sliders fresh without a manual refresh click
+  setInterval(()=>{
+    seedShown.textContent = (S && S.seed!=null) ? S.seed : '—';
+    if(S && S.mode==='play' && document.getElementById('devNeedSliders').children.length !== babies.length*NEEDS.length){
+      rebuildDevNeedSliders();
+    }
+  }, 500);
+}
+
 updateBestScoreLabel();
+renderMenuLevelBadge(); renderMenuLeaderboardPreview();  // main menu is visible by default at boot —
+                                                          // showMenuScreen('mainMenu') is never called for it
 tick();
 })();
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
 </script>
 </body>
 </html>
