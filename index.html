@@ -139,6 +139,11 @@
   .phaseAlert{background:rgba(16,14,26,.94);border:1px solid #b7a6ff;color:#e6dfff;font-size:14px;
     transition:opacity .5s}
   .phaseAlert.show{display:block;animation:none;opacity:1}
+  /* rare milestone moment — a delightful surprise, not a warning, so it gets its own celebratory
+     pink/gold look and the same calm fade as the phase banner rather than an urgent flash */
+  .milestoneAlert{background:rgba(28,14,22,.94);border:1px solid #ff9ec7;color:#ffe0f0;font-size:14px;
+    transition:opacity .5s}
+  .milestoneAlert.show{display:block;animation:none;opacity:1}
   /* amber pre-warning state — a hazard is coming but hasn't fired yet, so it reads calmer than the
      urgent flashing .show state above: no flash animation, slightly dimmer */
   .alertBox.warn.show{animation:none;opacity:.72}
@@ -241,6 +246,13 @@
   .diffOpt.daily{border-color:#ffd166;background:rgba(255,209,102,.08)}
   .diffOpt.daily:hover{background:rgba(255,209,102,.14)}
   .diffOpt.daily.selected{border-color:#ffd166;background:rgba(255,209,102,.2)}
+  /* a full divider + its own call-out box, not just another row in #modePicker's list — Daily Challenge
+     is a fundamentally different flow (fixed seed, one attempt/day, no difficulty pick) so it reads as
+     a separate choice you make instead of a fourth option in the same group */
+  .modeDivider{display:flex;align-items:center;gap:12px;margin:18px 0 14px;opacity:.6;font-size:12px}
+  .modeDivider::before,.modeDivider::after{content:'';flex:1;height:1px;background:var(--panelborder)}
+  .dailyStandalone{padding:14px 16px}
+  .dailyStandalone .diffTitle{font-size:16px}
   .diffTitle{font-weight:bold;font-size:15px}
   .diffSub{font-size:12px;opacity:.75;margin-top:2px}
   .musicPicker{flex-direction:row;gap:8px;margin:0}
@@ -433,6 +445,7 @@
     <div class="alertBox packageAlert" id="packageAlert"></div>
     <div class="alertBox ovenAlert" id="ovenAlert"></div>
     <div class="alertBox phaseAlert" id="phaseBanner"></div>
+    <div class="alertBox milestoneAlert" id="milestoneBanner"></div>
   </div>
   <div class="prompt" id="prompt"></div>
   <div class="carry" id="carry"></div>
@@ -833,10 +846,6 @@
     <h2>Choose Your Game Mode</h2>
     <p style="font-size:13px;opacity:.8">Pick how tonight's shift plays out — you'll choose a difficulty next.</p>
     <div class="diffPicker" id="modePicker">
-      <div class="diffOpt daily" data-mode="daily">
-        <div class="diffTitle">📅 Daily Challenge</div>
-        <div class="diffSub">Same house, same hazards, same difficulty as everyone else today — one attempt per day</div>
-      </div>
       <div class="diffOpt selected" data-mode="normal">
         <div class="diffTitle">👶 Normal</div>
         <div class="diffSub">A timed run — keep the baby happy until Mom's back from shopping</div>
@@ -853,6 +862,11 @@
     <div class="stepnav">
       <button class="btn cta" id="modeBackBtn">◀ Back</button>
       <button class="btn cta" id="modeNextBtn">Next ▶</button>
+    </div>
+    <div class="modeDivider"><span>or</span></div>
+    <div class="diffOpt daily dailyStandalone" id="dailyModeOption">
+      <div class="diffTitle">📅 Daily Challenge</div>
+      <div class="diffSub">Same house, same hazards, same difficulty as everyone else today — one attempt per day</div>
     </div>
   </div>
 
@@ -990,11 +1004,27 @@
          won't be thrilled even if you win. Survive until Mom returns to win! (The 🚪 closet ends the
          game instantly if used.)</p>
     </div>
+    <p style="font-size:13px;opacity:.75;margin:16px 0 4px">🔊 Volume</p>
+    <div class="volumeRow">
+      <span class="volumeLbl">🎵 Music</span>
+      <input type="range" id="pauseMusicVolSlider" class="settingsSlider" min="0" max="100" value="14">
+    </div>
+    <div class="volumeRow">
+      <span class="volumeLbl">🔔 Sound FX</span>
+      <input type="range" id="pauseSfxVolSlider" class="settingsSlider" min="0" max="100" value="90">
+    </div>
     <p style="font-size:13px;opacity:.75;margin:16px 0 4px">⌨️ Controls</p>
     <div class="hint" style="position:static;max-width:none">
-      <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · <kbd>E</kbd> interact · <kbd>Q</kbd> drop item ·
-      <kbd>Space</kbd> pick up baby · <kbd>U</kbd> shop · <kbd>M</kbd> mute ·
-      <kbd>Esc</kbd> pause · scroll to zoom
+      Scroll to zoom · <kbd>[</kbd><kbd>]</kbd> rotate camera · <kbd>Esc</kbd> resume
+    </div>
+    <div class="keybindGrid" id="pauseKeybindGrid"></div>
+    <p style="font-size:13px;opacity:.75;margin:16px 0 4px">♿ Accessibility</p>
+    <label class="settingsToggle">
+      <input type="checkbox" id="pauseReducedMotionToggle"> Reduce motion (calms the cry wobble &amp; toy bob)
+    </label>
+    <div class="volumeRow">
+      <span class="volumeLbl">🔍 HUD Scale</span>
+      <input type="range" id="pauseHudScaleSlider" class="settingsSlider" min="80" max="130" value="100">
     </div>
     <div class="stepnav" style="margin-top:14px">
       <button class="btn" id="pauseQuitBtn">🚪 Quit to Menu</button>
@@ -2435,29 +2465,29 @@ function traitBadgesHtml(traits){
 // ---- difficulty: picked on the intro screen, locked in for the run ----
 const DIFFICULTIES = {
   first:   {key:'first', label:'First Born', gameLen:225,
-    decayMul:0.80, cryFillMul:0.75, cryDrainMul:1.15, vomitMin:28, vomitMax:50,
+    decayMul:0.80, cryFillMul:0.75, cryDrainMul:1.15, vomitMin:100, vomitMax:155,
     walkChance:0.26, fallMin:7, fallMax:15, needStart:{food:95,milk:92,diaper:95,cartoon:88},
     holdBase:13, holdRecoverMul:1.3, ovenChance:0.03, penSeconds:27,
     notifyMin:38, notifyMax:60, notifyWindow:20, notifyPenalty:14, fireLimit:4,
-    backPainMin:70, backPainMax:105, backPainCrippleBase:1.9,
+    backPainMin:140, backPainMax:210, backPainCrippleBase:1.9,
     chokeMin:58, chokeMax:92, chokeWindow:10,
     bathroomMin:135, bathroomMax:195, bathroomWindow:30,
     packageMin:100, packageMax:170, packageWindow:24, dirtyMul:0.7},
   veteran: {key:'veteran', label:"Been There, Done That", gameLen:285,
-    decayMul:1.12, cryFillMul:1.12, cryDrainMul:0.9, vomitMin:22, vomitMax:42,
+    decayMul:1.12, cryFillMul:1.12, cryDrainMul:0.9, vomitMin:80, vomitMax:130,
     walkChance:0.4, fallMin:5, fallMax:10, needStart:{food:92,milk:85,diaper:90,cartoon:78},
     holdBase:8.5, holdRecoverMul:1.18, ovenChance:0.06, penSeconds:19,
     notifyMin:26, notifyMax:44, notifyWindow:14, notifyPenalty:19, fireLimit:3,
-    backPainMin:52, backPainMax:80, backPainCrippleBase:3.0,
+    backPainMin:104, backPainMax:160, backPainCrippleBase:3.0,
     chokeMin:45, chokeMax:74, chokeWindow:7.5,
     bathroomMin:98, bathroomMax:150, bathroomWindow:24,
     packageMin:80, packageMax:140, packageWindow:19, dirtyMul:1},
   king:    {key:'king', label:'King', gameLen:345,
-    decayMul:1.55, cryFillMul:1.5, cryDrainMul:0.65, vomitMin:12, vomitMax:26,
+    decayMul:1.55, cryFillMul:1.5, cryDrainMul:0.65, vomitMin:60, vomitMax:95,
     walkChance:0.55, fallMin:3, fallMax:7, needStart:{food:78,milk:72,diaper:80,cartoon:62},
     holdBase:5, holdRecoverMul:1.05, ovenChance:0.10, penSeconds:13,
     notifyMin:16, notifyMax:30, notifyWindow:9, notifyPenalty:24, fireLimit:3,
-    backPainMin:34, backPainMax:58, backPainCrippleBase:4.3,
+    backPainMin:68, backPainMax:116, backPainCrippleBase:4.3,
     chokeMin:33, chokeMax:54, chokeWindow:6,
     bathroomMin:74, bathroomMax:115, bathroomWindow:19,
     packageMin:60, packageMax:110, packageWindow:14, dirtyMul:1.4},
@@ -2501,6 +2531,26 @@ const PHASE_LUNCH_SECONDS = 60;
 const PHASE_EVENING_SECONDS = 60;      // always the run's last 60s of real time — "mom's 60s out"
 const PHASE_AFTERNOON_ENDLESS_SECONDS = 90;  // endless mode's stand-in Afternoon length (no "time left" to anchor off)
 const PHASE_BANNER_SECONDS = 4.5;      // how long the transition banner stays up
+
+// ---- rare milestone moments: pure flavor, no mechanical effect beyond a tiny joy nudge — deliberately
+// long, wide intervals so they read as a special surprise rather than something to plan around ----
+const MILESTONE_MIN = 90, MILESTONE_MAX = 220;
+const MILESTONE_RETRY_SECONDS = 12;    // recheck soon (not a full interval) if no baby was eligible
+const MILESTONE_BANNER_SECONDS = 5;
+const RARE_EVENTS = [
+  {text:b=>`🗣️ ${babyDisplayName(b)} just said their first word: "${random0to1()<0.5?'DA-DA':'MA-MA'}"! 🥹`},
+  {text:b=>`💃 ${babyDisplayName(b)} is having a little dance party!`},
+  {text:b=>`😂 ${babyDisplayName(b)} just burst into a fit of giggles for no reason`},
+  {text:b=>`🙈 ${babyDisplayName(b)} discovered peekaboo and is delighted with themselves`},
+];
+function babyDisplayName(b){ return babies.length>1 ? b.name : 'Baby'; }
+// eligible = not mid-hazard and not currently miserable — a milestone should read as a nice surprise,
+// not clash with a baby who's crying, choking, or otherwise having a rough moment
+function milestoneEligibleBabies(){
+  return babies.filter(b=>
+    !b.choking && !b.fallen && !b.burned && !b.queasy && !b.pickyRefusing &&
+    b.dirty<DIRTY_CRY_THRESHOLD && NEEDS.every(k=>b.need[k]>40));
+}
 const PHASE_DEFAULTS = {decayMul:1, foodDecayMul:1, ovenMul:1, notifyMul:1, cryFillMul:1,
   vomitMul:1, chokeMul:1, fallMul:1, backpainMul:1, bathroomMul:1};
 const PHASES = [
@@ -2771,6 +2821,11 @@ function resetState(){
     packageDeadline:0,                 // seconds left to grab it before it's stolen
     packageMesh:null,                  // the box mesh currently on the doormat, if any
     missedPackages:0,                  // stolen this run — enough of these sours the win message
+    milestoneTimer: rand(MILESTONE_MIN*0.5, MILESTONE_MAX*0.5), // first one can come a little sooner
+    milestoneBannerTimer: 0,           // >0 briefly after one fires, to show the banner
+    milestoneMsg: '',                  // text of the most recent milestone, shown while the banner's up
+    milestoneNonce: 0,                 // bumped each time one fires — how guests detect a new one arrived
+    milestoneCount: 0,                 // total this run — shown on the end card if >0
   };
   players = {}; players[myId] = freshPlayer(myName, getProfile().colorIdx);
   const P = players[myId];
@@ -3094,6 +3149,7 @@ const el = {
   backPainAlert:document.getElementById('backPainAlert'), bathroomAlert:document.getElementById('bathroomAlert'),
   packageAlert:document.getElementById('packageAlert'),
   ovenAlert:document.getElementById('ovenAlert'), phaseBanner:document.getElementById('phaseBanner'),
+  milestoneBanner:document.getElementById('milestoneBanner'),
   mpPlayerHud:document.getElementById('mpPlayerHud'), tasksHud:document.getElementById('tasksHud'),
   timeLabel:document.getElementById('timeLabel'), scoreStat:document.getElementById('scoreStat'), scoreVal:document.getElementById('scoreVal'),
   streakStat:document.getElementById('streakStat'), streakVal:document.getElementById('streakVal'),
@@ -3207,7 +3263,7 @@ function togglePause(){
   if(S.mode!=='play') return;
   if(!shopEl.classList.contains('hidden')){ closeShopFn(); return; }
   S.paused = !S.paused;
-  if(S.paused){ syncMusicPickers(); drawMinimap(); pauseMenuEl.classList.remove('hidden'); }
+  if(S.paused){ syncMusicPickers(); syncSettingsScreen(PAUSE_SETTINGS_IDS); drawMinimap(); pauseMenuEl.classList.remove('hidden'); }
   else { pauseMenuEl.classList.add('hidden'); }
 }
 document.getElementById('resumeBtn').addEventListener('click', togglePause);
@@ -3233,8 +3289,12 @@ const KEYBIND_LABELS = {up:'Move Up', down:'Move Down', left:'Move Left', right:
   rotateLeft:'Rotate Camera ◀', rotateRight:'Rotate Camera ▶'};
 function keyDisplayName(k){ return k===' ' ? 'Space' : k.toUpperCase(); }
 let listeningForRebind = null;                          // action name currently waiting on a keypress, or null
-function renderKeybindGrid(){
-  const el = document.getElementById('keybindGrid');
+// The exact same settings (volume, keybinds, accessibility) are offered in two places — the main
+// menu's Settings screen and the in-run Esc pause menu — so every function here is parameterized by
+// element id instead of hard-coding one screen's ids, and gets wired/synced twice (see the two
+// SETTINGS_UI_IDS-shaped calls below) rather than duplicating this logic per screen.
+function renderKeybindGrid(containerId){
+  const el = document.getElementById(containerId);
   el.innerHTML = Object.keys(KEYBIND_LABELS).map(action=>
     `<div class="keybindRow"><span class="keybindLabel">${KEYBIND_LABELS[action]}</span>
      <button class="keybindBtn" data-action="${action}">${keyDisplayName(gameSettings.keybinds[action])}</button></div>`
@@ -3247,9 +3307,9 @@ function renderKeybindGrid(){
     });
   });
 }
-function initSettingsControls(){
-  const musicSlider = document.getElementById('musicVolSlider'), sfxSlider = document.getElementById('sfxVolSlider'),
-        hudScaleSlider = document.getElementById('hudScaleSlider'), reducedMotionToggle = document.getElementById('reducedMotionToggle');
+function initSettingsControls(ids){
+  const musicSlider = document.getElementById(ids.music), sfxSlider = document.getElementById(ids.sfx),
+        hudScaleSlider = document.getElementById(ids.hud), reducedMotionToggle = document.getElementById(ids.reduced);
   musicSlider.addEventListener('input', ()=>{
     gameSettings.musicVol = +musicSlider.value/100; Music.setVolume(gameSettings.musicVol); saveGameSettings(gameSettings);
   });
@@ -3264,14 +3324,19 @@ function initSettingsControls(){
     applyReducedMotionClass();
   });
 }
-function syncSettingsScreen(){
-  document.getElementById('musicVolSlider').value = Math.round(gameSettings.musicVol*100);
-  document.getElementById('sfxVolSlider').value = Math.round(gameSettings.sfxVol*100);
-  document.getElementById('hudScaleSlider').value = Math.round(gameSettings.hudScale*100);
-  document.getElementById('reducedMotionToggle').checked = gameSettings.reducedMotion;
-  renderKeybindGrid();
+function syncSettingsScreen(ids){
+  document.getElementById(ids.music).value = Math.round(gameSettings.musicVol*100);
+  document.getElementById(ids.sfx).value = Math.round(gameSettings.sfxVol*100);
+  document.getElementById(ids.hud).value = Math.round(gameSettings.hudScale*100);
+  document.getElementById(ids.reduced).checked = gameSettings.reducedMotion;
+  renderKeybindGrid(ids.keybindGrid);
 }
-initSettingsControls();
+const MAIN_SETTINGS_IDS = {music:'musicVolSlider', sfx:'sfxVolSlider', hud:'hudScaleSlider',
+  reduced:'reducedMotionToggle', keybindGrid:'keybindGrid'};
+const PAUSE_SETTINGS_IDS = {music:'pauseMusicVolSlider', sfx:'pauseSfxVolSlider', hud:'pauseHudScaleSlider',
+  reduced:'pauseReducedMotionToggle', keybindGrid:'pauseKeybindGrid'};
+initSettingsControls(MAIN_SETTINGS_IDS);
+initSettingsControls(PAUSE_SETTINGS_IDS);
 document.getElementById('pauseHelpToggleBtn').addEventListener('click', ()=>{
   const isHidden = document.getElementById('pauseHelpDetail').classList.toggle('hidden');
   document.getElementById('pauseHelpToggleBtn').textContent = isHidden ? '▶ How does this work?' : '▼ Hide details';
@@ -3344,7 +3409,8 @@ function renderRunSummary(prefix){                        // shared between the 
   if(canvas) drawCrySparkline(canvas);
   document.getElementById(prefix+'Hazards').textContent = hazardSummaryLine();
   document.getElementById(prefix+'Extra').textContent =
-    `😌 Longest calm streak: ${Math.round(S.longestStreak)}s`;
+    `😌 Longest calm streak: ${Math.round(S.longestStreak)}s` +
+    (S.milestoneCount>0 ? ` · 🌟 ${S.milestoneCount} milestone${S.milestoneCount===1?'':'s'}` : '');
   document.getElementById(prefix+'Traits').textContent = babyTraitsSummaryLine();
 }
 function buildShareText(reason){                          // plain-text summary + URL for the Copy Result button
@@ -3561,14 +3627,13 @@ document.querySelectorAll('#diffPicker .diffOpt').forEach(opt=>{
     Audio.buy();
   });
 });
-let gameMode = 'normal';                             // 'normal' | 'endless' | 'chores' | 'daily' — set on
-document.querySelectorAll('#modePicker .diffOpt').forEach(opt=>{ // modeScreen, translated into endlessMode/
-  opt.addEventListener('click', ()=>{                             // tasksMode below ('daily' skips both)
-    gameMode = opt.dataset.mode;
+let gameMode = 'normal';                             // 'normal' | 'endless' | 'chores' — set on modeScreen,
+document.querySelectorAll('#modePicker .diffOpt').forEach(opt=>{ // translated into endlessMode/tasksMode below.
+  opt.addEventListener('click', ()=>{                             // Daily Challenge lives outside this picker
+    gameMode = opt.dataset.mode;                                   // entirely now — see #dailyModeOption
     document.querySelectorAll('#modePicker .diffOpt').forEach(o=>o.classList.toggle('selected', o===opt));
     endlessMode = gameMode==='endless';
     tasksMode = gameMode==='chores';
-    document.getElementById('modeNextBtn').textContent = gameMode==='daily' ? 'View Challenge ▶' : 'Next ▶';
     Audio.buy();
   });
 });
@@ -3593,7 +3658,7 @@ window.addEventListener('resize', ()=>{
   if(!document.getElementById('mainMenu').classList.contains('hidden')) alignMenuLbPreview();
 });
 document.getElementById('menuPlayBtn').addEventListener('click', ()=>showMenuScreen('modeScreen'));
-document.getElementById('menuSettingsBtn').addEventListener('click', ()=>{ syncMusicPickers(); syncSettingsScreen(); showMenuScreen('settingsScreen'); });
+document.getElementById('menuSettingsBtn').addEventListener('click', ()=>{ syncMusicPickers(); syncSettingsScreen(MAIN_SETTINGS_IDS); showMenuScreen('settingsScreen'); });
 document.getElementById('menuHelpBtn').addEventListener('click', ()=>showMenuScreen('helpScreen'));
 document.getElementById('menuAboutBtn').addEventListener('click', ()=>showMenuScreen('aboutScreen'));
 // the Dad Level bar at the top of the main menu IS the entry point to the profile/details screen now
@@ -3706,10 +3771,15 @@ document.getElementById('settingsBackBtn').addEventListener('click', ()=>showMen
 document.getElementById('aboutBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('modeBackBtn').addEventListener('click', ()=>showMenuScreen('mainMenu'));
 document.getElementById('modeNextBtn').addEventListener('click', ()=>{
-  if(gameMode==='daily'){ showMenuScreen('dailyScreen'); renderDailyScreen(); return; }
   document.getElementById('bestScoreNote').classList.toggle('hidden', !endlessMode);
   updateBestScoreLabel();
   showMenuScreen('diffScreen');
+});
+// standalone, one-click entry point — Daily Challenge never needed a difficulty pick anyway, so skip
+// straight to its own screen instead of routing through the mode picker + a relabeled Next button
+document.getElementById('dailyModeOption').addEventListener('click', ()=>{
+  Audio.buy();
+  showMenuScreen('dailyScreen'); renderDailyScreen();
 });
 document.getElementById('diffBackBtn').addEventListener('click', ()=>showMenuScreen('modeScreen'));
 document.getElementById('startBtn').addEventListener('click', ()=>startGame(false));
@@ -3897,6 +3967,7 @@ const Net = (function(){
         elapsed:S.elapsed, timeLeft: isFinite(S.timeLeft)?S.timeLeft:-1, score:S.score,
         packageWaiting:S.packageWaiting, phaseIdx: S.phaseIdx==null?-1:S.phaseIdx,
         messes:S.messes.map(m=>({x:m.x,z:m.z})),
+        milestoneNonce:S.milestoneNonce, milestoneMsg:S.milestoneMsg,  // guests detect the nonce changing
         tasksDone:S.tasks.map(t=>t.done)});      // task identity/order is already deterministic from the shared
                                                   // seed — only the done-flags actually need to be synced
       for(const id in players){ if(id===myId) continue;
@@ -4229,6 +4300,12 @@ function applyRemoteWorld(w){
   if(newPhaseIdx !== S.phaseIdx){                       // guest-side: detect the host's phase transitions too,
     S.phaseIdx = newPhaseIdx;                           // so the banner/HUD indicator shows up for everyone
     if(newPhaseIdx!=null){ S.phaseBannerTimer = PHASE_BANNER_SECONDS; Audio.chime(); }
+  }
+  if(w.milestoneNonce!=null && w.milestoneNonce !== S.milestoneNonce){  // guest-side: detect the host's
+    S.milestoneNonce = w.milestoneNonce;                                 // rare milestone moments too
+    S.milestoneMsg = w.milestoneMsg||'';
+    S.milestoneBannerTimer = MILESTONE_BANNER_SECONDS;
+    Audio.giggle();
   }
   const packageNowWaiting = !!w.packageWaiting;
   if(packageNowWaiting !== S.packageWaiting){
@@ -4722,6 +4799,27 @@ function tick(){
         }
       }
 
+      // ---- rare milestone moments: pure flavor (first words, a little dance, a giggle fit...) — no
+      // mechanical effect beyond a small joy nudge, just a nice surprise every so often ----
+      if(!S.tutorial){
+        S.milestoneTimer -= dt;
+        if(S.milestoneTimer <= 0){
+          const eligible = milestoneEligibleBabies();
+          if(eligible.length){
+            const b = pick(eligible), event = pick(RARE_EVENTS);
+            S.milestoneMsg = event.text(b);
+            S.milestoneBannerTimer = MILESTONE_BANNER_SECONDS;
+            S.milestoneNonce++;
+            S.milestoneCount++;
+            S.joy = Math.min(1, S.joy + 0.15);
+            Audio.giggle();
+            S.milestoneTimer = rand(MILESTONE_MIN, MILESTONE_MAX);
+          } else {
+            S.milestoneTimer = MILESTONE_RETRY_SECONDS;   // nobody eligible right now — check back soon, not a full interval
+          }
+        }
+      }
+
       // ---- choking hazard: an unattended baby on the floor might swallow something small ----
       if(!S.tutorial){
         babies.forEach(b=>{
@@ -4811,6 +4909,7 @@ function tick(){
       S.cryHistoryTimer -= dt;
       if(S.cryHistoryTimer<=0){ S.cryHistory.push(S.cry); S.cryHistoryTimer = CRY_HISTORY_INTERVAL; }
       if(S.phaseBannerTimer>0) S.phaseBannerTimer = Math.max(0, S.phaseBannerTimer-dt);
+      if(S.milestoneBannerTimer>0) S.milestoneBannerTimer = Math.max(0, S.milestoneBannerTimer-dt);
     }
 
     // ---- stepping in a mess: drop whatever you're carrying and slip (walk slower for a few seconds) ----
@@ -4955,6 +5054,10 @@ function updateHUD(){
     el.phaseBanner.textContent = phase.banner;
     el.phaseBanner.classList.add('show');
   } else el.phaseBanner.classList.remove('show');
+  if(S.milestoneBannerTimer>0){
+    el.milestoneBanner.textContent = S.milestoneMsg;
+    el.milestoneBanner.classList.add('show');
+  } else el.milestoneBanner.classList.remove('show');
   const hp = happiness();
   el.hap.textContent = hp>70?'😄':hp>40?'🙂':hp>15?'😟':'😢';
   el.poo.textContent = '💩 '+P.poo;
