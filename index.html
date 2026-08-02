@@ -95,6 +95,10 @@
   .needMini[data-k=cartoon] .barMini>i{background:var(--cartoon)}
   .needMini[data-k=dirty] .barMini>i{background:#8a6a4a}
   .barMini.low>i{animation:flash .5s steps(2) infinite}
+  /* colorblind-safe cue: a low/critical bar also gets a diagonal stripe texture, not just a color+flash —
+     see also the numeric % now set as each bar's title attribute (updateHUD()) for a hover readout */
+  .barMini.low>i{background-image:repeating-linear-gradient(45deg, rgba(0,0,0,.32) 0 3px, transparent 3px 6px)}
+  .reducedMotion .barMini.low>i{animation:none}
 
   .stat{display:flex;flex-direction:column;align-items:center;min-width:66px;padding:0 4px}
   .stat b{font-size:18px;line-height:1}
@@ -242,6 +246,22 @@
   .musicPicker{flex-direction:row;gap:8px;margin:0}
   .musicPicker .diffOpt{flex:1;text-align:center;padding:10px 8px}
   .musicPicker .diffTitle{font-size:14px}
+
+  /* ---------- Settings screen: volume, keybinds, accessibility ---------- */
+  .volumeRow{display:flex;align-items:center;gap:12px;margin:6px 0}
+  .volumeLbl{font-size:13px;min-width:92px;text-align:left}
+  .settingsSlider{pointer-events:auto;flex:1;accent-color:var(--good)}
+  .settingsToggle{pointer-events:auto;display:flex;align-items:center;gap:8px;font-size:13px;
+    margin:6px 0 10px;cursor:pointer;text-align:left}
+  .settingsToggle input{pointer-events:auto;accent-color:var(--good);width:16px;height:16px}
+  .keybindGrid{display:grid;grid-template-columns:1fr 1fr;gap:5px 16px;margin:10px 0 4px;font-size:12px}
+  .keybindRow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .keybindLabel{opacity:.8}
+  .keybindBtn{pointer-events:auto;cursor:pointer;min-width:52px;padding:4px 9px;border-radius:8px;
+    border:1px solid var(--panelborder);background:rgba(255,255,255,.08);color:var(--text);
+    font-family:inherit;font-weight:bold;font-size:12px;text-transform:uppercase}
+  .keybindBtn:hover{background:rgba(255,255,255,.16)}
+  .keybindBtn.listening{background:var(--good);color:#0d2a12;animation:flash .6s steps(2) infinite}
 
   .leaderboardList{display:flex;flex-direction:column;gap:6px;margin:14px 0;max-height:340px;overflow-y:auto;text-align:left}
   .lbRow{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border:1px solid var(--panelborder);
@@ -627,11 +647,27 @@
         <div class="diffTitle">🕹️ Retro Arcade</div>
       </div>
     </div>
+    <p style="font-size:13px;opacity:.75;margin:16px 0 4px">🔊 Volume</p>
+    <div class="volumeRow">
+      <span class="volumeLbl">🎵 Music</span>
+      <input type="range" id="musicVolSlider" class="settingsSlider" min="0" max="100" value="14">
+    </div>
+    <div class="volumeRow">
+      <span class="volumeLbl">🔔 Sound FX</span>
+      <input type="range" id="sfxVolSlider" class="settingsSlider" min="0" max="100" value="90">
+    </div>
     <p style="font-size:13px;opacity:.75;margin:16px 0 4px">⌨️ Controls</p>
     <div class="hint" style="position:static;max-width:none">
-      <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · <kbd>E</kbd> interact · <kbd>Q</kbd> drop item ·
-      <kbd>Space</kbd> pick up baby · <kbd>U</kbd> shop · <kbd>M</kbd> mute ·
-      <kbd>Esc</kbd> pause · scroll to zoom
+      Scroll to zoom · <kbd>[</kbd><kbd>]</kbd> rotate camera · <kbd>Esc</kbd> pause
+    </div>
+    <div class="keybindGrid" id="keybindGrid"></div>
+    <p style="font-size:13px;opacity:.75;margin:16px 0 4px">♿ Accessibility</p>
+    <label class="settingsToggle">
+      <input type="checkbox" id="reducedMotionToggle"> Reduce motion (calms the cry wobble &amp; toy bob)
+    </label>
+    <div class="volumeRow">
+      <span class="volumeLbl">🔍 HUD Scale</span>
+      <input type="range" id="hudScaleSlider" class="settingsSlider" min="80" max="130" value="100">
     </div>
     <div class="stepnav">
       <button class="btn cta" id="settingsBackBtn">◀ Back to Menu</button>
@@ -2183,13 +2219,35 @@ function spawnBabies(){                                  // (re)builds the babie
   buildBabyNeedsHUD();
 }
 
+/* ---------- Persisted player settings (audio, accessibility, keybinds) ---------- */
+const GAME_SETTINGS_KEY = 'babycare_settings_v1';
+const DEFAULT_KEYBINDS = {up:'w', down:'s', left:'a', right:'d', interact:'e', hold:' ', drop:'q',
+  shop:'u', mute:'m', rotateLeft:'[', rotateRight:']'};
+function defaultGameSettings(){
+  return {musicVol:0.14, sfxVol:0.9, reducedMotion:false, hudScale:1, camRotation:0, keybinds:Object.assign({},DEFAULT_KEYBINDS)};
+}
+function getGameSettings(){
+  try{
+    const raw = localStorage.getItem(GAME_SETTINGS_KEY);
+    if(!raw) return defaultGameSettings();
+    const parsed = JSON.parse(raw);
+    return Object.assign(defaultGameSettings(), parsed, {keybinds:Object.assign({},DEFAULT_KEYBINDS,parsed.keybinds||{})});
+  }catch(e){ return defaultGameSettings(); }
+}
+function saveGameSettings(s){ try{ localStorage.setItem(GAME_SETTINGS_KEY, JSON.stringify(s)); }catch(e){} }
+let gameSettings = getGameSettings();
+// prefers-reduced-motion is an OS-level signal, but a manual Settings toggle can also force it on
+// regardless of that — matched against with OR, never overridden back off by the OS setting alone
+const prefersReducedMotionMQ = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+function reducedMotionActive(){ return gameSettings.reducedMotion || (prefersReducedMotionMQ && prefersReducedMotionMQ.matches); }
+
 /* ---------- Audio (procedural, Web Audio) ---------- */
 const Audio = (function(){
-  let ctx=null, master=null, muted=false, started=false;
+  let ctx=null, master=null, muted=false, started=false, sfxVol=0.9;
   function init(){                                  // no background music — just sets up the context for SFX
     if(started) return; started=true;
     ctx = new (window.AudioContext||window.webkitAudioContext)();
-    master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
+    master = ctx.createGain(); master.gain.value = sfxVol; master.connect(ctx.destination);
   }
   function blip(freq, dur, type, vol, glideTo){
     if(!ctx||muted) return;
@@ -2201,25 +2259,52 @@ const Audio = (function(){
     g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+dur);
     o.connect(g); g.connect(master); o.start(); o.stop(ctx.currentTime+dur+0.05);
   }
+  // layered in place of a single flat blip — a sawtooth "wail" with a wavering vibrato (an LFO
+  // frequency-modulating the main oscillator) plus a thinner, higher "shrill" harmonic on top.
+  // Still fully procedural (no sampled audio asset available to ship), but reads as a cry rather
+  // than a generic sci-fi blip.
+  function cryBurst(){
+    if(!ctx||muted) return;
+    const t0 = ctx.currentTime, dur = 0.55;
+    const o1=ctx.createOscillator(), g1=ctx.createGain();
+    o1.type='sawtooth'; o1.frequency.setValueAtTime(560,t0); o1.frequency.exponentialRampToValueAtTime(190,t0+dur);
+    const lfo=ctx.createOscillator(), lfoGain=ctx.createGain();
+    lfo.type='sine'; lfo.frequency.value=7; lfoGain.gain.value=18;
+    lfo.connect(lfoGain); lfoGain.connect(o1.frequency);
+    g1.gain.setValueAtTime(0.0001,t0); g1.gain.exponentialRampToValueAtTime(0.16,t0+0.03); g1.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    o1.connect(g1); g1.connect(master);
+    const o2=ctx.createOscillator(), g2=ctx.createGain();
+    o2.type='square'; o2.frequency.setValueAtTime(1080,t0); o2.frequency.exponentialRampToValueAtTime(380,t0+dur-0.05);
+    g2.gain.setValueAtTime(0.0001,t0); g2.gain.exponentialRampToValueAtTime(0.05,t0+0.03); g2.gain.exponentialRampToValueAtTime(0.0001,t0+dur-0.05);
+    o2.connect(g2); g2.connect(master);
+    lfo.start(t0); o1.start(t0); o2.start(t0);
+    lfo.stop(t0+dur+0.05); o1.stop(t0+dur+0.05); o2.stop(t0+dur);
+  }
   return {
     start(){ init(); if(ctx.state==='suspended') ctx.resume(); },
     chime(){ blip(880,0.18,'sine',0.22); setTimeout(()=>blip(1318,0.25,'sine',0.2),90); },
     poo(){ blip(300,0.14,'square',0.14,180); },
     buy(){ blip(660,0.1,'triangle',0.2); setTimeout(()=>blip(990,0.16,'triangle',0.2),80); },
-    cry(){ blip(520,0.5,'sawtooth',0.12,180); },
+    cry(){ cryBurst(); },
     error(){ blip(200,0.18,'sawtooth',0.15,120); },
     cough(){ blip(340,0.09,'triangle',0.16); setTimeout(()=>blip(260,0.11,'triangle',0.14),70); },  // hazard telegraph — distinct from cry/error
     doorbell(){ blip(784,0.2,'sine',0.22); setTimeout(()=>blip(587,0.28,'sine',0.2),150); },        // descending, unlike chime's ascending contour — for packages, not work pings
+    giggle(){ [0,1,2].forEach(i=>setTimeout(()=>blip(520+i*90,0.14,'sine',0.14),i*90)); },          // a baby happily playing with a toy
     setMuted(m){ muted=m; },
-    get muted(){ return muted; }
+    get muted(){ return muted; },
+    setSfxVolume(v){ sfxVol=Math.max(0,Math.min(1,v)); if(master) master.gain.value=sfxVol; },
+    get sfxVolume(){ return sfxVol; },
   };
 })();
 
 /* ---------- Background music (player-selectable, real audio files, kept quiet) ---------- */
 const Music = (function(){
   const TRACKS = { games:'music/game-vibes.mp3', retro:'music/retro-arcade.mp3' };
-  let el=null, muted=false, started=false, current='games';
-  function ensure(){ if(!el){ el=new window.Audio(); el.loop=true; el.volume=0.14; } return el; }
+  let el=null, muted=false, started=false, current='games', baseVolume=0.14, intensity=0;
+  function ensure(){ if(!el){ el=new window.Audio(); el.loop=true; applyVolume(); } return el; }
+  // called both when the user drags the volume slider and every frame off the cry-o-meter — panic
+  // used to be communicated by a red bar alone; now the music itself swells and speeds up with it
+  function applyVolume(){ if(!el) return; el.volume = Math.min(1, baseVolume*(1+intensity*0.6)); el.playbackRate = 1+intensity*0.15; }
   return {
     start(){
       started=true; const a=ensure();
@@ -2232,8 +2317,11 @@ const Music = (function(){
       if(started && !muted) a.play().catch(()=>{});
     },
     setMuted(m){ muted=m; const a=ensure(); if(m) a.pause(); else if(started) a.play().catch(()=>{}); },
+    setVolume(v){ baseVolume=Math.max(0,Math.min(1,v)); applyVolume(); },
+    setIntensity(i){ intensity=Math.max(0,Math.min(1,i)); applyVolume(); },
     get muted(){ return muted; },
-    get current(){ return current; }
+    get current(){ return current; },
+    get volume(){ return baseVolume; },
   };
 })();
 
@@ -2723,21 +2811,48 @@ function moveSpeed(){
 const keys = {};
 window.addEventListener('keydown', e=>{
   const k = e.key.toLowerCase();
+  if(listeningForRebind){                                // Settings' key-rebind capture takes priority over
+    e.preventDefault();                                   // every other keydown handling, including Escape/pause
+    gameSettings.keybinds[listeningForRebind] = k;
+    saveGameSettings(gameSettings);
+    listeningForRebind = null;
+    renderKeybindGrid();
+    return;
+  }
   if(k==='escape'){ togglePause(); return; }
   if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
   keys[k]=true;
   if(S.mode!=='play' || S.paused) return;
-  if(k==='e'){ requestInteract(); }
-  if(k===' '){ requestToggleHold(); }
-  if(k==='q'){ requestDrop(); }
-  if(k==='u'){ toggleShop(); }
-  if(k==='m'){ toggleMute(); }
+  const kb = gameSettings.keybinds;
+  if(k===kb.interact){ requestInteract(); }
+  if(k===kb.hold){ requestToggleHold(); }
+  if(k===kb.drop){ requestDrop(); }
+  if(k===kb.shop){ toggleShop(); }
+  if(k===kb.mute){ toggleMute(); }
+  if(k===kb.rotateLeft){ rotateCamera(-1); }
+  if(k===kb.rotateRight){ rotateCamera(1); }
 });
 window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; });
 
-// isometric movement basis (screen-up = toward far corner)
+// isometric movement basis (screen-up = toward far corner) — mutated in place by applyCameraRotation()
+// when the player rotates the view with rotateLeft/rotateRight, so both stay derived from CAM_OFFSET
+// (declared far above, near the camera setup) rather than drifting out of sync with it
 const FWD = new THREE.Vector3(-1,0,-1).normalize();
 const RIGHT = new THREE.Vector3(1,0,-1).normalize();
+const CAM_HORIZ_DIST = Math.hypot(CAM_OFFSET.x, CAM_OFFSET.z);   // preserves the original view distance/zoom framing
+let camRotationSteps = gameSettings.camRotation||0;
+function applyCameraRotation(){
+  const angle = Math.PI/4 + camRotationSteps*(Math.PI/2);        // base 45° (the original fixed angle) + 90°/step
+  CAM_OFFSET.set(Math.cos(angle)*CAM_HORIZ_DIST, CAM_OFFSET.y, Math.sin(angle)*CAM_HORIZ_DIST);
+  FWD.set(-CAM_OFFSET.x/CAM_HORIZ_DIST, 0, -CAM_OFFSET.z/CAM_HORIZ_DIST);
+  RIGHT.set(-FWD.z, 0, FWD.x);                                    // +90° of FWD in the XZ plane
+}
+function rotateCamera(dir){
+  camRotationSteps = ((camRotationSteps + dir) % 4 + 4) % 4;
+  applyCameraRotation();
+  gameSettings.camRotation = camRotationSteps; saveGameSettings(gameSettings);
+}
+applyCameraRotation();   // apply any persisted rotation from a previous session immediately at boot
 
 /* ---------- Interaction ----------
    Every function below runs "as" actingPlayer()/actingPos() — for the local player that's always
@@ -3098,6 +3213,60 @@ document.querySelectorAll('.musicPicker .diffOpt').forEach(opt=>{
     Audio.buy();
   });
 });
+
+/* ---------- Settings screen: volume sliders, HUD scale, reduced motion, key rebinding ---------- */
+function applyHudScale(){                              // `zoom` (not `transform`) so absolutely/fixed
+  const h = document.getElementById('hud');             // positioned HUD children keep their own corner
+  if(h) h.style.zoom = gameSettings.hudScale;            // anchoring instead of drifting from a transform-origin
+}
+// toggled on <body> so any CSS (e.g. .reducedMotion .barMini.low>i) can react without a per-element flag;
+// re-applied whenever the OS-level media query changes, not just the manual Settings toggle
+function applyReducedMotionClass(){ document.body.classList.toggle('reducedMotion', reducedMotionActive()); }
+if(prefersReducedMotionMQ && prefersReducedMotionMQ.addEventListener) prefersReducedMotionMQ.addEventListener('change', applyReducedMotionClass);
+const KEYBIND_LABELS = {up:'Move Up', down:'Move Down', left:'Move Left', right:'Move Right',
+  interact:'Interact', hold:'Pick Up / Put Down', drop:'Drop Item', shop:'Open Shop', mute:'Mute',
+  rotateLeft:'Rotate Camera ◀', rotateRight:'Rotate Camera ▶'};
+function keyDisplayName(k){ return k===' ' ? 'Space' : k.toUpperCase(); }
+let listeningForRebind = null;                          // action name currently waiting on a keypress, or null
+function renderKeybindGrid(){
+  const el = document.getElementById('keybindGrid');
+  el.innerHTML = Object.keys(KEYBIND_LABELS).map(action=>
+    `<div class="keybindRow"><span class="keybindLabel">${KEYBIND_LABELS[action]}</span>
+     <button class="keybindBtn" data-action="${action}">${keyDisplayName(gameSettings.keybinds[action])}</button></div>`
+  ).join('');
+  el.querySelectorAll('.keybindBtn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(listeningForRebind) return;                     // one rebind capture at a time
+      listeningForRebind = btn.dataset.action;
+      btn.textContent = '…'; btn.classList.add('listening');
+    });
+  });
+}
+function initSettingsControls(){
+  const musicSlider = document.getElementById('musicVolSlider'), sfxSlider = document.getElementById('sfxVolSlider'),
+        hudScaleSlider = document.getElementById('hudScaleSlider'), reducedMotionToggle = document.getElementById('reducedMotionToggle');
+  musicSlider.addEventListener('input', ()=>{
+    gameSettings.musicVol = +musicSlider.value/100; Music.setVolume(gameSettings.musicVol); saveGameSettings(gameSettings);
+  });
+  sfxSlider.addEventListener('input', ()=>{
+    gameSettings.sfxVol = +sfxSlider.value/100; Audio.setSfxVolume(gameSettings.sfxVol); saveGameSettings(gameSettings);
+  });
+  hudScaleSlider.addEventListener('input', ()=>{
+    gameSettings.hudScale = +hudScaleSlider.value/100; applyHudScale(); saveGameSettings(gameSettings);
+  });
+  reducedMotionToggle.addEventListener('change', ()=>{
+    gameSettings.reducedMotion = reducedMotionToggle.checked; saveGameSettings(gameSettings);
+    applyReducedMotionClass();
+  });
+}
+function syncSettingsScreen(){
+  document.getElementById('musicVolSlider').value = Math.round(gameSettings.musicVol*100);
+  document.getElementById('sfxVolSlider').value = Math.round(gameSettings.sfxVol*100);
+  document.getElementById('hudScaleSlider').value = Math.round(gameSettings.hudScale*100);
+  document.getElementById('reducedMotionToggle').checked = gameSettings.reducedMotion;
+  renderKeybindGrid();
+}
+initSettingsControls();
 document.getElementById('pauseHelpToggleBtn').addEventListener('click', ()=>{
   const isHidden = document.getElementById('pauseHelpDetail').classList.toggle('hidden');
   document.getElementById('pauseHelpToggleBtn').textContent = isHidden ? '▶ How does this work?' : '▼ Hide details';
@@ -3322,6 +3491,7 @@ function endGame(reason){                              // 'win' | 'lose' | 'hide
   S.mode = reason==='win' ? 'win' : 'over';
   lastEndReason = reason;
   closeShopFn();
+  Music.setIntensity(0);                                // ease back to the base volume/tempo once play stops
   const P = me();
   // MP round ended with the room still alive → offer to rejoin its lobby instead of an outright restart;
   // a daily-challenge run's primary button goes to the menu instead of silently starting a normal run
@@ -3418,7 +3588,7 @@ window.addEventListener('resize', ()=>{
   if(!document.getElementById('mainMenu').classList.contains('hidden')) alignMenuLbPreview();
 });
 document.getElementById('menuPlayBtn').addEventListener('click', ()=>showMenuScreen('modeScreen'));
-document.getElementById('menuSettingsBtn').addEventListener('click', ()=>{ syncMusicPickers(); showMenuScreen('settingsScreen'); });
+document.getElementById('menuSettingsBtn').addEventListener('click', ()=>{ syncMusicPickers(); syncSettingsScreen(); showMenuScreen('settingsScreen'); });
 document.getElementById('menuHelpBtn').addEventListener('click', ()=>showMenuScreen('helpScreen'));
 document.getElementById('menuAboutBtn').addEventListener('click', ()=>showMenuScreen('aboutScreen'));
 // the Dad Level bar at the top of the main menu IS the entry point to the profile/details screen now
@@ -3548,6 +3718,7 @@ function leaveToMainMenu(){                             // shared "abandon the c
   }
   S.mode = 'menu';
   closeShopFn();
+  Music.setIntensity(0);
   document.getElementById('gameover').classList.add('hidden');
   document.getElementById('win').classList.add('hidden');
   document.getElementById('intro').classList.remove('hidden');
@@ -4256,7 +4427,7 @@ function updateBabyAI(b, dt, t){
     const distT = toT.length();
     b.retime -= dt;
     if(b.play<=0 && (b.retime<=0 || distT<0.6)){
-      if(b.playingToy && distT<1.6){ b.play = 2 + random0to1()*2; }        // arrived at a toy
+      if(b.playingToy && distT<1.6){ b.play = 2 + random0to1()*2; Audio.giggle(); }  // arrived at a toy
       else pickBabyTarget(b);
     }
     if(b.play>0){
@@ -4308,7 +4479,8 @@ function updateBabyAI(b, dt, t){
     : bHp>70 ? '😄' : bHp>40 ? '🙂' : '😟');
   if(bCrying && !b.heldBy){
     b.cryTimer -= dt; if(b.cryTimer<=0){ Audio.cry(); b.cryTimer=1.1; }
-    b.mesh.userData.body.position.x = Math.sin(t*30)*0.06; b.mesh.userData.head.position.x = Math.sin(t*30)*0.06;
+    const wobble = reducedMotionActive() ? 0 : Math.sin(t*30)*0.06;
+    b.mesh.userData.body.position.x = wobble; b.mesh.userData.head.position.x = wobble;
   } else {
     b.cryTimer = 0; b.mesh.userData.body.position.x *= 0.8; b.mesh.userData.head.position.x *= 0.8;
   }
@@ -4319,14 +4491,20 @@ function updateBabyAI(b, dt, t){
 // fade walls that sit between the camera and any dad/baby so they never hide the action
 function updateWallFade(dt){
   const k = Math.min(1, dt*10);
+  // camDir is "toward the camera" in the XZ plane, scaled by √2 (undoing FWD's unit-length normalization)
+  // so the dot product below reproduces the exact same numbers — and the same tuned 0.5/6 thresholds —
+  // that the original hard-coded `(dx)+(dz)` sum produced at the default (unrotated) view; generalizing
+  // it this way means the fade keeps working correctly after rotateCamera() changes the view angle
+  const camDirX = -FWD.x*Math.SQRT2, camDirZ = -FWD.z*Math.SQRT2;
   const pts = [dad.position];
   babies.forEach(b=>{ if(b.mesh) pts.push(b.mesh.position); });
   for(const id in players){ if(id!==myId && players[id].avatar) pts.push(players[id].avatar.group.position); }
   for(const m of wallMeshes){
     let target = 1;
     for(const p of pts){
-      const front = (m.position.x - p.x) + (m.position.z - p.z);   // >0: wall is on the camera side of the character
-      const horiz = Math.hypot(m.position.x - p.x, m.position.z - p.z);
+      const dx = m.position.x - p.x, dz = m.position.z - p.z;
+      const front = dx*camDirX + dz*camDirZ;   // >0: wall is on the camera side of the character
+      const horiz = Math.hypot(dx, dz);
       if(front > 0.5 && horiz < 6){ target = Math.min(target, 0.16 + 0.5*(horiz/6)); }
     }
     m.material.opacity += (target - m.material.opacity) * k;
@@ -4354,10 +4532,11 @@ function tick(){
     }
     // ---- dad movement (always local — every client only ever drives its own avatar) ----
     const dir = new THREE.Vector3();
-    if(keys['w']||keys['arrowup']) dir.add(FWD);
-    if(keys['s']||keys['arrowdown']) dir.sub(FWD);
-    if(keys['d']||keys['arrowright']) dir.add(RIGHT);
-    if(keys['a']||keys['arrowleft']) dir.sub(RIGHT);
+    const kb = gameSettings.keybinds;
+    if(keys[kb.up]||keys['arrowup']) dir.add(FWD);
+    if(keys[kb.down]||keys['arrowdown']) dir.sub(FWD);
+    if(keys[kb.right]||keys['arrowright']) dir.add(RIGHT);
+    if(keys[kb.left]||keys['arrowleft']) dir.sub(RIGHT);
     // bathing pins Dad exactly like back pain does, but it's read off the *baby's* own bathTimer
     // (synced to every client via applyRemoteBabies) rather than a player field, so the freeze lands
     // correctly on whichever client is actually holding the baby mid-bath, host or guest
@@ -4393,7 +4572,7 @@ function tick(){
         empties += r.empties;
       });
       toys.forEach(ty=>{ const active = babies.find(b=>b.playingToy===ty && b.play>0);
-        ty.mesh.position.y = ty.baseY + (active ? Math.abs(Math.sin(t*10))*0.15 : 0); });
+        ty.mesh.position.y = ty.baseY + (active && !reducedMotionActive() ? Math.abs(Math.sin(t*10))*0.15 : 0); });
       S.joy = Math.max(0, S.joy - 0.06*dt);
       if(S.penEscapedTimer>0) S.penEscapedTimer = Math.max(0, S.penEscapedTimer-dt);
       if(S.toyTidyCooldown>0) S.toyTidyCooldown = Math.max(0, S.toyTidyCooldown-dt);
@@ -4655,6 +4834,7 @@ function tick(){
       if(!isHost) updateRemoteBabies(dt);
     }
 
+    Music.setIntensity(S.cry/100);   // panic used to be a red bar alone — now the music swells with it too
     updateHUD();
     drawMinimap();
   }
@@ -4717,9 +4897,11 @@ function updateHUD(){
       const v = b.need[k];
       bars[k].fill.style.width = v+'%';
       bars[k].bar.classList.toggle('low', v<=20);
-    });
+      bars[k].bar.title = `${NEED_ICON[k]} ${Math.round(v)}%`;    // colorblind-safe readout — the bar itself
+    });                                                            // is too narrow for a permanent numeric label
     bars.dirty.fill.style.width = b.dirty+'%';
     bars.dirty.bar.classList.toggle('low', b.dirty>=DIRTY_CRY_THRESHOLD);
+    bars.dirty.bar.title = `🧼 ${Math.round(b.dirty)}%`;
   });
   el.cryFill.style.width = S.cry+'%';
   el.cryPct.textContent = Math.round(S.cry)+'%';
@@ -4950,6 +5132,8 @@ updateBestScoreLabel();
 renderMenuLevelBadge(); renderMenuLeaderboardPreview(); alignMenuLbPreview();  // main menu is visible by
                                                           // default at boot — showMenuScreen('mainMenu')
                                                           // is never called for it
+Audio.setSfxVolume(gameSettings.sfxVol); Music.setVolume(gameSettings.musicVol);
+applyHudScale(); applyReducedMotionClass();
 tick();
 })();
 </script>
