@@ -1,12 +1,27 @@
 // Baby Care service worker — precaches the app shell (HTML, three.js, music, icons) so the game is
 // installable and playable offline. Bump CACHE_NAME on every deploy that changes any precached file;
 // the old cache is dropped on activate.
-const CACHE_NAME = 'babycare-v2';
+const CACHE_NAME = 'babycare-v3';
 const PRECACHE_URLS = [
   './',
   'index.html',
   'manifest.json',
   'vendor/three.min.js',
+  'css/style.css',
+  'js/main.js',
+  'js/config.js',
+  'js/utils.js',
+  'js/state.js',
+  'js/persistence.js',
+  'js/audio.js',
+  'js/entities.js',
+  'js/house/build.js',
+  'js/house/furniture.js',
+  'js/net.js',
+  'js/leaderboard.js',
+  'js/tutorial.js',
+  'js/ui.js',
+  'js/gameplay.js',
   'music/game-vibes.mp3',
   'music/retro-arcade.mp3',
   'assets/favicon.ico',

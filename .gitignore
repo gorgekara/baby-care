@@ -1,2 +1,8 @@
 .claude/
 .DS_Store
+
+# test tooling (installed locally via `npm install`, not part of the deployed game)
+node_modules/
+test-results/
+playwright-report/
+.coverage-raw/

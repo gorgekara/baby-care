@@ -1,0 +1,383 @@
+  :root{
+    --bg1:#2b2140; --bg2:#4a3a6a;
+    --panel:rgba(24,18,38,.86); --panelborder:rgba(255,255,255,.14);
+    --food:#ffcf5c; --milk:#8fd3ff; --diaper:#a0e3a0; --cartoon:#e59bff;
+    --cry:#ff5c6b; --poo:#b07a4b; --good:#7ee787; --text:#f4eefc;
+  }
+  *{box-sizing:border-box}
+  .hidden{display:none !important}   /* must beat scoped rules like .stepnav .btn's display:inline-flex —
+                                         otherwise a higher-specificity selector keeps an element visible
+                                         even after its own hidden class is toggled on */
+  html,body{margin:0;height:100%;overflow:hidden;background:linear-gradient(160deg,var(--bg1),var(--bg2));
+    font-family:'Trebuchet MS','Segoe UI',system-ui,sans-serif;color:var(--text);user-select:none;-webkit-user-select:none}
+  #app{position:fixed;inset:0}
+  canvas{display:block}
+
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:20}
+  .topbar{position:absolute;top:10px;left:50%;transform:translateX(-50%);
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;
+    background:var(--panel);border:1px solid var(--panelborder);border-radius:14px;padding:8px 12px;
+    box-shadow:0 8px 30px rgba(0,0,0,.35);max-width:96vw}
+  .need{display:flex;flex-direction:column;align-items:center;width:78px}
+  .need .lbl{font-size:12px;opacity:.85;margin-bottom:3px;white-space:nowrap}
+  .bar{width:74px;height:12px;border-radius:8px;background:rgba(255,255,255,.12);overflow:hidden;position:relative}
+  .bar > i{display:block;height:100%;width:100%;transition:width .12s linear;border-radius:8px}
+  .need[data-k=food] .bar>i{background:var(--food)}
+  .need[data-k=milk] .bar>i{background:var(--milk)}
+  .need[data-k=diaper] .bar>i{background:var(--diaper)}
+  .need[data-k=cartoon] .bar>i{background:var(--cartoon)}
+  .bar.low>i{animation:flash .5s steps(2) infinite}
+  @keyframes flash{50%{opacity:.35}}
+
+  /* per-baby need clusters — one repeats per baby in multiplayer, so keep each compact */
+  .babyNeeds{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+  /* more than 3 babies: detach from the topbar into a scrollable vertical list, top-left */
+  .babyNeeds.side{position:fixed;top:100px;left:12px;flex-direction:column;flex-wrap:nowrap;
+    align-items:flex-start;gap:6px;max-height:62vh;overflow-y:auto;z-index:6;
+    background:var(--panel);border:1px solid var(--panelborder);border-radius:14px;padding:8px 10px;
+    box-shadow:0 8px 30px rgba(0,0,0,.35)}
+  .babyCluster{display:flex;gap:5px;align-items:center;padding:3px 6px;border-radius:10px}
+  .babyCluster.multi{background:rgba(255,255,255,.05);border:1px solid var(--panelborder)}
+  .babyClusterLabel{font-size:11px;opacity:.7;margin-right:2px;white-space:nowrap}
+  .traitBadges{font-size:13px;line-height:1;margin-right:2px;white-space:nowrap;display:inline-flex;gap:3px}
+  .traitBadge{position:relative;cursor:default;pointer-events:auto}
+  .traitBadge::after{
+    content:attr(data-tt); position:absolute; left:0; top:100%; margin-top:6px;
+    background:rgba(15,10,25,.96); color:#fff; padding:6px 10px; border-radius:8px;
+    border:1px solid var(--panelborder); font-size:11px; font-weight:normal; line-height:1.35;
+    width:max-content; max-width:220px; white-space:normal;
+    opacity:0; pointer-events:none; transform:translateY(-4px); transition:opacity .12s ease,transform .12s ease;
+    z-index:50;
+  }
+  .traitBadge:hover::after{opacity:1; transform:translateY(0)}
+  .needMini{display:flex;flex-direction:column;align-items:center;width:34px}
+  .needMini .lblMini{font-size:11px;line-height:1;margin-bottom:2px}
+  .barMini{width:32px;height:9px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden}
+  .barMini>i{display:block;height:100%;width:100%;transition:width .12s linear;border-radius:6px}
+  .needMini[data-k=food] .barMini>i{background:var(--food)}
+  .needMini[data-k=milk] .barMini>i{background:var(--milk)}
+  .needMini[data-k=diaper] .barMini>i{background:var(--diaper)}
+  .needMini[data-k=cartoon] .barMini>i{background:var(--cartoon)}
+  .needMini[data-k=dirty] .barMini>i{background:#8a6a4a}
+  .barMini.low>i{animation:flash .5s steps(2) infinite}
+  /* colorblind-safe cue: a low/critical bar also gets a diagonal stripe texture, not just a color+flash —
+     see also the numeric % now set as each bar's title attribute (updateHUD()) for a hover readout */
+  .barMini.low>i{background-image:repeating-linear-gradient(45deg, rgba(0,0,0,.32) 0 3px, transparent 3px 6px)}
+  .reducedMotion .barMini.low>i{animation:none}
+
+  .stat{display:flex;flex-direction:column;align-items:center;min-width:66px;padding:0 4px}
+  .stat b{font-size:18px;line-height:1}
+  .stat span{font-size:11px;opacity:.8}
+
+  .crywrap{position:absolute;top:96px;left:50%;transform:translateX(-50%);width:min(360px,80vw);
+    background:var(--panel);border:1px solid var(--panelborder);border-radius:12px;padding:7px 12px 9px;
+    box-shadow:0 6px 20px rgba(0,0,0,.3);opacity:0;transition:opacity .2s}
+  .crywrap.show{opacity:1}
+  .crywrap .lbl{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+  .crybar{height:16px;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden}
+  .crybar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ff8a5c,var(--cry));
+    transition:width .12s linear;border-radius:9px}
+
+  /* solid, near-opaque backdrops (not a tinted-transparent fill) so text stays legible over any room.
+     All alert boxes stack in one flow column (.alertsArea below) instead of each owning a fixed `top`,
+     so whichever ones are active pack together with no gaps — first triggered on top, rest below it. */
+  .alertsArea{position:absolute;top:150px;left:50%;transform:translateX(-50%);
+    display:flex;flex-direction:column;align-items:center;gap:8px;z-index:5;pointer-events:none}
+  .alertBox{display:none;width:min(380px,80vw);border-radius:12px;padding:7px 14px;
+    font-size:13px;text-align:center;font-weight:bold;text-shadow:0 1px 3px rgba(0,0,0,.7);
+    box-shadow:0 6px 20px rgba(0,0,0,.4)}
+  .alertBox.show{display:block;animation:flash .8s steps(2) infinite}
+
+  .workAlert{background:rgba(18,13,24,.94);border:1px solid #ff8a5c;color:#ffd7c2}
+  .workAlert.show{animation-duration:.9s}
+  .chokeAlert{background:rgba(24,10,10,.94);border:1px solid #ff5c5c;color:#ffcaca}
+  .chokeAlert.show{animation-duration:.7s}
+  .backPainAlert{background:rgba(24,16,10,.94);border:1px solid #ffb15c;color:#ffe0c2}
+  .backPainAlert.show{animation-duration:.8s}
+  .bathroomAlert{background:rgba(10,20,24,.94);border:1px solid #5cd0ff;color:#cdeeff}
+  .bathroomAlert.show{animation-duration:.9s}
+  .packageAlert{background:rgba(24,18,8,.94);border:1px solid #ffcf5c;color:#ffedc2}
+  .packageAlert.show{animation-duration:.85s}
+  .ovenAlert{background:rgba(24,12,6,.94);border:1px solid #ff7a3c;color:#ffd9b8}
+  .ovenAlert.show{animation-duration:.75s}
+  /* phase-transition banner — informational, not urgent, so it fades in/out instead of flashing */
+  .phaseAlert{background:rgba(16,14,26,.94);border:1px solid #b7a6ff;color:#e6dfff;font-size:14px;
+    transition:opacity .5s}
+  .phaseAlert.show{display:block;animation:none;opacity:1}
+  /* rare milestone moment — a delightful surprise, not a warning, so it gets its own celebratory
+     pink/gold look and the same calm fade as the phase banner rather than an urgent flash */
+  .milestoneAlert{background:rgba(28,14,22,.94);border:1px solid #ff9ec7;color:#ffe0f0;font-size:14px;
+    transition:opacity .5s}
+  .milestoneAlert.show{display:block;animation:none;opacity:1}
+  /* amber pre-warning state — a hazard is coming but hasn't fired yet, so it reads calmer than the
+     urgent flashing .show state above: no flash animation, slightly dimmer */
+  .alertBox.warn.show{animation:none;opacity:.72}
+
+  .topRightHud{position:absolute;top:10px;right:12px;display:flex;flex-direction:column;gap:8px;
+    align-items:flex-end;z-index:6}
+  .mpPlayerHud{display:flex;flex-direction:column;gap:5px;
+    background:var(--panel);border:1px solid var(--panelborder);border-radius:14px;padding:8px 12px;
+    box-shadow:0 8px 30px rgba(0,0,0,.35);font-size:13px;max-width:180px}
+  .mpPlayerRow{display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mpPlayerDot{width:10px;height:10px;border-radius:50%;flex:none;box-shadow:0 0 0 1px rgba(255,255,255,.25)}
+
+  .tasksHud{background:var(--panel);border:1px solid var(--panelborder);border-radius:14px;padding:8px 12px;
+    box-shadow:0 8px 30px rgba(0,0,0,.35);font-size:13px;max-width:220px}
+  .tasksHud h4{margin:0 0 4px;font-size:12px;opacity:.7;font-weight:normal;text-align:right}
+  .taskRow{display:flex;align-items:center;gap:6px;white-space:nowrap;margin:3px 0;justify-content:flex-end}
+  .taskRow.done{opacity:.45;text-decoration:line-through}
+  .taskRow.inSeason{color:#ffd76b}
+  .taskRow.inSeason::after{content:'⭐';font-size:11px}
+
+  .tutorialPanel{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);width:min(560px,92vw);
+    background:var(--panel);border:1px solid var(--panelborder);border-radius:14px;padding:14px 18px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);pointer-events:auto}
+  .tutorialPanel.hidden{display:none}
+  .tutorialStepNum{font-size:11px;opacity:.65;margin-bottom:4px;font-weight:bold;letter-spacing:.02em}
+  .tutorialText{font-size:14px;line-height:1.55;margin-bottom:12px}
+  .tutorialText kbd{background:#fff;color:#222;border-radius:6px;padding:1px 7px;font-weight:bold;font-family:inherit}
+  .tutorialBtns{display:flex;justify-content:space-between;gap:10px}
+
+  .prompt{position:absolute;bottom:74px;left:50%;transform:translateX(-50%);
+    background:rgba(0,0,0,.6);border:1px solid var(--panelborder);border-radius:10px;
+    padding:8px 16px;font-size:15px;opacity:0;transition:opacity .12s;white-space:nowrap}
+  .prompt.show{opacity:1}
+  .prompt kbd{background:#fff;color:#222;border-radius:6px;padding:1px 7px;font-weight:bold;font-family:inherit}
+
+  .carry{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
+    font-size:14px;background:var(--panel);border:1px solid var(--panelborder);border-radius:10px;
+    padding:6px 14px;opacity:0;transition:opacity .15s}
+  .carry.show{opacity:1}
+  .staminaBar{height:8px;width:150px;margin:6px auto 0;border-radius:6px;background:rgba(255,255,255,.15);overflow:hidden}
+  .staminaBar>i{display:block;height:100%;background:linear-gradient(90deg,var(--good),#ffcf5c,var(--cry));
+    border-radius:6px;transition:width .12s linear}
+  .staminaBar.low>i{animation:flash .5s steps(2) infinite}
+
+  .corner{position:absolute;bottom:16px;right:16px;display:flex;gap:8px;pointer-events:auto}
+  .btn{pointer-events:auto;cursor:pointer;border:1px solid var(--panelborder);background:var(--panel);
+    color:var(--text);border-radius:12px;padding:10px 16px;font-size:14px;font-family:inherit;font-weight:bold;
+    box-shadow:0 6px 18px rgba(0,0,0,.3);transition:transform .08s,background .15s}
+  .btn:hover{background:rgba(60,45,90,.95)}
+  .btn:active{transform:scale(.96)}
+  .btn.icon{padding:10px 12px;font-size:16px}
+
+  .hint{position:absolute;bottom:14px;left:12px;max-width:250px;font-size:12px;opacity:.75;line-height:1.7;
+    background:var(--panel);border:1px solid var(--panelborder);border-radius:10px;padding:8px 12px}
+  .hint kbd{background:#fff;color:#222;border-radius:4px;padding:0 5px;font-weight:bold}
+  .minimapHud{position:absolute;bottom:14px;left:12px;background:var(--panel);border:1px solid var(--panelborder);
+    border-radius:10px;padding:6px}
+  .minimapHud canvas{display:block;border-radius:6px}
+
+  /* ---------- Overlays ---------- */
+  .overlay{position:fixed;inset:0;z-index:40;display:flex;align-items:flex-start;justify-content:center;
+    padding:20px;overflow-y:auto;background:radial-gradient(circle at 50% 30%,rgba(74,58,106,.6),rgba(20,14,32,.92));
+    backdrop-filter:blur(3px)}
+  .overlay.hidden{display:none}
+  .card{background:var(--panel);border:1px solid var(--panelborder);border-radius:22px;margin:auto;
+    padding:26px 32px;max-width:520px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .card h1{margin:.1em 0 .3em;font-size:30px}
+  .card h2{margin:.1em 0 .3em;font-size:26px}
+  .card p{font-size:15px;line-height:1.6;opacity:.92;margin:.5em 0}
+  .card .big{font-size:52px;margin:6px 0}
+  .card .cta{margin-top:18px;font-size:18px;padding:14px 30px}
+  .card.hidden{display:none}
+  .stepnav{display:flex;gap:10px;justify-content:center;align-items:stretch;margin-top:18px}
+  .stepnav .btn{margin-top:0;height:52px;display:inline-flex;align-items:center;justify-content:center;
+    padding-top:0;padding-bottom:0;box-sizing:border-box}
+  .legend{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;text-align:left;margin:16px auto;
+    max-width:420px;font-size:14px}
+  .legend b{opacity:.95}
+  .helpDetail{margin-top:14px}
+  .helpDetail.hidden{display:none}
+  .helpSection{text-align:left;margin:16px 0;padding-top:12px;border-top:1px solid var(--panelborder)}
+  .helpSection:first-of-type{border-top:none;padding-top:0}
+  .helpSection h3{font-size:15px;margin:0 0 5px;color:var(--good)}
+  .helpSection p{font-size:13px;opacity:.85;line-height:1.55;margin:0}
+  .tag{display:inline-block;background:rgba(255,255,255,.1);border-radius:20px;padding:4px 14px;
+    font-size:13px;margin:4px 3px}
+
+  .runSummary{margin-top:14px;padding-top:14px;border-top:1px solid var(--panelborder);text-align:left}
+  .runSummary canvas{width:100%;height:46px;display:block;border-radius:8px;background:rgba(255,255,255,.04)}
+  .summaryLine{font-size:13px;opacity:.85;margin:8px 0 0;text-align:center}
+  .runSummary .btn{margin-top:12px;width:100%;box-sizing:border-box}
+
+  .diffPicker{display:flex;flex-direction:column;gap:8px;margin:18px 0;text-align:left}
+  .diffOpt{pointer-events:auto;cursor:pointer;background:rgba(255,255,255,.06);border:2px solid var(--panelborder);
+    border-radius:12px;padding:10px 14px;transition:border-color .15s,background .15s}
+  .diffOpt:hover{background:rgba(255,255,255,.1)}
+  .diffOpt.selected{border-color:var(--good);background:rgba(126,231,135,.12)}
+  /* daily challenge gets its own gold accent instead of the generic green "selected" look, so it
+     reads as a distinct, special mode rather than just another option in the same list */
+  .diffOpt.daily{border-color:#ffd166;background:rgba(255,209,102,.08)}
+  .diffOpt.daily:hover{background:rgba(255,209,102,.14)}
+  .diffOpt.daily.selected{border-color:#ffd166;background:rgba(255,209,102,.2)}
+  /* a full divider + its own call-out box, not just another row in #modePicker's list — Daily Challenge
+     is a fundamentally different flow (fixed seed, one attempt/day, no difficulty pick) so it reads as
+     a separate choice you make instead of a fourth option in the same group */
+  .modeDivider{display:flex;align-items:center;gap:12px;margin:18px 0 14px;opacity:.6;font-size:12px}
+  .modeDivider::before,.modeDivider::after{content:'';flex:1;height:1px;background:var(--panelborder)}
+  .dailyStandalone{padding:14px 16px}
+  .dailyStandalone .diffTitle{font-size:16px}
+  .diffTitle{font-weight:bold;font-size:15px}
+  .diffSub{font-size:12px;opacity:.75;margin-top:2px}
+  .musicPicker{flex-direction:row;gap:8px;margin:0}
+  .musicPicker .diffOpt{flex:1;text-align:center;padding:10px 8px}
+  .musicPicker .diffTitle{font-size:14px}
+
+  /* ---------- Settings screen: volume, keybinds, accessibility ---------- */
+  .volumeRow{display:flex;align-items:center;gap:12px;margin:6px 0}
+  .volumeLbl{font-size:13px;min-width:92px;text-align:left}
+  .settingsSlider{pointer-events:auto;flex:1;accent-color:var(--good)}
+  .settingsToggle{pointer-events:auto;display:flex;align-items:center;gap:8px;font-size:13px;
+    margin:6px 0 10px;cursor:pointer;text-align:left}
+  .settingsToggle input{pointer-events:auto;accent-color:var(--good);width:16px;height:16px}
+  .keybindGrid{display:grid;grid-template-columns:1fr 1fr;gap:5px 16px;margin:10px 0 4px;font-size:12px}
+  .keybindRow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .keybindLabel{opacity:.8}
+  .keybindBtn{pointer-events:auto;cursor:pointer;min-width:52px;padding:4px 9px;border-radius:8px;
+    border:1px solid var(--panelborder);background:rgba(255,255,255,.08);color:var(--text);
+    font-family:inherit;font-weight:bold;font-size:12px;text-transform:uppercase}
+  .keybindBtn:hover{background:rgba(255,255,255,.16)}
+  .keybindBtn.listening{background:var(--good);color:#0d2a12;animation:flash .6s steps(2) infinite}
+
+  .leaderboardList{display:flex;flex-direction:column;gap:6px;margin:14px 0;max-height:340px;overflow-y:auto;text-align:left}
+  .lbRow{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border:1px solid var(--panelborder);
+    border-radius:12px;padding:9px 14px}
+  .lbRow.me{border-color:var(--good);background:rgba(126,231,135,.12)}
+  .lbRank{font-weight:800;font-size:15px;width:28px;text-align:center;opacity:.85}
+  .lbRow:nth-child(1) .lbRank{color:#ffd166}
+  .lbRow:nth-child(2) .lbRank{color:#d9d9e0}
+  .lbRow:nth-child(3) .lbRank{color:#c9895a}
+  .lbName{flex:1;font-weight:bold;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lbDiff{font-size:18px}
+  .lbScore{font-weight:bold;font-size:15px;color:var(--good);min-width:44px;text-align:right}
+  .lbEmpty{font-size:13px;opacity:.7;text-align:center;padding:20px 0}
+  .menuLbPreview{text-align:left}
+  .menuLbPreviewTitle{font-size:15px;font-weight:bold;opacity:.85;margin-bottom:8px;text-align:center}
+  .menuLbPreviewFull .leaderboardList{max-height:420px;gap:4px}
+  .menuLbPreviewFull .lbRow{padding:5px 10px;gap:8px}
+  .menuLbPreviewFull .lbRank{font-size:13px;width:20px}
+  .menuLbPreviewFull .lbDiff{font-size:15px}
+  .menuLbPreviewFull .lbName{font-size:13px}
+  .menuLbPreviewFull .lbScore{font-size:13px;min-width:36px}
+
+  .colorGrid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:4px 0 14px}
+  .colorSwatch{width:30px;height:30px;border-radius:50%;cursor:pointer;pointer-events:auto;
+    border:3px solid transparent;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25);transition:transform .1s,border-color .15s}
+  .colorSwatch:hover{transform:scale(1.12)}
+  .colorSwatch.selected{border-color:#fff;transform:scale(1.12)}
+  .colorSwatch.taken{opacity:.2;cursor:not-allowed;pointer-events:none}
+
+  /* ---------- Profile / Dad Level ---------- */
+  .dadLevelBadge{font-size:36px;font-weight:bold;line-height:1}
+  .xpBarWrap{max-width:360px;margin:6px auto 4px}
+  .xpBarLbl{display:flex;justify-content:space-between;font-size:12px;opacity:.8;margin-bottom:4px}
+  .xpBar{height:14px;border-radius:8px;background:rgba(255,255,255,.12);overflow:hidden}
+  .xpBar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ffcf5c,#ffa25c);
+    transition:width .3s ease;border-radius:8px}
+  .profileStats{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;text-align:left;margin:16px auto;
+    max-width:360px;font-size:13px}
+  .profileStats b{opacity:.95}
+  .profileUnlocks{font-size:12px;opacity:.75;margin:10px 0}
+
+  /* ---------- Upgrade panel ---------- */
+  #shop.hidden{display:none}
+  #shop{z-index:45}
+  .shopcard{max-width:560px}
+  .ups{display:flex;flex-direction:column;gap:10px;margin:14px 0}
+  .up{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.06);
+    border:1px solid var(--panelborder);border-radius:14px;padding:10px 12px;text-align:left}
+  .up .ico{font-size:26px;width:34px;text-align:center}
+  .up .info{flex:1}
+  .up .info .t{font-weight:bold;font-size:15px}
+  .up .info .d{font-size:12px;opacity:.78}
+  .up .lv{font-size:12px;opacity:.85;margin-top:2px}
+  .up .buy{pointer-events:auto;cursor:pointer;border:none;border-radius:10px;padding:9px 14px;
+    font-weight:bold;font-family:inherit;font-size:14px;background:var(--good);color:#0d2a12;white-space:nowrap}
+  .up .buy:disabled{background:rgba(255,255,255,.14);color:rgba(255,255,255,.5);cursor:not-allowed}
+  .shopbal{font-size:16px;margin:2px 0 4px}
+  .flash{animation:pop .4s ease}
+  @keyframes pop{40%{transform:scale(1.06)}}
+
+  /* ---------- Main menu ----------
+     Two independent flex columns (menuLeft/menuRight), NOT a shared CSS grid — a grid item spanning
+     multiple auto-sized rows (the leaderboard, needing to start at Play's row) forces every row it spans
+     to grow to fit its own content, which visually inflated the gaps between every button below Play.
+     Instead: menuLeft is just a plain top-aligned button stack; the level bar is pinned top-right of
+     menuRight via absolute positioning (out of flow, so it can't push the leaderboard down); and the
+     leaderboard preview's top offset is set in JS (alignMenuLbPreview(), called alongside the other
+     menu renders) to match Play's actual measured top — robust to size changes on either side, no
+     magic-number offsets to keep in sync by hand. */
+  .menuCard{background:var(--panel);border:1px solid var(--panelborder);border-radius:22px;margin:auto;
+    padding:36px 40px;max-width:780px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);
+    display:flex;align-items:flex-start;justify-content:space-between;gap:34px;flex-wrap:wrap}
+  .menuCard.hidden{display:none}
+  .menuLeft{display:flex;flex-direction:column;gap:14px;min-width:220px}
+  .menuRight{position:relative;flex:1;min-width:260px}
+  /* pinned top-right of menuRight, narrower than the column — "top right, always" */
+  .menuLevelBar{position:absolute;top:0;right:0;width:230px;box-sizing:border-box;pointer-events:auto;cursor:pointer;
+    display:flex;align-items:center;gap:8px;
+    border:1px solid var(--panelborder);background:rgba(255,255,255,.06);border-radius:14px;padding:8px 14px;
+    color:var(--text);font-family:inherit;text-align:left;transition:background .15s,transform .1s}
+  .menuLevelBar:hover{background:rgba(255,255,255,.13);transform:translateY(-1px)}
+  .menuLevelBar:active{transform:scale(.98)}
+  .menuLevelIcon{font-size:18px}
+  .menuLevelText{font-weight:bold;font-size:13px;white-space:nowrap}
+  .menuLevelColorDot{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+  .menuLevelXpBar{flex:1;height:8px;border-radius:5px;background:rgba(255,255,255,.12);
+    overflow:hidden;display:inline-block}
+  .menuLevelXpBar>i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#ffcf5c,#ffa25c);
+    border-radius:5px;transition:width .3s ease}
+  .menuLevelArrow{opacity:.55;font-size:12px}
+  .menuLogoCompact{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+  .menuLogoIconSm{font-size:36px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.4))}
+  .menuLogoTextSm{font-family:'Baloo 2',cursive,'Comic Sans MS',sans-serif}
+  .menuLogoTopSm{font-size:23px;font-weight:800;color:#ffd166;line-height:1.05;
+    text-shadow:1.5px 1.5px 0 #7a4a1a,-1.5px -1.5px 0 #7a4a1a,1.5px -1.5px 0 #7a4a1a,-1.5px 1.5px 0 #7a4a1a}
+  .menuLogoSubSm{font-size:13px;font-weight:700;color:#ff9ec7;margin-top:1px;
+    text-shadow:1px 1px 0 #6a2a4a,-1px -1px 0 #6a2a4a,1px -1px 0 #6a2a4a,-1px 1px 0 #6a2a4a}
+  .menuBtnBig{pointer-events:auto;cursor:pointer;border:1px solid var(--panelborder);background:rgba(255,255,255,.08);
+    color:var(--text);border-radius:16px;padding:16px 22px;font-size:19px;font-family:inherit;font-weight:bold;
+    text-align:left;display:flex;align-items:center;gap:12px;transition:transform .1s,background .15s}
+  .menuBtnBig:hover{background:rgba(255,255,255,.16);transform:translateX(4px)}
+  .menuBtnBig:active{transform:scale(.97)}
+  /* Play is the primary call to action — bigger, filled, and glowing so it reads as the obvious first click */
+  .menuBtnPrimary{background:linear-gradient(135deg,#ffd166,#ffb347);color:#3a2410;border-color:#ffb347;
+    font-size:22px;padding:19px 24px;box-shadow:0 8px 24px rgba(255,177,71,.35)}
+  .menuBtnPrimary:hover{background:linear-gradient(135deg,#ffdb85,#ffbf5e);box-shadow:0 10px 28px rgba(255,177,71,.5)}
+  /* Multiplayer/Tutorial/Settings/Help read as secondary options next to Play — smaller and a touch dimmer */
+  .menuBtnSecondary{font-size:15px;padding:11px 18px;border-radius:13px;opacity:.82}
+  .menuBtnSecondary:hover{opacity:1}
+  /* About is the least essential item — shrink it down and drop the border so it doesn't compete for attention */
+  .menuBtnMinor{border-color:transparent;background:transparent;color:var(--text);opacity:.6;
+    font-size:14px;font-weight:normal;padding:6px 22px;margin-top:2px}
+  .menuBtnMinor:hover{opacity:.9;background:rgba(255,255,255,.08);transform:none}
+  .creditFooter{position:fixed;left:0;right:0;bottom:14px;text-align:center;font-size:13px;
+    color:var(--text);opacity:.6;z-index:1}
+  .creditFooter a{color:inherit;text-decoration:underline;text-decoration-color:rgba(244,238,252,.4)}
+  .creditFooter a:hover{opacity:.85;text-decoration-color:currentColor}
+
+  /* ---- Dev tools panel (?dev=1 only) ---- */
+  #devPanel{position:fixed;top:10px;left:10px;width:230px;max-height:calc(100vh - 20px);overflow-y:auto;
+    background:rgba(18,12,28,.92);border:1px solid rgba(255,255,255,.18);border-radius:10px;
+    padding:10px;font-size:11px;color:#f4eefc;z-index:9999;font-family:system-ui,sans-serif}
+  #devPanel.hidden{display:none}
+  .devHead{display:flex;align-items:center;justify-content:space-between;font-weight:800;
+    font-size:13px;margin-bottom:6px}
+  .devHead button{background:none;border:none;color:inherit;cursor:pointer;font-size:14px;opacity:.7}
+  .devHead button:hover{opacity:1}
+  .devSection{margin:10px 0 4px;font-weight:700;opacity:.8;display:flex;align-items:center;
+    justify-content:space-between;border-top:1px solid rgba(255,255,255,.12);padding-top:8px}
+  .devSection button{background:none;border:none;color:inherit;cursor:pointer;font-size:12px}
+  .devRow{display:flex;align-items:center;gap:6px;margin:3px 0}
+  .devRow label{flex:1;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .devRow input[type=range]{flex:1.4;width:0}
+  .devRow input[type=number]{width:70px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);
+    color:inherit;border-radius:4px;padding:2px 4px}
+  .devRow span{min-width:22px;text-align:right;opacity:.75}
+  .devSeedShown{font-size:10px;opacity:.6;margin:2px 0 4px;word-break:break-all}
+  .devBtnGrid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+  .devBtnGrid button{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:inherit;
+    border-radius:6px;padding:5px 4px;font-size:10.5px;cursor:pointer}
+  .devBtnGrid button:hover{background:rgba(255,255,255,.16)}

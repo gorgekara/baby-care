@@ -1,0 +1,17 @@
+{
+  "name": "baby-care",
+  "private": true,
+  "type": "module",
+  "description": "Baby Care: Dad's on Duty — isometric 3D babysitting game (no build step; tooling here is dev/test only)",
+  "scripts": {
+    "test:unit": "node --test tests/unit/*.test.js",
+    "test:e2e": "playwright test",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:coverage:unit": "node --test --experimental-test-coverage tests/unit/*.test.js",
+    "test:coverage:e2e": "rm -rf .coverage-raw && COVERAGE=1 playwright test && node scripts/e2e-coverage-report.mjs",
+    "test:coverage": "npm run test:coverage:unit && npm run test:coverage:e2e"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1"
+  }
+}
