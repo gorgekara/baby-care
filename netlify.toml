@@ -1,0 +1,25 @@
+# The game is plain static files — no build step. Netlify serves the repo root as-is.
+# (package.json / tests / scripts are dev-only tooling; they're harmless to ship and
+# keeping the publish dir at the root avoids a copy-into-dist build we'd have to maintain.)
+[build]
+  publish = "."
+  command = ""
+
+# Netlify already defaults to must-revalidate for these, but pin it explicitly: a
+# CDN-cached sw.js would keep an old service worker controlling the page, and since
+# sw.js is what decides freshness for everything else, that failure is unrecoverable
+# from the client side. Too load-bearing to leave riding on a platform default.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
